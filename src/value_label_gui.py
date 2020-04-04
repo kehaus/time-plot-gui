@@ -52,6 +52,9 @@ class ValueLabelGui(QWidget):
     start_signal = QtCore.pyqtSignal()
     stop_signal = QtCore.pyqtSignal()
     
+    FORMATER_STR = '{:.2f} mBar'
+    LABEL_FONT = QFont('Sanserif', 80)
+    
     def __init__(self, parent=None, window=None, devicewrapper=None):
         """ """
         super(ValueLabelGui, self).__init__(parent=parent)
@@ -75,10 +78,17 @@ class ValueLabelGui(QWidget):
         # =====================================================================
         # control panel
         # =====================================================================
+        self.formaterStr = ValueLabelGui.FORMATER_STR
+        self.label_font = ValueLabelGui.LABEL_FONT
+        
         self.graphics_layout = QGridLayout()
-        self.vl = pg.ValueLabel(formatStr='{avgValue:0.2f} {suffix}')
-        self.vl.setValue(-1)
+#        self.vl = pg.ValueLabel(formatStr='{avgValue:0.2f} {suffix}')
+#        self.vl.setValue(-1)
+        self.vl = QLabel('-')
+        self.vl.setFont(self.label_font)
         self.graphics_layout.addWidget(self.vl, 0, 0, 4, 4)
+        
+
         
         
         # =====================================================================
@@ -105,8 +115,8 @@ class ValueLabelGui(QWidget):
        # ============================================================
         # put everything together
         # ============================================================
-        self.wid_layout.addItem(self.graphics_layout, 0, 0, 2, 2)
-        self.wid_layout.addItem(self.controls_layout, 0, 2, 2, 2)     
+        self.wid_layout.addItem(self.graphics_layout, 0, 0, 2, 6)
+        self.wid_layout.addItem(self.controls_layout, 0, 6, 2, 2)     
         # self.wid_layout.setColumnStretch(0, 10)
         # self.wid_layout.setColumnStretch(8, 2)
         
@@ -151,7 +161,8 @@ class ValueLabelGui(QWidget):
         
     def update_ValueLabel(self, val):
         """ """
-        self.vl.setValue(val)
+#        self.vl.setValue(val)
+        self.vl.setText(self.formaterStr.format(val))
         
 
 
@@ -187,7 +198,7 @@ class ValueLabelGui(QWidget):
 class MainWindow(QMainWindow):
     """ """
     
-    DEFAULT_GEOMETRY = [400, 400, 200, 50]
+    DEFAULT_GEOMETRY = [400, 400, 800, 180]
     
     def __init__(self, devicewrapper=None):
         super(MainWindow, self).__init__()
