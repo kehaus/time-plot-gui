@@ -50,9 +50,6 @@ class TimePlotGuiException(Exception):
 
 class TimePlotGui(QWidget):
 
-    ABSOLUTE_TIME = []
-    TIME = []
-    POTENTIAL = []
 
     start_signal = QtCore.pyqtSignal()
     stop_signal = QtCore.pyqtSignal()
@@ -60,6 +57,9 @@ class TimePlotGui(QWidget):
     def __init__(self, parent=None, window=None, devicewrapper=None):
         """ """
         super(TimePlotGui, self).__init__(parent=parent)
+        self.ABSOLUTE_TIME = []
+        self.TIME = []
+        self.POTENTIAL = []
         self._init_ui(window)
         self._init_worker_thread(devicewrapper)
 
@@ -177,10 +177,12 @@ class TimePlotGui(QWidget):
         """ """
         self.vl.setValue(val)
         self.POTENTIAL.append(val)
-
         self.ABSOLUTE_TIME.append(time.time())
         self.TIME = [x - self.ABSOLUTE_TIME[0] for x in self.ABSOLUTE_TIME]
-        self._init_ui(self.mainwindow)
+        potential_axis = self.POTENTIAL
+        time_axis = self.TIME
+        self.graphWidget.plot(time_axis, potential_axis)
+        #self._init_ui(self.mainwindow)
         #TIME.append(val)
         #print(f"POTENTIAL: {self.POTENTIAL} \n TIME: {self.TIME}")
 
