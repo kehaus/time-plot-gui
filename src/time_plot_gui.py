@@ -28,7 +28,6 @@ from PyQt5.QtWidgets import qApp, QAction, QMenu, QGridLayout, QLabel, QLineEdit
 from PyQt5.QtGui import QIcon, QFont, QCursor
 from PyQt5 import QtCore
 import pyqtgraph as pg
-import time
 
 
 from time_plot_worker import TimePlotWorker
@@ -50,7 +49,7 @@ class TimePlotGuiException(Exception):
 
 class TimePlotGui(QWidget):
 
-    switch_window = QtCore.pyqtSignal()
+    switch_window = QtCore.pyqtSignal(str)
     start_signal = QtCore.pyqtSignal()
     stop_signal = QtCore.pyqtSignal()
 
@@ -121,6 +120,9 @@ class TimePlotGui(QWidget):
         self.graphics_layout.addWidget(self.graphWidget, 0, 3, 5, 5)
         potential_axis = self.potential
         time_axis = self.time_array
+        self.graphWidget.setTitle('Potential over Time')
+        self.graphWidget.setLabel('left', 'Potential (Volts)', color='white', size=30)
+        self.graphWidget.setLabel('bottom', 'Time (seconds)', color='white', size=30)
         self.graphWidget.plot(time_axis, potential_axis)
 
 
@@ -194,7 +196,7 @@ class TimePlotGui(QWidget):
 
     def switch(self):
         print(f"emit switch signal")
-        self.switch_window.emit()
+        self.switch_window.emit(self.line_edit.text())
         # controller = Controller()
         # controller.show_window_two("hellowell")
 
@@ -230,7 +232,6 @@ class TimePlotGui(QWidget):
 
 class MainWindow(QMainWindow):
     """ """
-    switch_window = QtCore.pyqtSignal(str)
     # xpos on screen, ypos on screen, width, height
     DEFAULT_GEOMETRY = [400, 400, 1000, 500]
 
@@ -262,7 +263,7 @@ class MainWindow(QMainWindow):
 
 class WindowTwo(QWidget):
 
-    def __init__(self):
+    def __init__(self, text):
         QWidget.__init__(self)
         self.setWindowTitle('Window Two')
 
@@ -286,13 +287,13 @@ class Controller:
     def show_main(self, devicewrapper):
         print("show main")
         self.window = MainWindow(devicewrapper=devicewrapper)
-        self.window.switch_window.connect(self.show_window_two)
+        self.window.time_plot_ui.switch_window.connect(self.show_window_two)
         self.window.show()
 
     def show_window_two(self, text):
         print("show window two")
         self.window_two = WindowTwo(text)
-        self.window.close()
+        #self.window.close()
         self.window_two.show()
 
 
