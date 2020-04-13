@@ -24,7 +24,7 @@ from unittest.mock import MagicMock
 
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QToolTip, QPushButton, QMessageBox, QMainWindow
-from PyQt5.QtWidgets import qApp, QAction, QMenu, QGridLayout, QLabel
+from PyQt5.QtWidgets import qApp, QAction, QMenu, QGridLayout, QLabel, QLineEdit
 from PyQt5.QtGui import QIcon, QFont, QCursor
 from PyQt5 import QtCore
 import pyqtgraph as pg
@@ -50,16 +50,16 @@ class TimePlotGuiException(Exception):
 
 class TimePlotGui(QWidget):
 
-
+    switch_window = QtCore.pyqtSignal()
     start_signal = QtCore.pyqtSignal()
     stop_signal = QtCore.pyqtSignal()
 
     def __init__(self, parent=None, window=None, devicewrapper=None):
         """ """
         super(TimePlotGui, self).__init__(parent=parent)
-        self.ABSOLUTE_TIME = []
-        self.TIME = []
-        self.POTENTIAL = []
+        self.absolute_time = []
+        self.time_array = []
+        self.potential = []
         self._init_ui(window)
         self._init_worker_thread(devicewrapper)
 
@@ -76,16 +76,15 @@ class TimePlotGui(QWidget):
         # grid layout to put all widgets
         self.wid_layout = QGridLayout()
 
-
         # =====================================================================
         # control panel
         # =====================================================================
         self.graphics_layout = QGridLayout()
         self.vl = pg.ValueLabel(formatStr='{avgValue:0.2f} {suffix}')
-        if len(self.POTENTIAL) == 0:
+        if len(self.potential) == 0:
             self.vl.setValue(-1)
         else:
-            self.vl.setValue(self.POTENTIAL[-1])
+            self.vl.setValue(self.potential[-1])
         self.graphics_layout.addWidget(self.vl, 0, 0, 1, 1)
 
 
@@ -107,6 +106,12 @@ class TimePlotGui(QWidget):
         #comboBox.addItem()
         #self.controls_layout.addWidget(self.comboBox, 0, 1, 1, 1)
 
+        #multiple windows
+        self.line_edit = QLineEdit()
+        self.controls_layout.addWidget(self.line_edit, 3, 0, 1, 1)
+        self.button = QPushButton('Edit Axes')
+        self.controls_layout.addWidget(self.button, 4, 0, 1, 1)
+
 
         #self.setCentralWidget(self.graphWidget)
         # hour = [1,2,3,4,5,6,7,8,9,10]
@@ -114,8 +119,8 @@ class TimePlotGui(QWidget):
         # temperature2 = [40, 20, 40, 40, 20, 20, 40, 30, 20, 30]
         self.graphWidget = pg.PlotWidget()
         self.graphics_layout.addWidget(self.graphWidget, 0, 3, 5, 5)
-        potential_axis = self.POTENTIAL
-        time_axis = self.TIME
+        potential_axis = self.potential
+        time_axis = self.time_array
         self.graphWidget.plot(time_axis, potential_axis)
 
 
@@ -124,6 +129,7 @@ class TimePlotGui(QWidget):
         # =====================================================================
         self.startBtn.clicked.connect(self.start_thread)
         self.stopBtn.clicked.connect(self.stop_thread)
+        self.button.clicked.connect(self.switch)
 
        # ============================================================
         # put everything together
@@ -176,15 +182,21 @@ class TimePlotGui(QWidget):
     def update_ValueLabel(self, val):
         """ """
         self.vl.setValue(val)
-        self.POTENTIAL.append(val)
-        self.ABSOLUTE_TIME.append(time.time())
-        self.TIME = [x - self.ABSOLUTE_TIME[0] for x in self.ABSOLUTE_TIME]
-        potential_axis = self.POTENTIAL
-        time_axis = self.TIME
+        self.potential.append(val)
+        self.absolute_time.append(time.time())
+        self.time_array = [x - self.absolute_time[0] for x in self.absolute_time]
+        potential_axis = self.potential
+        time_axis = self.time_array
         self.graphWidget.plot(time_axis, potential_axis)
         #self._init_ui(self.mainwindow)
-        #TIME.append(val)
-        #print(f"POTENTIAL: {self.POTENTIAL} \n TIME: {self.TIME}")
+        #time_array.append(val)
+        #print(f"potential: {self.potential} \n time_array: {self.time_array}")
+
+    def switch(self):
+        print(f"emit switch signal")
+        self.switch_window.emit()
+        # controller = Controller()
+        # controller.show_window_two("hellowell")
 
 
 
@@ -218,6 +230,7 @@ class TimePlotGui(QWidget):
 
 class MainWindow(QMainWindow):
     """ """
+    switch_window = QtCore.pyqtSignal(str)
     # xpos on screen, ypos on screen, width, height
     DEFAULT_GEOMETRY = [400, 400, 1000, 500]
 
@@ -246,6 +259,43 @@ class MainWindow(QMainWindow):
         self.time_plot_ui.closeEvent(event)
 #        event.accept
 
+
+class WindowTwo(QWidget):
+
+    def __init__(self):
+        QWidget.__init__(self)
+        self.setWindowTitle('Window Two')
+
+        layout = QGridLayout()
+
+        self.label = QLabel(text)
+        layout.addWidget(self.label)
+
+        self.button = QPushButton('Close')
+        self.button.clicked.connect(self.close)
+
+        layout.addWidget(self.button)
+
+        self.setLayout(layout)
+
+class Controller:
+
+    def __init__(self):
+        pass
+
+    def show_main(self, devicewrapper):
+        print("show main")
+        self.window = MainWindow(devicewrapper=devicewrapper)
+        self.window.switch_window.connect(self.show_window_two)
+        self.window.show()
+
+    def show_window_two(self, text):
+        print("show window two")
+        self.window_two = WindowTwo(text)
+        self.window.close()
+        self.window_two.show()
+
+
 # ===========================================================================
 # main function
 # ===========================================================================
@@ -257,9 +307,11 @@ def main(devicewrapper):
         app = QApplication(sys.argv)
     else:
         print('QApplication instance already exists {}'.format(str(app)))
-    window = MainWindow(devicewrapper=devicewrapper)
+    #window = MainWindow(devicewrapper=devicewrapper)
 
-    window.show()
+    controller = Controller()
+    controller.show_main(devicewrapper)
+#    window.show()
     app.exec_()
 
 
