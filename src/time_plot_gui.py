@@ -136,15 +136,19 @@ class TimePlotGui(QWidget):
     def init_plot(self):
         """ """
         #self.setCentralWidget(self.graphWidget)
-        print(f"initializing plot")
+        print(f"initializing plot...")
+        (x,y) = self.getData()
+        print(f'{x} \n {y}')
         self.graphWidget = pg.PlotWidget()
         self.graphics_layout.addWidget(self.graphWidget, 0, 3, 5, 5)
         potential_axis = self.potential
         time_axis = self.time_array
-        self.graphWidget.setTitle('Potential over Time')
+        self.graphWidget.setTitle('Potential over Time', **{'color': '#FFF', 'size': '20pt'})
+        #self.graphWidget.showAxis('top', False)
         self.graphWidget.setLabel('left', 'Potential (Volts)', color='white', size=30)
         self.graphWidget.setLabel('bottom', 'Time (seconds)', color='white', size=30)
         self.graphWidget.plot(time_axis, potential_axis)
+        #print(f"{potential_axis}")
 
     def _set_central_wid_properties(self):
         """ """
@@ -189,6 +193,7 @@ class TimePlotGui(QWidget):
         self.update_time_array(val)
         potential_axis = self.potential
         time_axis = self.time_array
+        #self.init_plot()
         self.graphWidget.plot(time_axis, potential_axis)
 
     def update_time_array(self, val):
