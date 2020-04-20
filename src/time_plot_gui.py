@@ -23,6 +23,7 @@ from unittest.mock import MagicMock
 
 
 import sys
+import weakref
 from PyQt5.QtWidgets import QApplication, QWidget, QToolTip, QPushButton, QMessageBox, QMainWindow
 from PyQt5.QtWidgets import qApp, QAction, QMenu, QGridLayout, QLabel, QLineEdit
 from PyQt5.QtGui import QIcon, QFont, QCursor
@@ -55,9 +56,13 @@ class TimePlotGui(QWidget):
     def __init__(self, parent=None, window=None, devicewrapper=None):
         """ """
         super(TimePlotGui, self).__init__(parent=parent)
-        self.absolute_time = []
-        self.time_array = []
-        self.potential = []
+        # self.absolute_time = []
+        # self.time_array = []
+        # self.potential = []
+        self.absolute_time = np.array([])
+        self.time_array = np.array([])
+        self.potential = np.array([])
+        self.data = np.array([])
         self._init_ui(window)
         self._init_worker_thread(devicewrapper)
 
@@ -111,11 +116,11 @@ class TimePlotGui(QWidget):
 
         self.init_plot()
 
-        self.default_plot = QPushButton('Reset Plot Settings')
+        self.default_plot = QPushButton('Get Data Bounds')
         self.controls_layout.addWidget(self.default_plot, 2, 0, 1, 1)
         self.default_plot.setStyleSheet("background-color: white;")
 
-        self.default_plot.clicked.connect(self.init_plot)
+        self.default_plot.clicked.connect(self.getDataBounds)
 
         # =====================================================================
         # control buttons - connections
@@ -137,18 +142,28 @@ class TimePlotGui(QWidget):
         """ """
         #self.setCentralWidget(self.graphWidget)
         print(f"initializing plot...")
-        (x,y) = self.getData()
-        print(f'{x} \n {y}')
+        if len(self.potential) != 0:
+            print(f"conditon met")
+            self.graphics_layout.removeWidget(self.graphWidget)
         self.graphWidget = pg.PlotWidget()
+        self.graphItem = self.graphWidget.getPlotItem()
+        #self.graphCurveItem = self.graphItem.getPlotItem()
         self.graphics_layout.addWidget(self.graphWidget, 0, 3, 5, 5)
         potential_axis = self.potential
         time_axis = self.time_array
-        self.graphWidget.setTitle('Potential over Time', **{'color': '#FFF', 'size': '20pt'})
+        self.graphItem.setTitle('Potential over Time', **{'color': '#FFF', 'size': '20pt'})
         #self.graphWidget.showAxis('top', False)
-        self.graphWidget.setLabel('left', 'Potential (Volts)', color='white', size=30)
-        self.graphWidget.setLabel('bottom', 'Time (seconds)', color='white', size=30)
-        self.graphWidget.plot(time_axis, potential_axis)
-        #print(f"{potential_axis}")
+        self.graphItem.setLabel('left', 'Potential (Volts)', color='white', size=30)
+        self.graphItem.setLabel('bottom', 'Time (seconds)', color='white', size=30)
+        self.plotDataItem = self.graphItem.plot(time_axis, potential_axis)
+
+        print(f"{potential_axis} \n {time_axis}")
+
+    def getDataBounds(self):
+        #print(f"why didnt that work?")
+        #self.graphics_layout.removeWidget(self.graphWidget)
+        bounds = self.plotDataItem.dataBounds(0)
+        print(f"{bounds}")
 
     def _set_central_wid_properties(self):
         """ """
@@ -192,15 +207,21 @@ class TimePlotGui(QWidget):
         self.vl.setValue(val)
         self.update_time_array(val)
         potential_axis = self.potential
+
         time_axis = self.time_array
+        data = self.data
         #self.init_plot()
-        self.graphWidget.plot(time_axis, potential_axis)
+        #self.graphWidget.plot(time_axis, potential_axis)
+        self.plotDataItem.setData(time_axis, potential_axis)
+        #self.graphWidget.setData(1, potential_axis)
 
     def update_time_array(self, val):
         """ """
-        self.potential.append(val)
-        self.absolute_time.append(time.time())
-        self.time_array = [x - self.absolute_time[0] for x in self.absolute_time]
+        #self.potential.append(val)
+        self.potential = np.append(self.potential, np.array([val]))
+        self.absolute_time = np.append(self.absolute_time, np.array([time.time()]))
+        self.time_array = np.array([x - self.absolute_time[0] for x in self.absolute_time])
+        self.data = np.append(self.data, np.array([(self.potential[-1], self.time_array[-1])]))
 
 
     @QtCore.pyqtSlot(float)
