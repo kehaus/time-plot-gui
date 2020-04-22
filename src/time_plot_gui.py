@@ -15,6 +15,7 @@ __author__ = "kha"
 
 
 import os
+from os import path
 import ctypes as ct
 import numpy as np
 import time
@@ -32,6 +33,7 @@ import pyqtgraph as pg
 
 
 from time_plot_worker import TimePlotWorker
+from plot_item_settings import PlotItemSettings
 
 from util.workerthread import WorkerThread,WorkerTaskBase
 from util.devicewrapper import DeviceWrapper, DummyDevice
@@ -116,11 +118,22 @@ class TimePlotGui(QWidget):
 
         self.init_plot()
 
+        # here we ad a button to get the bounds
         self.default_plot = QPushButton('Get Data Bounds')
         self.controls_layout.addWidget(self.default_plot, 2, 0, 1, 1)
         self.default_plot.setStyleSheet("background-color: white;")
-
         self.default_plot.clicked.connect(self.getDataBounds)
+
+        # here we add buttons to save or reset defaults
+        self.save_settings = QPushButton('Save Current Settings')
+        self.controls_layout.addWidget(self.save_settings, 4, 0, 1, 1)
+        self.save_settings.setStyleSheet("background-color: white;")
+        self.save_settings.clicked.connect(self.save_current_settings)
+
+        self.restore_default_settings = QPushButton('Restore Default Plot Settings')
+        self.controls_layout.addWidget(self.restore_default_settings, 5, 0, 1, 1)
+        self.restore_default_settings.setStyleSheet("background-color: white;")
+        self.restore_default_settings.clicked.connect(self.default_settings)
 
         # =====================================================================
         # control buttons - connections
@@ -155,15 +168,32 @@ class TimePlotGui(QWidget):
         #self.graphWidget.showAxis('top', False)
         self.graphItem.setLabel('left', 'Potential (Volts)', color='white', size=30)
         self.graphItem.setLabel('bottom', 'Time (seconds)', color='white', size=30)
+        self.set_custom_settings()
         self.plotDataItem = self.graphItem.plot(time_axis, potential_axis)
 
-        print(f"{potential_axis} \n {time_axis}")
+        #print(f"{potential_axis} \n {time_axis}")
+
+
+    def set_custom_settings(self):
+        self.plot_item_settings = PlotItemSettings()
+        self.plot_item_settings.__init__()
+
+    def save_current_settings(self):
+        self.plot_item_settings = PlotItemSettings()
+        self.plot_item_settings.save()
+
+    def default_settings(self):
+        if path.exists("custom_settings.txt"):
+            os.remove("custom_settings.txt")
+        self.set_custom_settings()
 
     def getDataBounds(self):
         #print(f"why didnt that work?")
         #self.graphics_layout.removeWidget(self.graphWidget)
         bounds = self.plotDataItem.dataBounds(0)
         print(f"{bounds}")
+        self.plot_item_settings = PlotItemSettings()
+        self.plot_item_settings.save()
 
     def _set_central_wid_properties(self):
         """ """
