@@ -14,7 +14,6 @@ class PlotItemSettings(object):
     """ """
 
     DEFAULT_SETTINGS = {    # i just used generic values inhere. change if necessary
-
         'autoPan':      True,
         'xscale':      'linear',
         'yscale':      'linear',
@@ -94,17 +93,45 @@ class PlotItemSettings(object):
     # define setter and getter for all settings
     # ===
 
-    def get_xlim(self):
-        #return self.settings['xlim']
-        xlim = [1, 10]
-        return xlim
-
-    def set_xlim(self, xlim):
-        self.settings['xlim'] = xlim
-
-    #  ... the same for the others
+    def __getattr__(self, name):
+        """returns self.settings[name] if name is key in settings dictionary
+        """
+        if 'settings' in self.__dict__:
+            keys = self.settings.keys()
+        else:
+            keys = []
+        
+        if name in keys:
+            return self.settings[name]
+        else:
+            return super(PlotItemSettings, self).__getattribute__(name)
+        
+    def __setattr__(self, name, value):
+        """sets self.settings[name]=value if name is key in settings dictionary
+        """
+        if 'settings' in self.__dict__:
+            keys = self.settings.keys()
+        else:
+            keys = []
+        
+        if name in keys:
+            self.settings[name] = value
+        else:
+            super(PlotItemSettings, self).__setattr__(name, value)
 
 
 
 if __name__ == "__main__":
     ps = PlotItemSettings()
+    
+    
+    # ============================
+    # Example how to change settings values
+    # ============================
+    ps.xlim             # get values back
+    ps.xlim = [0,2]     # set values
+    
+    
+    
+    
+    
