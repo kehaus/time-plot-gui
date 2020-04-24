@@ -13,6 +13,7 @@ import json
 class PlotItemSettings(object):
     """ """
 
+    settings_filename = "custom_settings.json"
     DEFAULT_SETTINGS = {    # i just used generic values inhere. change if necessary
         'autoPan':      True,
         'xscale':      'linear',
@@ -23,13 +24,11 @@ class PlotItemSettings(object):
         }
 
     def __init__(self):
-        print(f"initializing settings")
+        #print(f"initializing settings")
         settings = self._checks_for_settings_file()
         if settings != {}:
-            print(f"setting customs")
             self.settings = settings
         else:
-            print(f"setting defaults")
             self.settings = PlotItemSettings.DEFAULT_SETTINGS
 
     # =====
@@ -43,13 +42,11 @@ class PlotItemSettings(object):
         empty dictionary
 
         """
-        if path.exists("custom_settings.txt"):
-            print(f"custom file exists")
-            custom_settings = self.load()
-            return custom_settings
         # implement function wich checks if settings file present.
         #   return {} if not the case
-        print(f"custom file doesnt exist")
+        if path.exists(self.settings_filename):
+            custom_settings = self.load()
+            return custom_settings
         return {}
 
     # ====
@@ -59,11 +56,11 @@ class PlotItemSettings(object):
     def load(self):
         """load settings from file"""
         # code to load settgins from file here
-        with open('custom_settings.txt') as json_file:
+        with open(self.settings_filename) as json_file:
             data = json.load(json_file)
             custom_settings = data['custom_settings'][-1]
-            for p in data['custom_settings']:
-                    print(p['autoPan'])
+            # for p in data['custom_settings']:
+            #         print(p['autoPan'])
             #custom_settings = data['custom_settings'][-1]
         return custom_settings
 
@@ -72,19 +69,24 @@ class PlotItemSettings(object):
         # code to save settings to file here
         data = {}
         data['custom_settings'] = []
-        data['custom_settings'].append({
-            'autoPan': 'True',
-            'xscale': 'linear',
-            'yscale': 'log',
-            'xlim': self.get_xlim(),
-            'ylim': '[0,1]'
-        })
-        print(f"{data}")
+        # data['custom_settings'].append({
+        #     'autoPan': 'True',
+        #     'xscale': 'linear',
+        #     'yscale': 'log',
+        #     'xlim': '[-2,10]',
+        #     'ylim': '[0,1]'
+        # })
+        for key in self.settings:
+            print(f"{key}")
+            print(f"{self.__getattr__(key)}")
+            data['custom_settings'].append({
+                key: self.__getattr__(key)
+            })
 
-        if path.exists("custom_settings.txt"):
-            os.remove("custom_settings.txt")
+        if path.exists(self.settings_filename):
+            os.remove(self.settings_filename)
 
-        with open('custom_settings.txt', 'w') as outfile:
+        with open(self.settings_filename, 'w') as outfile:
             json.dump(data, outfile)
 
         return
@@ -100,12 +102,12 @@ class PlotItemSettings(object):
             keys = self.settings.keys()
         else:
             keys = []
-        
+
         if name in keys:
             return self.settings[name]
         else:
             return super(PlotItemSettings, self).__getattribute__(name)
-        
+
     def __setattr__(self, name, value):
         """sets self.settings[name]=value if name is key in settings dictionary
         """
@@ -113,7 +115,7 @@ class PlotItemSettings(object):
             keys = self.settings.keys()
         else:
             keys = []
-        
+
         if name in keys:
             self.settings[name] = value
         else:
@@ -123,15 +125,10 @@ class PlotItemSettings(object):
 
 if __name__ == "__main__":
     ps = PlotItemSettings()
-    
-    
+
+
     # ============================
     # Example how to change settings values
     # ============================
     ps.xlim             # get values back
     ps.xlim = [0,2]     # set values
-    
-    
-    
-    
-    

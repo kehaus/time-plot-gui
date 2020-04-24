@@ -156,7 +156,6 @@ class TimePlotGui(QWidget):
         #self.setCentralWidget(self.graphWidget)
         print(f"initializing plot...")
         if len(self.potential) != 0:
-            print(f"conditon met")
             self.graphics_layout.removeWidget(self.graphWidget)
         self.graphWidget = pg.PlotWidget()
         self.graphItem = self.graphWidget.getPlotItem()
@@ -171,29 +170,29 @@ class TimePlotGui(QWidget):
         self.set_custom_settings()
         self.plotDataItem = self.graphItem.plot(time_axis, potential_axis)
 
-        #print(f"{potential_axis} \n {time_axis}")
-
 
     def set_custom_settings(self):
         self.plot_item_settings = PlotItemSettings()
+        # initializes the self.settings variable
         self.plot_item_settings.__init__()
+        # acquires the self.settings varibale from plot_item_settings
+        settings = self.plot_item_settings.settings
+        for key in settings:
+            self.plot_item_settings.__setattr__(key, settings[key])
 
     def save_current_settings(self):
         self.plot_item_settings = PlotItemSettings()
         self.plot_item_settings.save()
 
     def default_settings(self):
-        if path.exists("custom_settings.txt"):
-            os.remove("custom_settings.txt")
+        self.plot_item_settings = PlotItemSettings()
+        if path.exists(self.plot_item_settings.settings_filename):
+            os.remove(self.plot_item_settings.settings_filename)
         self.set_custom_settings()
 
     def getDataBounds(self):
-        #print(f"why didnt that work?")
-        #self.graphics_layout.removeWidget(self.graphWidget)
         bounds = self.plotDataItem.dataBounds(0)
         print(f"{bounds}")
-        self.plot_item_settings = PlotItemSettings()
-        self.plot_item_settings.save()
 
     def _set_central_wid_properties(self):
         """ """
