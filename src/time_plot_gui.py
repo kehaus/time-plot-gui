@@ -118,11 +118,11 @@ class TimePlotGui(QWidget):
 
         self.init_plot()
 
-        # here we ad a button to get the bounds
-        self.default_plot = QPushButton('Get Data Bounds')
-        self.controls_layout.addWidget(self.default_plot, 2, 0, 1, 1)
-        self.default_plot.setStyleSheet("background-color: white;")
-        self.default_plot.clicked.connect(self.getDataBounds)
+        # # here we add a button to get the bounds
+        # self.default_plot = QPushButton('Get Data Bounds')
+        # self.controls_layout.addWidget(self.default_plot, 2, 0, 1, 1)
+        # self.default_plot.setStyleSheet("background-color: white;")
+        # self.default_plot.clicked.connect(self.getDataBounds)
 
         # here we add buttons to save or reset defaults
         self.save_settings = QPushButton('Save Current Settings')
@@ -153,13 +153,13 @@ class TimePlotGui(QWidget):
 
     def init_plot(self):
         """ """
-        #self.setCentralWidget(self.graphWidget)
-        print(f"initializing plot...")
-        if len(self.potential) != 0:
-            self.graphics_layout.removeWidget(self.graphWidget)
+        print("initializing plot...")
+        # if len(self.potential) != 0:
+        #     self.graphWidget.removeItem(self.graphItem)
+        #     self.graphics_layout.removeWidget(self.graphWidget)
         self.graphWidget = pg.PlotWidget()
         self.graphItem = self.graphWidget.getPlotItem()
-        #self.graphCurveItem = self.graphItem.getPlotItem()
+        self.viewbox = self.graphItem.getViewBox()
         self.graphics_layout.addWidget(self.graphWidget, 0, 3, 5, 5)
         potential_axis = self.potential
         time_axis = self.time_array
@@ -173,26 +173,38 @@ class TimePlotGui(QWidget):
 
     def set_custom_settings(self):
         self.plot_item_settings = PlotItemSettings()
-        # initializes the self.settings variable
-        self.plot_item_settings.__init__()
         # acquires the self.settings varibale from plot_item_settings
-        settings = self.plot_item_settings.settings
-        for key in settings:
-            self.plot_item_settings.__setattr__(key, settings[key])
+        if path.exists(self.plot_item_settings.SETTINGS_FILENAME):
+            settings = self.plot_item_settings.settings
+        else:
+            settings = self.plot_item_settings.DEFAULT_SETTINGS
+        self.graphItem.setLogMode(x = settings['xscalelog'], y = settings['yscalelog'])
+        self.viewbox.setAutoPan(x = settings['autoPan'])
+        self.viewbox.setRange(xRange = settings['xlim'], yRange = settings['ylim'], \
+                                disableAutoRange = settings['disableautorange'])
 
     def save_current_settings(self):
         self.plot_item_settings = PlotItemSettings()
         self.plot_item_settings.save()
+        viewboxstate = self.viewbox.getState()
+        #print(f"{viewboxstate}")
+        self.plot_item_settings.save(xlim = viewboxstate['targetRange'][0],
+                                    ylim = viewboxstate['targetRange'][1],
+                                    disableautorange = not viewboxstate['autoRange'][0],
+                                    autoPan = viewboxstate['autoPan'][0])
+        self.set_custom_settings()
 
+    # rename as "restore_default_settings"
     def default_settings(self):
         self.plot_item_settings = PlotItemSettings()
         if path.exists(self.plot_item_settings.settings_filename):
             os.remove(self.plot_item_settings.settings_filename)
         self.set_custom_settings()
+        #self.init_plot()
 
-    def getDataBounds(self):
-        bounds = self.plotDataItem.dataBounds(0)
-        print(f"{bounds}")
+    # def getDataBounds(self):
+    #     bounds = self.plotDataItem.dataBounds(0)
+    #     print(f"{bounds}")
 
     def _set_central_wid_properties(self):
         """ """
@@ -234,15 +246,12 @@ class TimePlotGui(QWidget):
     def update_ValueLabel(self, val):
         """ """
         self.vl.setValue(val)
+
         self.update_time_array(val)
         potential_axis = self.potential
-
         time_axis = self.time_array
         data = self.data
-        #self.init_plot()
-        #self.graphWidget.plot(time_axis, potential_axis)
         self.plotDataItem.setData(time_axis, potential_axis)
-        #self.graphWidget.setData(1, potential_axis)
 
     def update_time_array(self, val):
         """ """

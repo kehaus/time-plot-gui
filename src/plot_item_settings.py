@@ -13,18 +13,20 @@ import json
 class PlotItemSettings(object):
     """ """
 
-    settings_filename = "custom_settings.json"
+    SETTINGS_FILENAME = "custom_settings.json"
     DEFAULT_SETTINGS = {    # i just used generic values inhere. change if necessary
-        'autoPan':      True,
-        'xscale':      'linear',
-        'yscale':      'linear',
-        'xlim':         [0,1],
-        'ylim':         [0,1],
+        'autoPan':          False,
+        'xscalelog':        False,
+        'yscalelog':        False,
+        'xlim':             [0, 1],
+        'ylim':             [-1,1],
+        'disableautorange': False
         # maybe more settings here
         }
 
     def __init__(self):
         #print(f"initializing settings")
+        self.settings_filename = PlotItemSettings.SETTINGS_FILENAME
         settings = self._checks_for_settings_file()
         if settings != {}:
             self.settings = settings
@@ -58,36 +60,38 @@ class PlotItemSettings(object):
         # code to load settgins from file here
         with open(self.settings_filename) as json_file:
             data = json.load(json_file)
-            custom_settings = data['custom_settings'][-1]
-            # for p in data['custom_settings']:
-            #         print(p['autoPan'])
-            #custom_settings = data['custom_settings'][-1]
-        return custom_settings
+        return data
 
-    def save(self):
+    def update(self, **kwargs):
+        self.settings.update(**kwargs)
+
+    def save(self, **kwargs):
         """save settings to file """
         # code to save settings to file here
-        data = {}
-        data['custom_settings'] = []
+        # data = {}
+        # data['custom_settings'] = []
+        self.update(**kwargs)
         # data['custom_settings'].append({
-        #     'autoPan': 'True',
-        #     'xscale': 'linear',
-        #     'yscale': 'log',
-        #     'xlim': '[-2,10]',
-        #     'ylim': '[0,1]'
+        #     'autoPan': True,
+        #     'xscale': True,
+        #     'yscale': False,
+        #     'xlim': [-2,10],
+        #     'ylim': [-1,1],
+        #     'disableautorange': True
         # })
-        for key in self.settings:
-            print(f"{key}")
-            print(f"{self.__getattr__(key)}")
-            data['custom_settings'].append({
-                key: self.__getattr__(key)
-            })
+        # for key in self.settings:
+        #     print(f"{key}")
+        #     print(f"{self.__getattr__(key)}")
+        #     data['custom_settings'].append({
+        #         key: self.__getattr__(key)
+        #     })
 
         if path.exists(self.settings_filename):
             os.remove(self.settings_filename)
-
+        # find a better letter than w
         with open(self.settings_filename, 'w') as outfile:
-            json.dump(data, outfile)
+            #phaseed out "data"
+            json.dump(self.settings, outfile)
 
         return
 
