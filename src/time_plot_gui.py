@@ -187,8 +187,8 @@ class TimePlotGui(QWidget):
             settings = self.plot_item_settings.DEFAULT_SETTINGS
         self.graphItem.setLogMode(x = settings['xscalelog'], y = settings['yscalelog'])
         self.viewbox.setAutoPan(x = settings['autoPan'])
-        self.viewbox.setRange(xRange = settings['xlim'], yRange = settings['ylim'], \
-                                disableAutoRange = settings['disableautorange'])
+        self.viewbox.setRange(xRange = settings['xlim'], yRange = settings['ylim'])
+        self.viewbox.enableAutoRange(x = settings['xautorange'], y = settings['yautorange'])
 
     def save_current_settings(self):
         self.plot_item_settings = PlotItemSettings()
@@ -197,7 +197,8 @@ class TimePlotGui(QWidget):
         #print(f"{self.graphItem.getScale(x)}")
         self.plot_item_settings.save(xlim = viewboxstate['targetRange'][0],
                                     ylim = viewboxstate['targetRange'][1],
-                                    disableautorange = not viewboxstate['autoRange'][0],
+                                    xautorange = viewboxstate['autoRange'][0],
+                                    yautorange = viewboxstate['autoRange'][1],
                                     autoPan = viewboxstate['autoPan'][0])
         self.set_custom_settings()
 
@@ -227,10 +228,10 @@ class TimePlotGui(QWidget):
         self.menu.addAction(save_settings)
         self.menu.save_settings = save_settings
 
-    def getDataBounds(self):
-        bounds = self.plotDataItem.dataBounds(0)
-        #print(f"{bounds}")
-        print('It worked!')
+    # def getDataBounds(self):
+    #     bounds = self.plotDataItem.dataBounds(0)
+    #     #print(f"{bounds}")
+    #     print('It worked!')
 
     def _set_central_wid_properties(self):
         """ """

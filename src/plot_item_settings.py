@@ -20,12 +20,12 @@ class PlotItemSettings(object):
         'yscalelog':        False,
         'xlim':             [0, 1],
         'ylim':             [-1,1],
-        'disableautorange': False
+        'xautorange':       True,
+        'yautorange':       True
         # maybe more settings here
         }
 
     def __init__(self):
-        #print(f"initializing settings")
         self.settings_filename = PlotItemSettings.SETTINGS_FILENAME
         settings = self._checks_for_settings_file()
         if settings != {}:
@@ -67,30 +67,13 @@ class PlotItemSettings(object):
 
     def save(self, **kwargs):
         """save settings to file """
-        # code to save settings to file here
-        # data = {}
-        # data['custom_settings'] = []
+
         self.update(**kwargs)
-        # data['custom_settings'].append({
-        #     'autoPan': True,
-        #     'xscale': True,
-        #     'yscale': False,
-        #     'xlim': [-2,10],
-        #     'ylim': [-1,1],
-        #     'disableautorange': True
-        # })
-        # for key in self.settings:
-        #     print(f"{key}")
-        #     print(f"{self.__getattr__(key)}")
-        #     data['custom_settings'].append({
-        #         key: self.__getattr__(key)
-        #     })
 
         if path.exists(self.settings_filename):
             os.remove(self.settings_filename)
         # find a better letter than w
         with open(self.settings_filename, 'w') as outfile:
-            #phaseed out "data"
             json.dump(self.settings, outfile)
 
         return
