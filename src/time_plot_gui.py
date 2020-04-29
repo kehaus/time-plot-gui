@@ -28,7 +28,7 @@ import weakref
 from PyQt5.QtWidgets import QApplication, QWidget, QToolTip, QPushButton, QMessageBox, QMainWindow
 from PyQt5.QtWidgets import qApp, QAction, QMenu, QGridLayout, QLabel, QLineEdit
 from PyQt5.QtGui import QIcon, QFont, QCursor
-from PyQt5 import QtCore, Qt
+from PyQt5 import QtCore, Qt, QtGui
 import pyqtgraph as pg
 
 
@@ -124,6 +124,11 @@ class TimePlotGui(QWidget):
         # self.default_plot.setStyleSheet("background-color: white;")
         # self.default_plot.clicked.connect(self.getDataBounds)
 
+        self.restore_saved_settings = QPushButton('Restore Saved Plot Settings')
+        self.controls_layout.addWidget(self.restore_saved_settings, 0, 2, 1, 1)
+        self.restore_saved_settings.setStyleSheet("background-color: white;")
+        self.restore_saved_settings.clicked.connect(self.set_custom_settings)
+
         # here we add buttons to save or reset defaults
         self.save_settings = QPushButton('Save Current Settings')
         self.controls_layout.addWidget(self.save_settings, 4, 0, 1, 1)
@@ -160,6 +165,10 @@ class TimePlotGui(QWidget):
         self.graphWidget = pg.PlotWidget()
         self.graphItem = self.graphWidget.getPlotItem()
         self.viewbox = self.graphItem.getViewBox()
+        # print(f'{self.graphItem.getMenu()}')
+        self.modify_context_menu()
+        # self.editmenu = QPushButton('editmenu')
+        # self.menu.addWidget(self.editmenu)
         self.graphics_layout.addWidget(self.graphWidget, 0, 3, 5, 5)
         potential_axis = self.potential
         time_axis = self.time_array
@@ -169,7 +178,6 @@ class TimePlotGui(QWidget):
         self.graphItem.setLabel('bottom', 'Time (seconds)', color='white', size=30)
         self.set_custom_settings()
         self.plotDataItem = self.graphItem.plot(time_axis, potential_axis)
-
 
     def set_custom_settings(self):
         self.plot_item_settings = PlotItemSettings()
@@ -185,9 +193,9 @@ class TimePlotGui(QWidget):
 
     def save_current_settings(self):
         self.plot_item_settings = PlotItemSettings()
-        self.plot_item_settings.save()
         viewboxstate = self.viewbox.getState()
         #print(f"{viewboxstate}")
+        #print(f"{self.graphItem.getScale(x)}")
         self.plot_item_settings.save(xlim = viewboxstate['targetRange'][0],
                                     ylim = viewboxstate['targetRange'][1],
                                     disableautorange = not viewboxstate['autoRange'][0],
@@ -202,9 +210,17 @@ class TimePlotGui(QWidget):
         self.set_custom_settings()
         #self.init_plot()
 
-    # def getDataBounds(self):
-    #     bounds = self.plotDataItem.dataBounds(0)
-    #     print(f"{bounds}")
+    def modify_context_menu(self):
+        self.menu = self.graphItem.getMenu()
+        green = QtGui.QAction("Turn green", self.menu)
+        green.triggered.connect(self.getDataBounds)
+        self.menu.addAction(green)
+        self.menu.green = green
+
+    def getDataBounds(self):
+        bounds = self.plotDataItem.dataBounds(0)
+        #print(f"{bounds}")
+        print('It worked!')
 
     def _set_central_wid_properties(self):
         """ """
@@ -278,6 +294,7 @@ class TimePlotGui(QWidget):
             QMessageBox.No, QMessageBox.Yes)
 
         if reply == QMessageBox.Yes:
+            self.save_current_settings()
             event.accept()
         else:
             event.ignore()
