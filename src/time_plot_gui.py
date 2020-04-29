@@ -124,21 +124,23 @@ class TimePlotGui(QWidget):
         # self.default_plot.setStyleSheet("background-color: white;")
         # self.default_plot.clicked.connect(self.getDataBounds)
 
-        self.restore_saved_settings = QPushButton('Restore Saved Plot Settings')
-        self.controls_layout.addWidget(self.restore_saved_settings, 0, 2, 1, 1)
-        self.restore_saved_settings.setStyleSheet("background-color: white;")
-        self.restore_saved_settings.clicked.connect(self.set_custom_settings)
-
-        # here we add buttons to save or reset defaults
-        self.save_settings = QPushButton('Save Current Settings')
-        self.controls_layout.addWidget(self.save_settings, 4, 0, 1, 1)
-        self.save_settings.setStyleSheet("background-color: white;")
-        self.save_settings.clicked.connect(self.save_current_settings)
-
-        self.restore_default_settings = QPushButton('Restore Default Plot Settings')
-        self.controls_layout.addWidget(self.restore_default_settings, 5, 0, 1, 1)
-        self.restore_default_settings.setStyleSheet("background-color: white;")
-        self.restore_default_settings.clicked.connect(self.default_settings)
+# Below is the code that creates the buttons for saving/restoring plot settings. I have commented
+# it out because I have put that functionality in the context menu
+        # self.restore_saved_settings = QPushButton('Restore Saved Plot Settings')
+        # self.controls_layout.addWidget(self.restore_saved_settings, 0, 2, 1, 1)
+        # self.restore_saved_settings.setStyleSheet("background-color: white;")
+        # self.restore_saved_settings.clicked.connect(self.set_custom_settings)
+        #
+        # # here we add buttons to save or reset defaults
+        # self.save_settings = QPushButton('Save Current Settings')
+        # self.controls_layout.addWidget(self.save_settings, 4, 0, 1, 1)
+        # self.save_settings.setStyleSheet("background-color: white;")
+        # self.save_settings.clicked.connect(self.save_current_settings)
+        #
+        # self.restore_default_settings = QPushButton('Restore Default Plot Settings')
+        # self.controls_layout.addWidget(self.restore_default_settings, 5, 0, 1, 1)
+        # self.restore_default_settings.setStyleSheet("background-color: white;")
+        # self.restore_default_settings.clicked.connect(self.default_settings)
 
         # =====================================================================
         # control buttons - connections
@@ -165,10 +167,7 @@ class TimePlotGui(QWidget):
         self.graphWidget = pg.PlotWidget()
         self.graphItem = self.graphWidget.getPlotItem()
         self.viewbox = self.graphItem.getViewBox()
-        # print(f'{self.graphItem.getMenu()}')
         self.modify_context_menu()
-        # self.editmenu = QPushButton('editmenu')
-        # self.menu.addWidget(self.editmenu)
         self.graphics_layout.addWidget(self.graphWidget, 0, 3, 5, 5)
         potential_axis = self.potential
         time_axis = self.time_array
@@ -212,10 +211,21 @@ class TimePlotGui(QWidget):
 
     def modify_context_menu(self):
         self.menu = self.graphItem.getMenu()
-        green = QtGui.QAction("Turn green", self.menu)
-        green.triggered.connect(self.getDataBounds)
-        self.menu.addAction(green)
-        self.menu.green = green
+
+        restore_default = QtGui.QAction("Restore Default Plot Settings", self.menu)
+        restore_default.triggered.connect(self.default_settings)
+        self.menu.addAction(restore_default)
+        self.menu.restore_default = restore_default
+
+        restore_saved = QtGui.QAction("Restore Saved Plot Settings", self.menu)
+        restore_saved.triggered.connect(self.set_custom_settings)
+        self.menu.addAction(restore_saved)
+        self.menu.restore_saved = restore_saved
+
+        save_settings = QtGui.QAction("Save Current Plot Settings", self.menu)
+        save_settings.triggered.connect(self.save_current_settings)
+        self.menu.addAction(save_settings)
+        self.menu.save_settings = save_settings
 
     def getDataBounds(self):
         bounds = self.plotDataItem.dataBounds(0)
