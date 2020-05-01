@@ -19,15 +19,15 @@ from os import path
 import ctypes as ct
 import numpy as np
 import time
-from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QMutex, QWaitCondition
+from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QMutex, QWaitCondition, QSize, QPoint
 from unittest.mock import MagicMock
 
 
 import sys
 import weakref
 from PyQt5.QtWidgets import QApplication, QWidget, QToolTip, QPushButton, QMessageBox, QMainWindow
-from PyQt5.QtWidgets import qApp, QAction, QMenu, QGridLayout, QLabel, QLineEdit
-from PyQt5.QtGui import QIcon, QFont, QCursor
+from PyQt5.QtWidgets import qApp, QAction, QMenu, QGridLayout, QLabel, QLineEdit, QSizePolicy
+from PyQt5.QtGui import QIcon, QFont, QCursor, QRegion, QPolygon
 from PyQt5 import QtCore, Qt, QtGui
 import pyqtgraph as pg
 
@@ -97,24 +97,43 @@ class TimePlotGui(QWidget):
         # =====================================================================
         # control panel
         # =====================================================================
-        self.controls_layout = QGridLayout()
+        #self.controls_layout = QGridLayout()
 
 
         # =====================================================================
         # control buttons - layout
         # =====================================================================
-        self.startBtn = QPushButton('START')
-        self.controls_layout.addWidget(self.startBtn, 0, 0, 1, 1)
-        self.startBtn.setStyleSheet("background-color: white;")
-        #self.startBtn.setStyleSheet("color: yellow;")
-        self.stopBtn = QPushButton('STOP')
-        self.controls_layout.addWidget(self.stopBtn, 1, 0, 1, 1)
-        self.stopBtn.setStyleSheet("background-color: white;")
+        # self.startBtn = QPushButton('START')
+        # self.controls_layout.addWidget(self.startBtn, 0, 0, 1, 1)
+        # self.startBtn.setStyleSheet("background-color: white;")
+        #
+        # self.stopBtn = QPushButton('STOP')
+        # self.controls_layout.addWidget(self.stopBtn, 1, 0, 1, 1)
+        # self.stopBtn.setStyleSheet("background-color: white;")
+        #
+        # self.controls_layout.addWidget(self.vl, 0, 1, 1, 1)
+        # #self.comboBox = QComboBox(self)
+        # #comboBox.addItem()
+        # #self.controls_layout.addWidget(self.comboBox, 0, 1, 1, 1)
 
-        self.controls_layout.addWidget(self.vl, 0, 1, 1, 1)
-        #self.comboBox = QComboBox(self)
-        #comboBox.addItem()
-        #self.controls_layout.addWidget(self.comboBox, 0, 1, 1, 1)
+        self.playBtn = QPushButton()
+        self.playBtn.setFixedSize(QSize(30, 30))
+        self.playBtn.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed))
+        points = [QPoint(0, 0), QPoint(0, self.playBtn.height()), QPoint(self.playBtn.width(), self.playBtn.height()/2)]
+        self.playBtn.setMask(QRegion(QPolygon(points)))
+        self.graphics_layout.addWidget(self.playBtn, 1, 0)
+        self.playBtn.setStyleSheet("background-color: green;")
+
+        self.squarestopBtn = QPushButton()
+        self.squarestopBtn.setFixedSize(QSize(30, 30))
+        self.squarestopBtn.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed))
+        points = [QPoint(0, 0), \
+                QPoint(0, self.squarestopBtn.height()), \
+                QPoint(self.squarestopBtn.width(), self.squarestopBtn.height()), \
+                QPoint(0, self.squarestopBtn.height())]
+        self.squarestopBtn.setMask(QRegion(QPolygon(points)))
+        self.graphics_layout.addWidget(self.squarestopBtn, 3, 0)
+        self.squarestopBtn.setStyleSheet("background-color: red;")
 
         self.init_plot()
 
@@ -145,14 +164,17 @@ class TimePlotGui(QWidget):
         # =====================================================================
         # control buttons - connections
         # =====================================================================
-        self.startBtn.clicked.connect(self.start_thread)
-        self.stopBtn.clicked.connect(self.stop_thread)
+        # self.startBtn.clicked.connect(self.start_thread)
+        # self.stopBtn.clicked.connect(self.stop_thread)
+
+        self.playBtn.clicked.connect(self.start_thread)
+        self.squarestopBtn.clicked.connect(self.stop_thread)
 
        # ============================================================
         # put everything together
         # ============================================================
-        self.wid_layout.addItem(self.graphics_layout, 0, 4, 6, 6)
-        self.wid_layout.addItem(self.controls_layout, 0, 0, 2, 2)
+        self.wid_layout.addItem(self.graphics_layout, 0, 0, 6, 6)
+        #self.wid_layout.addItem(self.controls_layout, 0, 0, 2, 2)
         # self.wid_layout.setColumnStretch(0, 10)
         # self.wid_layout.setColumnStretch(8, 2)
 
@@ -175,8 +197,8 @@ class TimePlotGui(QWidget):
         #self.graphWidget.showAxis('top', False)
         self.graphItem.setLabel('left', 'Potential (Volts)', color='white', size=30)
         self.graphItem.setLabel('bottom', 'Time (seconds)', color='white', size=30)
-        self.set_custom_settings()
         self.plotDataItem = self.graphItem.plot(time_axis, potential_axis)
+        self.set_custom_settings()
 
     def set_custom_settings(self):
         self.plot_item_settings = PlotItemSettings()
@@ -188,7 +210,7 @@ class TimePlotGui(QWidget):
         self.graphItem.setLogMode(x = settings['xscalelog'], y = settings['yscalelog'])
         self.graphItem.showGrid(x = settings['xgridlines'], y = settings['ygridlines'], \
                                 alpha = settings['gridopacity'])
-        #self.graphItem.setAlpha(alpha = settings['plotalpha'])
+        self.plotDataItem.setAlpha(alpha = settings['plotalpha'][0], auto = settings['plotalpha'][1])
         self.viewbox.setAutoPan(x = settings['autoPan'])
         self.viewbox.setRange(xRange = settings['xlim'], yRange = settings['ylim'])
         self.viewbox.enableAutoRange(x = settings['xautorange'], y = settings['yautorange'])
@@ -197,10 +219,6 @@ class TimePlotGui(QWidget):
         self.plot_item_settings = PlotItemSettings()
         viewboxstate = self.viewbox.getState()
         #print(f"{viewboxstate}")
-        #print(f"{self.graphItem.getScale(x)}")
-        # x = self.graphItem.ctrl.xGridCheck.isChecked()
-        # y = self.graphItem.ctrl.yGridCheck.isChecked()
-        # print(f"{x} \n {y}")
         self.plot_item_settings.save(autoPan = viewboxstate['autoPan'][0],
                                     xscalelog = self.graphItem.ctrl.logXCheck.isChecked(),
                                     yscalelog = self.graphItem.ctrl.logYCheck.isChecked(),
@@ -209,7 +227,9 @@ class TimePlotGui(QWidget):
                                     xautorange = viewboxstate['autoRange'][0],
                                     yautorange = viewboxstate['autoRange'][1],
                                     xgridlines = self.graphItem.ctrl.xGridCheck.isChecked(),
-                                    ygridlines = self.graphItem.ctrl.yGridCheck.isChecked()
+                                    ygridlines = self.graphItem.ctrl.yGridCheck.isChecked(),
+                                    gridopacity = self.graphItem.ctrl.gridAlphaSlider.value()/255,
+                                    plotalpha = self.graphItem.alphaState()
                                     )
         self.set_custom_settings()
 

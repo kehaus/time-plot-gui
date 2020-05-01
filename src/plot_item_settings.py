@@ -25,7 +25,8 @@ class PlotItemSettings(object):
         'xgridlines':       False,
         'ygridlines':       False,
         'gridopacity':      1,
-        'plotalpha':        0,
+        'plotalpha':        [1, False],
+        # in plotalpha, the first item is the alpha and the second is whether the value is autodetermined
         # maybe more settings here
         }
 
