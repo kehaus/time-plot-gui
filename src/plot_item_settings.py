@@ -21,7 +21,11 @@ class PlotItemSettings(object):
         'xlim':             [0, 1],
         'ylim':             [-1,1],
         'xautorange':       True,
-        'yautorange':       True
+        'yautorange':       True,
+        'xgridlines':       False,
+        'ygridlines':       False,
+        'gridopacity':      1,
+        'plotalpha':        0,
         # maybe more settings here
         }
 

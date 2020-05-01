@@ -186,6 +186,9 @@ class TimePlotGui(QWidget):
         else:
             settings = self.plot_item_settings.DEFAULT_SETTINGS
         self.graphItem.setLogMode(x = settings['xscalelog'], y = settings['yscalelog'])
+        self.graphItem.showGrid(x = settings['xgridlines'], y = settings['ygridlines'], \
+                                alpha = settings['gridopacity'])
+        #self.graphItem.setAlpha(alpha = settings['plotalpha'])
         self.viewbox.setAutoPan(x = settings['autoPan'])
         self.viewbox.setRange(xRange = settings['xlim'], yRange = settings['ylim'])
         self.viewbox.enableAutoRange(x = settings['xautorange'], y = settings['yautorange'])
@@ -195,11 +198,19 @@ class TimePlotGui(QWidget):
         viewboxstate = self.viewbox.getState()
         #print(f"{viewboxstate}")
         #print(f"{self.graphItem.getScale(x)}")
-        self.plot_item_settings.save(xlim = viewboxstate['targetRange'][0],
+        # x = self.graphItem.ctrl.xGridCheck.isChecked()
+        # y = self.graphItem.ctrl.yGridCheck.isChecked()
+        # print(f"{x} \n {y}")
+        self.plot_item_settings.save(autoPan = viewboxstate['autoPan'][0],
+                                    xscalelog = self.graphItem.ctrl.logXCheck.isChecked(),
+                                    yscalelog = self.graphItem.ctrl.logYCheck.isChecked(),
+                                    xlim = viewboxstate['targetRange'][0],
                                     ylim = viewboxstate['targetRange'][1],
                                     xautorange = viewboxstate['autoRange'][0],
                                     yautorange = viewboxstate['autoRange'][1],
-                                    autoPan = viewboxstate['autoPan'][0])
+                                    xgridlines = self.graphItem.ctrl.xGridCheck.isChecked(),
+                                    ygridlines = self.graphItem.ctrl.yGridCheck.isChecked()
+                                    )
         self.set_custom_settings()
 
     # rename as "restore_default_settings"
