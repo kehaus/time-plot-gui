@@ -80,7 +80,6 @@ class TimePlotGui(QWidget):
 
         # grid layout to put all widgets
         self.wid_layout = QGridLayout()
-
         # =====================================================================
         # control panel
         # =====================================================================
@@ -92,7 +91,7 @@ class TimePlotGui(QWidget):
         else:
             self.vl.setValue(self.potential[-1])
         self.vl.setFixedSize(QSize(40, 30))
-        self.graphics_layout.addWidget(self.vl, 0, 3)
+        #self.graphics_layout.addWidget(self.vl, 0, 3)
 
         # =====================================================================
         # control panel
@@ -121,7 +120,7 @@ class TimePlotGui(QWidget):
         self.playBtn.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed))
         points = [QPoint(0, 0), QPoint(0, self.playBtn.height()), QPoint(self.playBtn.width(), self.playBtn.height()/2)]
         self.playBtn.setMask(QRegion(QPolygon(points)))
-        self.graphics_layout.addWidget(self.playBtn, 0, 0)
+        #self.graphics_layout.addWidget(self.playBtn, 0, 0)
         self.playBtn.setStyleSheet("background-color: green;")
 
         self.squarestopBtn = QPushButton()
@@ -132,15 +131,22 @@ class TimePlotGui(QWidget):
                 QPoint(self.squarestopBtn.width(), self.squarestopBtn.height()), \
                 QPoint(0, self.squarestopBtn.height())]
         self.squarestopBtn.setMask(QRegion(QPolygon(points)))
-        self.graphics_layout.addWidget(self.squarestopBtn, 0, 1)
+    #    self.graphics_layout.addWidget(self.squarestopBtn, 0, 1)
         self.squarestopBtn.setStyleSheet("background-color: red;")
 
         self.blankWidget = QWidget()
         self.blankWidget.setFixedSize(QSize(500, 30))
         self.graphics_layout.addWidget(self.blankWidget, 0, 2)
 
+        self.blankWidget2 = QPushButton()
+        self.blankWidget2.setFixedSize(QSize(30, 30))
+        self.blankWidget2.setStyleSheet("background-color: green;")
+
 
         self.init_plot()
+        self.graphics_layout.addWidget(self.playBtn, 0, 0)
+        self.graphics_layout.addWidget(self.squarestopBtn, 0, 1)
+        self.graphics_layout.addWidget(self.vl, 0, 3)
 
         # # here we add a button to get the bounds
         # self.default_plot = QPushButton('Get Data Bounds')
@@ -195,9 +201,8 @@ class TimePlotGui(QWidget):
         self.graphItem = self.graphWidget.getPlotItem()
         self.viewbox = self.graphItem.getViewBox()
         self.modify_context_menu()
-        #self.graphWidget.setFixedSize(QSize(500, 30))
-        self.graphics_layout.addWidget(self.graphWidget, 1, 0, 5, 4)
-        #self.graphics_layout.addWidget(self.blankBtn2, 2, 2)
+        self.graphics_layout.addWidget(self.graphWidget, 0, 0, 5, 4)
+        #self.graphics_layout.addWidget(self.blankWidget2, 2, 2)
         potential_axis = self.potential
         time_axis = self.time_array
         self.graphItem.setTitle('Potential over Time', **{'color': '#FFF', 'size': '20pt'})
