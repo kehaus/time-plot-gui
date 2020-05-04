@@ -124,12 +124,12 @@ class TimePlotGui(QWidget):
         self.playBtn.setStyleSheet("background-color: green;")
 
         self.squarestopBtn = QPushButton()
-        self.squarestopBtn.setFixedSize(QSize(30, 30))
+        self.squarestopBtn.setFixedSize(QSize(110, 30))
         self.squarestopBtn.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed))
-        points = [QPoint(0, 0), \
-                QPoint(0, self.squarestopBtn.height()), \
+        points = [QPoint((self.squarestopBtn.width()+50)/2, 0), \
+                QPoint((self.squarestopBtn.width()+50)/2, self.squarestopBtn.height()), \
                 QPoint(self.squarestopBtn.width(), self.squarestopBtn.height()), \
-                QPoint(0, self.squarestopBtn.height())]
+                QPoint(self.squarestopBtn.width(), 0)]
         self.squarestopBtn.setMask(QRegion(QPolygon(points)))
     #    self.graphics_layout.addWidget(self.squarestopBtn, 0, 1)
         self.squarestopBtn.setStyleSheet("background-color: red;")
@@ -138,14 +138,15 @@ class TimePlotGui(QWidget):
         self.blankWidget.setFixedSize(QSize(500, 30))
         self.graphics_layout.addWidget(self.blankWidget, 0, 2)
 
-        self.blankWidget2 = QPushButton()
+        self.blankWidget2 = QWidget()
         self.blankWidget2.setFixedSize(QSize(30, 30))
-        self.blankWidget2.setStyleSheet("background-color: green;")
+        self.graphics_layout.addWidget(self.blankWidget2, 0, 1)
 
 
         self.init_plot()
+        self.graphics_layout.addWidget(self.squarestopBtn, 0, 0)
         self.graphics_layout.addWidget(self.playBtn, 0, 0)
-        self.graphics_layout.addWidget(self.squarestopBtn, 0, 1)
+        self.graphics_layout.addWidget(self.blankWidget2, 0, 1)
         self.graphics_layout.addWidget(self.vl, 0, 3)
 
         # # here we add a button to get the bounds
