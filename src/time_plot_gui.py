@@ -135,9 +135,10 @@ class TimePlotGui(QWidget):
         self.graphics_layout.addWidget(self.squarestopBtn, 0, 1)
         self.squarestopBtn.setStyleSheet("background-color: red;")
 
-        self.blankBtn = QPushButton()
-        self.blankBtn.setFixedSize(QSize(500, 30))
-        self.graphics_layout.addWidget(self.blankBtn, 0, 2)
+        self.blankWidget = QWidget()
+        self.blankWidget.setFixedSize(QSize(500, 30))
+        self.graphics_layout.addWidget(self.blankWidget, 0, 2)
+
 
         self.init_plot()
 
@@ -196,6 +197,7 @@ class TimePlotGui(QWidget):
         self.modify_context_menu()
         #self.graphWidget.setFixedSize(QSize(500, 30))
         self.graphics_layout.addWidget(self.graphWidget, 1, 0, 5, 4)
+        #self.graphics_layout.addWidget(self.blankBtn2, 2, 2)
         potential_axis = self.potential
         time_axis = self.time_array
         self.graphItem.setTitle('Potential over Time', **{'color': '#FFF', 'size': '20pt'})
