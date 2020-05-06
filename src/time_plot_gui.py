@@ -355,6 +355,41 @@ class TimePlotGui(QWidget):
             event.ignore()
 
 
+
+# ===========================================================================
+# helper classes
+# ===========================================================================
+
+class PlotDataItemV2(pg.PlotDataItem):
+    """Child class customizes pyqtgraph.PlotDataItem 
+    
+    This child class is designed to act as replacement for a PlotDataItem class
+    and should therefore be able to neatlessly interface with the other 
+    pyqtgraph plot objects (e.g. ViewBox, PlotItem, PlotWidget)
+    
+    This class overwrites:
+        * _fourierTransform-function: fixes bug which caused indexing error
+        
+        
+    
+    """
+         
+    def _fourierTransform(self, x, y):
+        ## Perform fourier transform. If x values are not sampled uniformly,
+        ## then use np.interp to resample before taking fft.
+        dx = np.diff(x)
+        uniform = not np.any(np.abs(dx-dx[0]) > (abs(dx[0]) / 1000.))
+        if not uniform:
+            x2 = np.linspace(x[0], x[-1], len(x))
+            y = np.interp(x2, x, y)
+            x = x2
+        f = np.fft.fft(y) / len(y)
+        y = abs(f[1:int(len(f)/2)])
+        dt = x[-1] - x[0]
+        x = np.linspace(0, 0.5*len(x)/dt, len(y))
+        return x, y
+    
+
 # ===========================================================================
 #
 # ===========================================================================
