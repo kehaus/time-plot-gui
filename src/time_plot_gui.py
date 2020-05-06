@@ -285,6 +285,32 @@ class TimePlotGui(QWidget):
         self.central_wid.setPalette(p)
 
 
+    def _init_multi_worker_thread(self, devicewrapper_lst):
+        """ 
+        
+        * create plotData_lst
+        * update_ValueLabel
+        """
+        self.mutex_lst = [QMutex() for dw in devicewrapper_lst]
+        self.cond_lst = QWaitCondition()
+        
+        
+        self.worker_lst = []
+        for idx, devicewrapper in enumerate(devicewrapper_lst):
+            worker = TimePlotWorker(
+                devicewrapper, 
+                self.mutex_lst[idx], 
+                self.cond_lt[idx],
+                id_nr=idx
+            )
+        
+            worker.reading.connect(self.newReading)
+            self.start_signal.connect(worker.start)
+            self.stop_signal.connect(worker.stop)
+            
+            self.worker_lst.append(worker)
+        
+
     def _init_worker_thread(self, devicewrapper):
         """ """
 
@@ -314,9 +340,9 @@ class TimePlotGui(QWidget):
         self.stop_signal.emit()
 
 
-    def update_ValueLabel(self, val):
+    def update_ValueLabel(self, id_nr, val):
         """ """
-        self.vl.setValue(val)
+#        self.vl.setValue(val)
 
         self.update_time_array(val)
         potential_axis = self.potential
@@ -334,12 +360,12 @@ class TimePlotGui(QWidget):
 
 
     @QtCore.pyqtSlot(float)
-    def newReading(self, val):
+    def newReading(self, id_nr, val):
         """ """
         pg.QtGui.QApplication.processEvents()
-        self.update_ValueLabel(val)
+        self.update_ValueLabel(id_nr, val)
         time.sleep(0.1)         # necessary to avoid worker to freeze
-        self.cond.wakeAll()     # wake worker thread up
+        self.cond_lst[id_nr].wakeAll()     # wake worker thread up
         return
 
 
@@ -413,6 +439,7 @@ def main(devicewrapper):
 
 if __name__ == "__main__":
     dd = DummyDevice()
+    dd.frequency = 1
     dw = DeviceWrapper(dd)
 
     main(dw)
