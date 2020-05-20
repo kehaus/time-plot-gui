@@ -14,6 +14,7 @@ class PlotItemSettings(object):
     """ """
 
     SETTINGS_FILENAME = "custom_settings.json"
+    STORED_DATA_FILENAME = "stored_data.json"
     DEFAULT_SETTINGS = {    # i just used generic values inhere. change if necessary
         'autoPan':          False,
         'xscalelog':        False,
@@ -32,6 +33,7 @@ class PlotItemSettings(object):
 
     def __init__(self):
         self.settings_filename = PlotItemSettings.SETTINGS_FILENAME
+        self.stored_data = PlotItemSettings.STORED_DATA_FILENAME
         settings = self._checks_for_settings_file()
         if settings != {}:
             self.settings = settings
@@ -82,6 +84,24 @@ class PlotItemSettings(object):
             json.dump(self.settings, outfile)
 
         return
+
+    def store(self, x, y):
+        """store collected data to json file """
+
+        if path.exists(self.stored_data):
+            os.remove(self.stored_data)
+        # find a better letter than w
+        with open(self.stored_data, 'w') as outfile:
+            json.dump({'x': x, 'y': y}, outfile)
+
+        return
+
+    def load_data(self):
+        """load stored data from json file"""
+        # code to load settgins from file here
+        with open(self.stored_data) as json_file:
+            data = json.load(json_file)
+        return data['x'], data['y']
 
     # ===
     # define setter and getter for all settings

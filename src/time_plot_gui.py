@@ -61,9 +61,15 @@ class TimePlotGui(QWidget):
         # self.absolute_time = []
         # self.time_array = []
         # self.potential = []
+        self.plot_item_settings = PlotItemSettings()
+        if path.exists(self.plot_item_settings.STORED_DATA_FILENAME):
+            self.time_array, self.potential = self.plot_item_settings.load_data()
+            self.time_array = np.array(self.time_array)
+            self.potential = np.array(self.potential)
+        else:
+            self.time_array = np.array([])
+            self.potential = np.array([])
         self.absolute_time = np.array([])
-        self.time_array = np.array([])
-        self.potential = np.array([])
         self.data = np.array([])
         self._init_ui(window)
         self._init_worker_thread(devicewrapper)
@@ -214,7 +220,6 @@ class TimePlotGui(QWidget):
         self.set_custom_settings()
 
     def set_custom_settings(self):
-        self.plot_item_settings = PlotItemSettings()
         # acquires the self.settings varibale from plot_item_settings
         if path.exists(self.plot_item_settings.SETTINGS_FILENAME):
             settings = self.plot_item_settings.settings
@@ -272,6 +277,11 @@ class TimePlotGui(QWidget):
         self.menu.addAction(save_settings)
         self.menu.save_settings = save_settings
 
+    def store_current_data(self, x, y):
+        x_data = x.tolist()
+        y_data = y.tolist()
+        self.plot_item_settings.store(x_data, y_data)
+
     # def getDataBounds(self):
     #     bounds = self.plotDataItem.dataBounds(0)
     #     #print(f"{bounds}")
@@ -308,6 +318,8 @@ class TimePlotGui(QWidget):
 
 
     def start_thread(self):
+        self.time_array = np.array([])
+        self.potential = np.array([])
         self.start_signal.emit()
 
     def stop_thread(self):
@@ -350,6 +362,7 @@ class TimePlotGui(QWidget):
 
         if reply == QMessageBox.Yes:
             self.save_current_settings()
+            self.store_current_data(self.time_array, self.potential)
             event.accept()
         else:
             event.ignore()
@@ -361,19 +374,19 @@ class TimePlotGui(QWidget):
 # ===========================================================================
 
 class PlotDataItemV2(pg.PlotDataItem):
-    """Child class customizes pyqtgraph.PlotDataItem 
-    
+    """Child class customizes pyqtgraph.PlotDataItem
+
     This child class is designed to act as replacement for a PlotDataItem class
-    and should therefore be able to neatlessly interface with the other 
+    and should therefore be able to neatlessly interface with the other
     pyqtgraph plot objects (e.g. ViewBox, PlotItem, PlotWidget)
-    
+
     This class overwrites:
         * _fourierTransform-function: fixes bug which caused indexing error
-        
-        
-    
+
+
+
     """
-         
+
     def _fourierTransform(self, x, y):
         ## Perform fourier transform. If x values are not sampled uniformly,
         ## then use np.interp to resample before taking fft.
@@ -388,7 +401,7 @@ class PlotDataItemV2(pg.PlotDataItem):
         dt = x[-1] - x[0]
         x = np.linspace(0, 0.5*len(x)/dt, len(y))
         return x, y
-    
+
 
 # ===========================================================================
 #
