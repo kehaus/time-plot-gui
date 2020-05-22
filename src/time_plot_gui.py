@@ -33,7 +33,7 @@ import pyqtgraph as pg
 
 
 from time_plot_worker import TimePlotWorker
-from plot_item_settings import PlotItemSettings
+from plot_item_settings import PlotItemSettings, DataRecall
 
 from util.workerthread import WorkerThread,WorkerTaskBase
 from util.devicewrapper import DeviceWrapper, DummyDevice
@@ -61,15 +61,14 @@ class TimePlotGui(QWidget):
         # self.absolute_time = []
         # self.time_array = []
         # self.potential = []
+        self.data_recall = DataRecall()
         self.plot_item_settings = PlotItemSettings()
-        if path.exists(self.plot_item_settings.STORED_DATA_FILENAME):
-            self.time_array, self.potential = self.plot_item_settings.load_data()
-            self.time_array = np.array(self.time_array)
-            self.potential = np.array(self.potential)
+        if path.exists(self.data_recall.STORED_DATA_FILENAME):
+            self.set_data()
         else:
             self.time_array = np.array([])
             self.potential = np.array([])
-        self.absolute_time = np.array([])
+            self.absolute_time = np.array([])
         self.data = np.array([])
         self._init_ui(window)
         self._init_worker_thread(devicewrapper)
@@ -222,16 +221,18 @@ class TimePlotGui(QWidget):
     def set_custom_settings(self):
         # acquires the self.settings varibale from plot_item_settings
         if path.exists(self.plot_item_settings.SETTINGS_FILENAME):
-            settings = self.plot_item_settings.settings
+            self.settings = self.plot_item_settings.settings
         else:
-            settings = self.plot_item_settings.DEFAULT_SETTINGS
-        self.graphItem.setLogMode(x = settings['xscalelog'], y = settings['yscalelog'])
-        self.graphItem.showGrid(x = settings['xgridlines'], y = settings['ygridlines'], \
-                                alpha = settings['gridopacity'])
-        self.plotDataItem.setAlpha(alpha = settings['plotalpha'][0], auto = settings['plotalpha'][1])
-        self.viewbox.setAutoPan(x = settings['autoPan'])
-        self.viewbox.setRange(xRange = settings['xlim'], yRange = settings['ylim'])
-        self.viewbox.enableAutoRange(x = settings['xautorange'], y = settings['yautorange'])
+            self.settings = self.plot_item_settings.DEFAULT_SETTINGS
+        self.graphItem.setLogMode(x = self.settings['xscalelog'], y = self.settings['yscalelog'])
+        self.graphItem.showGrid(x = self.settings['xgridlines'], y = self.settings['ygridlines'], \
+                                alpha = self.settings['gridopacity'])
+        self.plotDataItem.setAlpha(alpha = self.settings['plotalpha'][0], auto = self.settings['plotalpha'][1])
+        self.viewbox.setAutoPan(x = self.settings['autoPan'])
+        self.viewbox.setRange(xRange = self.settings['xlim'], yRange = self.settings['ylim'])
+        self.viewbox.enableAutoRange(x = self.settings['xautorange'], y = self.settings['yautorange'])
+        self.data_options.automatic_clear_checkbox.setChecked(self.settings['auto_clear_data'])
+        self.viewbox.setMouseEnabled(x = self.settings['x_zoom'], y = self.settings['y_zoom'])
 
     def save_current_settings(self):
         self.plot_item_settings = PlotItemSettings()
@@ -247,7 +248,10 @@ class TimePlotGui(QWidget):
                                     xgridlines = self.graphItem.ctrl.xGridCheck.isChecked(),
                                     ygridlines = self.graphItem.ctrl.yGridCheck.isChecked(),
                                     gridopacity = self.graphItem.ctrl.gridAlphaSlider.value()/255,
-                                    plotalpha = self.graphItem.alphaState()
+                                    plotalpha = self.graphItem.alphaState(),
+                                    x_zoom = self.zoom_settings.x_zoom_checkbox.isChecked(),
+                                    y_zoom = self.zoom_settings.y_zoom_checkbox.isChecked(),
+                                    auto_clear_data = self.data_options.automatic_clear_checkbox.isChecked()
                                     )
         self.set_custom_settings()
 
@@ -262,30 +266,79 @@ class TimePlotGui(QWidget):
     def modify_context_menu(self):
         self.menu = self.graphItem.getMenu()
 
-        restore_default = QtGui.QAction("Restore Default Plot Settings", self.menu)
+        self.visualization_settings = self.menu.addMenu("Visualization Settings")
+
+        restore_default = QtGui.QAction("Restore Default Plot Settings", self.visualization_settings)
         restore_default.triggered.connect(self.default_settings)
-        self.menu.addAction(restore_default)
-        self.menu.restore_default = restore_default
+        self.visualization_settings.addAction(restore_default)
+        self.visualization_settings.restore_default = restore_default
 
-        restore_saved = QtGui.QAction("Restore Saved Plot Settings", self.menu)
+        restore_saved = QtGui.QAction("Restore Saved Plot Settings", self.visualization_settings)
         restore_saved.triggered.connect(self.set_custom_settings)
-        self.menu.addAction(restore_saved)
-        self.menu.restore_saved = restore_saved
+        self.visualization_settings.addAction(restore_saved)
+        self.visualization_settings.restore_saved = restore_saved
 
-        save_settings = QtGui.QAction("Save Current Plot Settings", self.menu)
+        save_settings = QtGui.QAction("Save Current Plot Settings", self.visualization_settings)
         save_settings.triggered.connect(self.save_current_settings)
-        self.menu.addAction(save_settings)
-        self.menu.save_settings = save_settings
+        self.visualization_settings.addAction(save_settings)
+        self.visualization_settings.save_settings = save_settings
 
-    def store_current_data(self, x, y):
-        x_data = x.tolist()
+        self.data_options = self.menu.addMenu("Data Options")
+
+        clear_data = QtGui.QAction("Clear Data", self.data_options)
+        clear_data.triggered.connect(self.clear_current_data)
+        self.data_options.addAction(clear_data)
+        self.data_options.clear_data = clear_data
+
+        automatic_clear = QtGui.QWidgetAction(self.data_options)
+        automatic_clear_checkbox = QtGui.QCheckBox()
+        automatic_clear.setDefaultWidget(automatic_clear_checkbox)
+        self.data_options.addAction(automatic_clear)
+        self.data_options.automatic_clear = automatic_clear
+        self.data_options.automatic_clear_checkbox = automatic_clear_checkbox
+
+        self.zoom_settings = self.menu.addMenu("Zoom Settings")
+
+        x_zoom = QtGui.QWidgetAction(self.zoom_settings)
+        x_zoom_checkbox = QtGui.QCheckBox()
+        x_zoom.setDefaultWidget(x_zoom_checkbox)
+        x_zoom_checkbox.stateChanged.connect(self.update_zoom_settings)
+        self.zoom_settings.addAction(x_zoom)
+        self.zoom_settings.x_zoom = x_zoom
+        self.zoom_settings.x_zoom_checkbox = x_zoom_checkbox
+
+        y_zoom = QtGui.QWidgetAction(self.zoom_settings)
+        y_zoom_checkbox = QtGui.QCheckBox()
+        y_zoom.setDefaultWidget(y_zoom_checkbox)
+        self.zoom_settings.addAction(y_zoom)
+        self.zoom_settings.y_zoom = y_zoom
+        self.zoom_settings.y_zoom_checkbox = y_zoom_checkbox
+
+
+    def store_current_data(self, time_axis, absolute_time, y):
+        time_data = time_axis.tolist()
+        absolute_time_data = absolute_time.tolist()
         y_data = y.tolist()
-        self.plot_item_settings.store(x_data, y_data)
+        # for argument in **kwargs:
+        #     argument.tolist()
+        self.data_recall.store(time_data, absolute_time_data, y_data)
 
-    # def getDataBounds(self):
-    #     bounds = self.plotDataItem.dataBounds(0)
-    #     #print(f"{bounds}")
-    #     print('It worked!')
+    def clear_current_data(self):
+        self.time_array = np.array([])
+        self.potential = np.array([])
+        self.absolute_time = np.array([])
+        self.data_recall.clear_data()
+        self.plotDataItem.setData(self.time_array, self.potential)
+        self.set_data()
+
+    def set_data(self):
+        self.time_array, self.absolute_time, self.potential = self.data_recall.load_data()
+
+    def update_zoom_settings(self):
+        x_zoom = self.zoom_settings.x_zoom_checkbox.isChecked()
+        y_zoom = self.zoom_settings.y_zoom_checkbox.isChecked()
+        self.viewbox.setMouseEnabled(x = self.settings['x_zoom'], y = self.settings['y_zoom'])
+
 
     def _set_central_wid_properties(self):
         """ """
@@ -318,8 +371,10 @@ class TimePlotGui(QWidget):
 
 
     def start_thread(self):
-        self.time_array = np.array([])
-        self.potential = np.array([])
+        # self.time_array = np.array([])
+        # self.potential = np.array([])
+        if self.data_options.automatic_clear_checkbox.isChecked():
+            self.clear_current_data()
         self.start_signal.emit()
 
     def stop_thread(self):
@@ -362,7 +417,7 @@ class TimePlotGui(QWidget):
 
         if reply == QMessageBox.Yes:
             self.save_current_settings()
-            self.store_current_data(self.time_array, self.potential)
+            self.store_current_data(self.time_array, self.absolute_time, self.potential)
             event.accept()
         else:
             event.ignore()
