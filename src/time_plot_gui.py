@@ -63,22 +63,11 @@ class TimePlotGui(QWidget):
     def __init__(self, parent=None, window=None, devicewrapper_lst=None):
         """ """
         super(TimePlotGui, self).__init__(parent=parent)
-        # self.absolute_time = []
-        # self.time_array = []
-        # self.potential = []
-        # self.absolute_time = np.array([])
-        # self.time_array = np.array([])
-        # self.potential = np.array([])
-        # self.data = np.array([])
         
         if type(devicewrapper_lst) == DeviceWrapper:
             devicewrapper_lst = [devicewrapper_lst]
         
-        # devicewrapper_lst = [devicewrapper]
-        
         self._init_ui(window, devicewrapper_lst)
-        
-        # self._init_worker_thread(devicewrapper)
         self._init_multi_worker_thread(devicewrapper_lst)
 
 
@@ -97,23 +86,6 @@ class TimePlotGui(QWidget):
         # control panel
         # =====================================================================
         self.graphics_layout = QGridLayout()
-        self.vl = pg.ValueLabel(formatStr='{avgValue:0.2f} {suffix}')
-        self.vl.setStyleSheet("color: white;")
-        
-        self.vl.setValue(-1)
-        # if len(self.potential) == 0:
-        #     self.vl.setValue(-1)
-        # else:
-        #     self.vl.setValue(self.potential[-1])
-            
-        self.vl.setFixedSize(QSize(40, 30))
-        #self.graphics_layout.addWidget(self.vl, 0, 3)
-
-        # =====================================================================
-        # control panel
-        # =====================================================================
-        #self.controls_layout = QGridLayout()
-
 
         # =====================================================================
         # control buttons - layout
@@ -163,7 +135,6 @@ class TimePlotGui(QWidget):
         self.graphics_layout.addWidget(self.squarestopBtn, 0, 0)
         self.graphics_layout.addWidget(self.playBtn, 0, 0)
         self.graphics_layout.addWidget(self.blankWidget2, 0, 1)
-        self.graphics_layout.addWidget(self.vl, 0, 3)
 
         # # here we add a button to get the bounds
         # self.default_plot = QPushButton('Get Data Bounds')
@@ -233,11 +204,6 @@ class TimePlotGui(QWidget):
                 {id_nr: data_item}
             )
             self.graphItem.addItem(data_item.get_plot_data_item())
-            print('   ***was here***')
-        
-        # self.data_item = TimePlotDataItem(absolute_time=self.t0)
-        # self.data_table.update({0:self.data_item})
-        # self.graphItem.addItem(self.data_table[0].get_plot_data_item())
         
         
         self.set_custom_settings()
@@ -260,18 +226,19 @@ class TimePlotGui(QWidget):
     def save_current_settings(self):
         self.plot_item_settings = PlotItemSettings()
         viewboxstate = self.viewbox.getState()
-        self.plot_item_settings.save(autoPan = viewboxstate['autoPan'][0],
-                                    xscalelog = self.graphItem.ctrl.logXCheck.isChecked(),
-                                    yscalelog = self.graphItem.ctrl.logYCheck.isChecked(),
-                                    xlim = viewboxstate['targetRange'][0],
-                                    ylim = viewboxstate['targetRange'][1],
-                                    xautorange = viewboxstate['autoRange'][0],
-                                    yautorange = viewboxstate['autoRange'][1],
-                                    xgridlines = self.graphItem.ctrl.xGridCheck.isChecked(),
-                                    ygridlines = self.graphItem.ctrl.yGridCheck.isChecked(),
-                                    gridopacity = self.graphItem.ctrl.gridAlphaSlider.value()/255,
-                                    plotalpha = self.graphItem.alphaState()
-                                    )
+        self.plot_item_settings.save(
+            autoPan = viewboxstate['autoPan'][0],
+            xscalelog = self.graphItem.ctrl.logXCheck.isChecked(),
+            yscalelog = self.graphItem.ctrl.logYCheck.isChecked(),
+            xlim = viewboxstate['targetRange'][0],
+            ylim = viewboxstate['targetRange'][1],
+            xautorange = viewboxstate['autoRange'][0],
+            yautorange = viewboxstate['autoRange'][1],
+            xgridlines = self.graphItem.ctrl.xGridCheck.isChecked(),
+            ygridlines = self.graphItem.ctrl.yGridCheck.isChecked(),
+            gridopacity = self.graphItem.ctrl.gridAlphaSlider.value()/255,
+            plotalpha = self.graphItem.alphaState()
+        )
         self.set_custom_settings()
 
     # rename as "restore_default_settings"
@@ -339,28 +306,7 @@ class TimePlotGui(QWidget):
             self.stop_signal.connect(worker.stop)
             
             self.worker_table.update({idx: worker})
-        
-
-#     def _init_worker_thread(self, devicewrapper):
-#         """ """
-
-#         # Setup QWaitCondition
-#         self.mutex = QMutex()
-#         self.cond = QWaitCondition()
-
-#         # Setup the measurement engine
-# #        self.mthread = QtCore.QThread()
-#         self.worker = TimePlotWorker(devicewrapper, self.mutex, self.cond)
-
-
-#         # connect signal and slots
-#         self.start_signal.connect(self.worker.start)
-#         self.stop_signal.connect(self.worker.stop)
-
-
-#         self.worker.reading.connect(self.newReading)
-#         return
-
+    
 
     def start_thread(self):
         self.start_signal.emit()
@@ -368,29 +314,8 @@ class TimePlotGui(QWidget):
     def stop_thread(self):
         self.stop_signal.emit()
 
-
-#     def update_ValueLabel(self, id_nr, val):
-#         """ """
-# #        self.vl.setValue(val)
-
-#         self.update_time_array(val)
-#         potential_axis = self.potential
-#         time_axis = self.time_array
-#         data = self.data
-#         self.plotDataItem_lst[id_nr].setData(time_axis, potential_axis)
-        
-
-
-    # def update_time_array(self, val):
-    #     """ """
-    #     #self.potential.append(val)
-    #     self.potential = np.append(self.potential, np.array([val]))
-    #     self.absolute_time = np.append(self.absolute_time, np.array([time.time()]))
-    #     self.time_array = np.array([x - self.absolute_time[0] for x in self.absolute_time])
-    #     self.data = np.append(self.data, np.array([(self.potential[-1], self.time_array[-1])]))
-
     def update_datapoint(self, id_nr, val):
-        """ """
+        """updates TimePlotDataItem object with corresponding to id_nr"""
         self.data_table[id_nr].add_value(val)
 
     @QtCore.pyqtSlot(int, float)
@@ -518,18 +443,8 @@ if __name__ == "__main__":
     dw2 = DeviceWrapper(dd2)
 
     dd3 = DummyDevice()
-    dd3.frequency = 1.2
+    dd3.frequency = 1.3
     dd3.signal_form = 'sin'
     dw3 = DeviceWrapper(dd3)
-
-    dd4 = DummyDevice()
-    dd4.frequency = 1.4
-    dd4.signal_form = 'sin'
-    dw4 = DeviceWrapper(dd4)
     
-    dd5 = DummyDevice()
-    dd5.frequency = 1.5
-    dd5.signal_form = 'sin'
-    dw5 = DeviceWrapper(dd5)
-    
-    main([dw1,dw3,dw4,dw5])
+    main([dw1,dw2,dw3])
