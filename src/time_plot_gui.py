@@ -60,7 +60,7 @@ class TimePlotGui(QWidget):
     start_signal = QtCore.pyqtSignal()
     stop_signal = QtCore.pyqtSignal()
 
-    def __init__(self, parent=None, window=None, devicewrapper=None):
+    def __init__(self, parent=None, window=None, devicewrapper_lst=None):
         """ """
         super(TimePlotGui, self).__init__(parent=parent)
         # self.absolute_time = []
@@ -71,7 +71,10 @@ class TimePlotGui(QWidget):
         # self.potential = np.array([])
         # self.data = np.array([])
         
-        devicewrapper_lst = [devicewrapper]
+        if type(devicewrapper_lst) == DeviceWrapper:
+            devicewrapper_lst = [devicewrapper_lst]
+        
+        # devicewrapper_lst = [devicewrapper]
         
         self._init_ui(window, devicewrapper_lst)
         
@@ -221,9 +224,6 @@ class TimePlotGui(QWidget):
         #self.graphWidget.showAxis('top', False)
         self.graphItem.setLabel('left', 'Potential (Volts)', color='white', size=30)
         self.graphItem.setLabel('bottom', 'Time (seconds)', color='white', size=30)
-        # potential_axis = self.potential
-        # time_axis = self.time_array
-        # self.plotDataItem = self.graphItem.plot(time_axis, potential_axis)
         
         self.data_table = {}
         self.t0 = time.time()
@@ -232,9 +232,13 @@ class TimePlotGui(QWidget):
             self.data_table.update(
                 {id_nr: data_item}
             )
-            self.graphItem.addItem(
-                data_item.get_plot_data_item()
-            )
+            self.graphItem.addItem(data_item.get_plot_data_item())
+            print('   ***was here***')
+        
+        # self.data_item = TimePlotDataItem(absolute_time=self.t0)
+        # self.data_table.update({0:self.data_item})
+        # self.graphItem.addItem(self.data_table[0].get_plot_data_item())
+        
         
         self.set_custom_settings()
 
@@ -256,7 +260,6 @@ class TimePlotGui(QWidget):
     def save_current_settings(self):
         self.plot_item_settings = PlotItemSettings()
         viewboxstate = self.viewbox.getState()
-        #print(f"{viewboxstate}")
         self.plot_item_settings.save(autoPan = viewboxstate['autoPan'][0],
                                     xscalelog = self.graphItem.ctrl.logXCheck.isChecked(),
                                     yscalelog = self.graphItem.ctrl.logYCheck.isChecked(),
@@ -277,7 +280,6 @@ class TimePlotGui(QWidget):
         if path.exists(self.plot_item_settings.settings_filename):
             os.remove(self.plot_item_settings.settings_filename)
         self.set_custom_settings()
-        #self.init_plot()
 
     def modify_context_menu(self):
         self.menu = self.graphItem.getMenu()
@@ -297,10 +299,6 @@ class TimePlotGui(QWidget):
         self.menu.addAction(save_settings)
         self.menu.save_settings = save_settings
 
-    # def getDataBounds(self):
-    #     bounds = self.plotDataItem.dataBounds(0)
-    #     #print(f"{bounds}")
-    #     print('It worked!')
 
     def _set_central_wid_properties(self):
         """ """
@@ -316,9 +314,8 @@ class TimePlotGui(QWidget):
         * create plotData_lst
         * update_ValueLabel
         """
-        # self.mutex_lst = [QMutex() for dw in devicewrapper_lst]
-        # self.cond_lst = [QWaitCondition() for dw in devicewrapper_lst]
-        
+
+        # set up QWaitCondition        
         self.mutex_table = {
             idx: QMutex() for idx in range(len(devicewrapper_lst))
         }
@@ -326,6 +323,7 @@ class TimePlotGui(QWidget):
             idx: QWaitCondition() for idx in range(len(devicewrapper_lst))
         }
         
+        # set up the measurement engine
         self.worker_table = {}
         for idx, devicewrapper in enumerate(devicewrapper_lst):
             worker = TimePlotWorker(
@@ -335,6 +333,7 @@ class TimePlotGui(QWidget):
                 id_nr=idx
             )
         
+            # connect signal and slot
             worker.reading.connect(self.newReading)
             self.start_signal.connect(worker.start)
             self.stop_signal.connect(worker.stop)
@@ -342,26 +341,25 @@ class TimePlotGui(QWidget):
             self.worker_table.update({idx: worker})
         
 
-    def _init_worker_thread(self, devicewrapper):
-        """ """
+#     def _init_worker_thread(self, devicewrapper):
+#         """ """
 
-        # Setup QWaitCondition
-        self.mutex = QMutex()
-        self.cond = QWaitCondition()
+#         # Setup QWaitCondition
+#         self.mutex = QMutex()
+#         self.cond = QWaitCondition()
 
-        # Setup the measurement engine
-#        self.mthread = QtCore.QThread()
-        self.worker = TimePlotWorker(devicewrapper, self.mutex, self.cond)
-
-
-        # connect signal and slots
-        self.start_signal.connect(self.worker.start)
-        self.stop_signal.connect(self.worker.stop)
+#         # Setup the measurement engine
+# #        self.mthread = QtCore.QThread()
+#         self.worker = TimePlotWorker(devicewrapper, self.mutex, self.cond)
 
 
-        self.worker.reading.connect(self.newReading)
+#         # connect signal and slots
+#         self.start_signal.connect(self.worker.start)
+#         self.stop_signal.connect(self.worker.stop)
 
-        return
+
+#         self.worker.reading.connect(self.newReading)
+#         return
 
 
     def start_thread(self):
@@ -393,18 +391,16 @@ class TimePlotGui(QWidget):
 
     def update_datapoint(self, id_nr, val):
         """ """
-        self.data_table[id_nr].set_value(val)
-        print(self.data_table[id_nr].get_data())
+        self.data_table[id_nr].add_value(val)
 
     @QtCore.pyqtSlot(int, float)
     def newReading(self, id_nr, val):
         """ """
         pg.QtGui.QApplication.processEvents()
         self.update_datapoint(id_nr, val)
-        time.sleep(0.1)         # necessary to avoid worker to freeze
+        time.sleep(0.01)         # necessary to avoid worker to freeze
         self.cond_table[id_nr].wakeAll()     # wake worker thread up
         return
-
 
     def closeEvent(self, event):
         reply = QMessageBox.question(self, 'Message',
@@ -445,7 +441,7 @@ class TimePlotDataItem(object):
         """returns the pg.PlotDataItem"""
         return self.pdi
     
-    def set_value(self, val):
+    def add_value(self, val):
         """adds value to pg.PlotDataItem data array"""
         t, y = self.pdi.getData()
         t = np.append(t, time.time() - self.absolute_time)
@@ -460,24 +456,23 @@ class TimePlotDataItem(object):
 # ===========================================================================
 #
 # ===========================================================================
-
 class MainWindow(QMainWindow):
     """ """
     # xpos on screen, ypos on screen, width, height
     DEFAULT_GEOMETRY = [400, 400, 1000, 500]
 
-    def __init__(self, devicewrapper=None):
+    def __init__(self, devicewrapper_lst=None):
         super(MainWindow, self).__init__()
-        self._init_ui(devicewrapper=devicewrapper)
+        self._init_ui(devicewrapper_lst=devicewrapper_lst)
 
-    def _init_ui(self, window_geometry=None, devicewrapper=None):
+    def _init_ui(self, window_geometry=None, devicewrapper_lst=None):
         self.setGeometry()
         self.setWindowTitle('time-plot')
         self.setStyleSheet("background-color: black;")
         self.time_plot_ui = TimePlotGui(
             parent=None,
             window=self,
-            devicewrapper=devicewrapper
+            devicewrapper_lst=devicewrapper_lst
         )
 
     def setGeometry(self, *args, **kwargs):
@@ -496,15 +491,14 @@ class MainWindow(QMainWindow):
 # ===========================================================================
 # main function
 # ===========================================================================
-
-def main(devicewrapper):
+def main(devicewrapper_lst):
     """ """
     app = QApplication.instance()
     if app is None:
         app = QApplication(sys.argv)
     else:
         print('QApplication instance already exists {}'.format(str(app)))
-    window = MainWindow(devicewrapper=devicewrapper)
+    window = MainWindow(devicewrapper_lst=devicewrapper_lst)
     window.show()
     app.exec_()
 
@@ -514,8 +508,28 @@ def main(devicewrapper):
 # ===========================================================================
 
 if __name__ == "__main__":
-    dd = DummyDevice()
-    dd.frequency = 1
-    dw = DeviceWrapper(dd)
+    dd1 = DummyDevice()
+    dd1.frequency = 1
+    dd1.signal_form = 'sin'
+    dw1 = DeviceWrapper(dd1)
 
-    main(dw)
+    dd2 = DummyDevice()
+    dd2.frequency = 0.6
+    dw2 = DeviceWrapper(dd2)
+
+    dd3 = DummyDevice()
+    dd3.frequency = 1.2
+    dd3.signal_form = 'sin'
+    dw3 = DeviceWrapper(dd3)
+
+    dd4 = DummyDevice()
+    dd4.frequency = 1.4
+    dd4.signal_form = 'sin'
+    dw4 = DeviceWrapper(dd4)
+    
+    dd5 = DummyDevice()
+    dd5.frequency = 1.5
+    dd5.signal_form = 'sin'
+    dw5 = DeviceWrapper(dd5)
+    
+    main([dw1,dw3,dw4,dw5])
