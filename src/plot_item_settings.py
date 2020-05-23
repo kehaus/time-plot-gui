@@ -9,6 +9,7 @@ Created on Mon Apr 20 16:01:02 2020
 import os
 from os import path
 import json
+import numpy as np
 
 class PlotItemSettings(object):
     """ """
@@ -26,6 +27,9 @@ class PlotItemSettings(object):
         'ygridlines':       False,
         'gridopacity':      1,
         'plotalpha':        [1, False],
+        'x_zoom':           True,
+        'y_zoom':           True,
+        'auto_clear_data':  True
         # in plotalpha, the first item is the alpha and the second is whether the value is autodetermined
         # maybe more settings here
         }
@@ -113,8 +117,58 @@ class PlotItemSettings(object):
         else:
             super(PlotItemSettings, self).__setattr__(name, value)
 
+class DataRecall(object):
+    """ """
+    STORED_DATA_FILENAME = "stored_data.json"
+
+    def __init__(self):
+        self.stored_data_filename = DataRecall.STORED_DATA_FILENAME
+
+    def store(self, time, absolute_time, y):
+        """store collected data to json file """
+
+        if path.exists(self.stored_data_filename):
+            os.remove(self.stored_data_filename)
+        # find a better letter than w
+        with open(self.stored_data_filename, 'w') as outfile:
+            json.dump({'time': time, 'absolute_time': absolute_time, 'y': y}, outfile)
+
+        return
+
+    def load_data(self, file = None):
+        """load stored data from json file"""
+        # code to load settgins from file here
+        if file is None:
+            file = self.stored_data_filename
+        if path.exists(file):
+            with open(file) as json_file:
+                data = json.load(json_file)
+            return np.array(data['time']), np.array(data['absolute_time']), np.array(data['y'])
+        return np.array([]), np.array([]), np.array([])
+
+    def clear_data(self):
+        if path.exists(self.stored_data_filename):
+            os.remove(self.stored_data_filename)
 
 
+# ===========================================================================
+# helper class to save&store JSON files
+# ===========================================================================
+class JSONFileHandler():
+    
+    def load(self, fn, mode='r'):
+        with open(fn, mode=mode) as json_file:
+            data = json.load(json_file)
+        return data
+    
+    def save(self, fn, dct, mode='a', sort_keys=True, indent=4):
+        with open(fn, mode=mode) as outfile:
+            json.dump(dct, outfile, sort_keys=sort_keys, indent=indent)
+        return
+
+# ===========================================================================
+# 
+# ===========================================================================
 if __name__ == "__main__":
     ps = PlotItemSettings()
 
