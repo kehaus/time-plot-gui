@@ -5,6 +5,11 @@ TimePlotGui class creates a GUI displaying the time trace of a value from a
 given device object
 
 
+TODO:
+    * implement multi line functionality
+    * figure out way to send command to dummy device instead of just gathering data
+    * check how to interface the U6
+
 
 
 """
@@ -61,15 +66,20 @@ class TimePlotGui(QWidget):
         # self.absolute_time = []
         # self.time_array = []
         # self.potential = []
-        self.absolute_time = np.array([])
-        self.time_array = np.array([])
-        self.potential = np.array([])
-        self.data = np.array([])
-        self._init_ui(window)
-        self._init_worker_thread(devicewrapper)
+        # self.absolute_time = np.array([])
+        # self.time_array = np.array([])
+        # self.potential = np.array([])
+        # self.data = np.array([])
+        
+        devicewrapper_lst = [devicewrapper]
+        
+        self._init_ui(window, devicewrapper_lst)
+        
+        # self._init_worker_thread(devicewrapper)
+        self._init_multi_worker_thread(devicewrapper_lst)
 
 
-    def _init_ui(self, mainwindow):
+    def _init_ui(self, mainwindow, devicewrapper_lst):
 
         self.central_wid = QWidget(mainwindow)
         self._set_central_wid_properties()
@@ -86,10 +96,13 @@ class TimePlotGui(QWidget):
         self.graphics_layout = QGridLayout()
         self.vl = pg.ValueLabel(formatStr='{avgValue:0.2f} {suffix}')
         self.vl.setStyleSheet("color: white;")
-        if len(self.potential) == 0:
-            self.vl.setValue(-1)
-        else:
-            self.vl.setValue(self.potential[-1])
+        
+        self.vl.setValue(-1)
+        # if len(self.potential) == 0:
+        #     self.vl.setValue(-1)
+        # else:
+        #     self.vl.setValue(self.potential[-1])
+            
         self.vl.setFixedSize(QSize(40, 30))
         #self.graphics_layout.addWidget(self.vl, 0, 3)
 
@@ -143,7 +156,7 @@ class TimePlotGui(QWidget):
         self.graphics_layout.addWidget(self.blankWidget2, 0, 1)
 
 
-        self.init_plot()
+        self.init_plot(devicewrapper_lst)
         self.graphics_layout.addWidget(self.squarestopBtn, 0, 0)
         self.graphics_layout.addWidget(self.playBtn, 0, 0)
         self.graphics_layout.addWidget(self.blankWidget2, 0, 1)
@@ -192,7 +205,7 @@ class TimePlotGui(QWidget):
 
         self.central_wid.setLayout(self.wid_layout)
 
-    def init_plot(self):
+    def init_plot(self, devicewrapper_lst):
         """ """
         print("initializing plot...")
         # if len(self.potential) != 0:
@@ -204,13 +217,25 @@ class TimePlotGui(QWidget):
         self.modify_context_menu()
         self.graphics_layout.addWidget(self.graphWidget, 0, 0, 5, 4)
         #self.graphics_layout.addWidget(self.blankWidget2, 2, 2)
-        potential_axis = self.potential
-        time_axis = self.time_array
         self.graphItem.setTitle('Potential over Time', **{'color': '#FFF', 'size': '20pt'})
         #self.graphWidget.showAxis('top', False)
         self.graphItem.setLabel('left', 'Potential (Volts)', color='white', size=30)
         self.graphItem.setLabel('bottom', 'Time (seconds)', color='white', size=30)
-        self.plotDataItem = self.graphItem.plot(time_axis, potential_axis)
+        # potential_axis = self.potential
+        # time_axis = self.time_array
+        # self.plotDataItem = self.graphItem.plot(time_axis, potential_axis)
+        
+        self.data_table = {}
+        self.t0 = time.time()
+        for id_nr, dw in enumerate(devicewrapper_lst):
+            data_item = TimePlotDataItem(absolute_time=self.t0)
+            self.data_table.update(
+                {id_nr: data_item}
+            )
+            self.graphItem.addItem(
+                data_item.get_plot_data_item()
+            )
+        
         self.set_custom_settings()
 
     def set_custom_settings(self):
@@ -223,7 +248,7 @@ class TimePlotGui(QWidget):
         self.graphItem.setLogMode(x = settings['xscalelog'], y = settings['yscalelog'])
         self.graphItem.showGrid(x = settings['xgridlines'], y = settings['ygridlines'], \
                                 alpha = settings['gridopacity'])
-        self.plotDataItem.setAlpha(alpha = settings['plotalpha'][0], auto = settings['plotalpha'][1])
+        # self.plotDataItem.setAlpha(alpha = settings['plotalpha'][0], auto = settings['plotalpha'][1])
         self.viewbox.setAutoPan(x = settings['autoPan'])
         self.viewbox.setRange(xRange = settings['xlim'], yRange = settings['ylim'])
         self.viewbox.enableAutoRange(x = settings['xautorange'], y = settings['yautorange'])
@@ -291,16 +316,22 @@ class TimePlotGui(QWidget):
         * create plotData_lst
         * update_ValueLabel
         """
-        self.mutex_lst = [QMutex() for dw in devicewrapper_lst]
-        self.cond_lst = QWaitCondition()
+        # self.mutex_lst = [QMutex() for dw in devicewrapper_lst]
+        # self.cond_lst = [QWaitCondition() for dw in devicewrapper_lst]
         
+        self.mutex_table = {
+            idx: QMutex() for idx in range(len(devicewrapper_lst))
+        }
+        self.cond_table = {
+            idx: QWaitCondition() for idx in range(len(devicewrapper_lst))
+        }
         
-        self.worker_lst = []
+        self.worker_table = {}
         for idx, devicewrapper in enumerate(devicewrapper_lst):
             worker = TimePlotWorker(
                 devicewrapper, 
-                self.mutex_lst[idx], 
-                self.cond_lt[idx],
+                self.mutex_table[idx], 
+                self.cond_table[idx],
                 id_nr=idx
             )
         
@@ -308,7 +339,7 @@ class TimePlotGui(QWidget):
             self.start_signal.connect(worker.start)
             self.stop_signal.connect(worker.stop)
             
-            self.worker_lst.append(worker)
+            self.worker_table.update({idx: worker})
         
 
     def _init_worker_thread(self, devicewrapper):
@@ -340,32 +371,38 @@ class TimePlotGui(QWidget):
         self.stop_signal.emit()
 
 
-    def update_ValueLabel(self, id_nr, val):
+#     def update_ValueLabel(self, id_nr, val):
+#         """ """
+# #        self.vl.setValue(val)
+
+#         self.update_time_array(val)
+#         potential_axis = self.potential
+#         time_axis = self.time_array
+#         data = self.data
+#         self.plotDataItem_lst[id_nr].setData(time_axis, potential_axis)
+        
+
+
+    # def update_time_array(self, val):
+    #     """ """
+    #     #self.potential.append(val)
+    #     self.potential = np.append(self.potential, np.array([val]))
+    #     self.absolute_time = np.append(self.absolute_time, np.array([time.time()]))
+    #     self.time_array = np.array([x - self.absolute_time[0] for x in self.absolute_time])
+    #     self.data = np.append(self.data, np.array([(self.potential[-1], self.time_array[-1])]))
+
+    def update_datapoint(self, id_nr, val):
         """ """
-#        self.vl.setValue(val)
+        self.data_table[id_nr].set_value(val)
+        print(self.data_table[id_nr].get_data())
 
-        self.update_time_array(val)
-        potential_axis = self.potential
-        time_axis = self.time_array
-        data = self.data
-        self.plotDataItem.setData(time_axis, potential_axis)
-
-    def update_time_array(self, val):
-        """ """
-        #self.potential.append(val)
-        self.potential = np.append(self.potential, np.array([val]))
-        self.absolute_time = np.append(self.absolute_time, np.array([time.time()]))
-        self.time_array = np.array([x - self.absolute_time[0] for x in self.absolute_time])
-        self.data = np.append(self.data, np.array([(self.potential[-1], self.time_array[-1])]))
-
-
-    @QtCore.pyqtSlot(float)
+    @QtCore.pyqtSlot(int, float)
     def newReading(self, id_nr, val):
         """ """
         pg.QtGui.QApplication.processEvents()
-        self.update_ValueLabel(id_nr, val)
+        self.update_datapoint(id_nr, val)
         time.sleep(0.1)         # necessary to avoid worker to freeze
-        self.cond_lst[id_nr].wakeAll()     # wake worker thread up
+        self.cond_table[id_nr].wakeAll()     # wake worker thread up
         return
 
 
@@ -379,6 +416,45 @@ class TimePlotGui(QWidget):
             event.accept()
         else:
             event.ignore()
+
+
+# ===========================================================================
+# helper class - Data item
+# ===========================================================================
+class TimePlotDataItem(object):
+    """wraps the pq.PlotCurveItem class to extend functionality
+    
+    Main functionality enhancement is that PlotCurveItem data can now be 
+    extended by providing a single value. Internal functionality will take care
+    of generating corresponding time valu and appending the the Data object of
+    PlotCurveItem
+    
+    TO INCLUDE:
+        * automatic saving mechanism
+    
+    """
+    
+    def __init__(self, absolute_time=None):
+        self.pdi = pg.PlotDataItem([],[])
+        if absolute_time == None:
+            self.absolute_time = time.time()
+        else:
+            self.absolute_time = absolute_time
+        
+    def get_plot_data_item(self):
+        """returns the pg.PlotDataItem"""
+        return self.pdi
+    
+    def set_value(self, val):
+        """adds value to pg.PlotDataItem data array"""
+        t, y = self.pdi.getData()
+        t = np.append(t, time.time() - self.absolute_time)
+        y = np.append(y, val)
+        self.pdi.setData(t,y)
+        
+    def get_data(self):
+        """returns the pg.PlotDataItem time and data arrrays"""
+        return self.pdi.getData()
 
 
 # ===========================================================================
