@@ -150,6 +150,25 @@ class DataRecall(object):
         if path.exists(self.stored_data_filename):
             os.remove(self.stored_data_filename)
 
+
+# ===========================================================================
+# helper class to save&store JSON files
+# ===========================================================================
+class JSONFileHandler():
+    
+    def load(self, fn, mode='r'):
+        with open(fn, mode=mode) as json_file:
+            data = json.load(json_file)
+        return data
+    
+    def save(self, fn, dct, mode='a', sort_keys=True, indent=4):
+        with open(fn, mode=mode) as outfile:
+            json.dump(dct, outfile, sort_keys=sort_keys, indent=indent)
+        return
+
+# ===========================================================================
+# 
+# ===========================================================================
 if __name__ == "__main__":
     ps = PlotItemSettings()
 

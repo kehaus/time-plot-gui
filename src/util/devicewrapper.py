@@ -15,6 +15,8 @@ import threading
 import queue
 import time
 
+import numpy as np
+
 
 from .workerthread import WorkerThread, WorkerTaskBase
 
@@ -142,6 +144,8 @@ class C():
     def reverse(self):
         self.count_direction *= -1
 
+class DummyDeviceException(Exception):
+    pass
 
 class DummyDevice():
     """Dummy class returns sawtooth signal"""
@@ -150,10 +154,24 @@ class DummyDevice():
         self.xmin = -1
         self.xmax = 1
         self.frequency = 0.1    #s
+        self.signal_form = 'sawtooth'
         
     def _calc_value(self):
+        if self.signal_form == 'sawtooth':
+            return self._calc_sawtooth()
+        elif self.signal_form == 'sin':
+            return self._calc_sin()
+        else:
+            raise DummyDeviceException('signal_form variable not know')
+    
+    def _calc_sawtooth(self):
         dx = self.xmax - self.xmin
         return  self.xmin + (time.time()*self.frequency % dx)
+    
+    def _calc_sin(self):
+        dx = self.xmax - self.xmin
+        return dx * np.sin(time.time()*self.frequency)
+        
     
     def get_value(self, verbose=False):
         val = self._calc_value()

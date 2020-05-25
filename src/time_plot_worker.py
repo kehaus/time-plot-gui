@@ -32,18 +32,19 @@ from util.devicewrapper import DeviceWrapper, DummyDevice
 class TimePlotWorker(QObject):       # change class name to MeasurementEngine ?
     """ """
     
-    reading = pyqtSignal(float)
+    reading = pyqtSignal(int, float)
     finished = pyqtSignal()
     started = pyqtSignal()
     killed = pyqtSignal()
     
-    def __init__(self, devicewrapper , mutex, cond, *args, **kwargs):
+    def __init__(self, devicewrapper , mutex, cond, *args, id_nr=0, **kwargs):
         """ """
         QObject.__init__(self)
         print('worker initialized')
         self.dw = devicewrapper
         self.wt = self.dw.wt
         self.dd = self.dw.d
+        self.id_nr = id_nr
         
         self.mtx = mutex
         self.cond = cond
@@ -65,7 +66,7 @@ class TimePlotWorker(QObject):       # change class name to MeasurementEngine ?
             print('read val: {:.2f}'.format(val))
         
         self.mtx.lock()                 # lock worker-thread
-        self.reading.emit(val)          # emit signalt to update gui
+        self.reading.emit(self.id_nr, val)          # emit signalt to update gui
         self.cond.wait(self.mtx)        # wait until gui is updated
         self.mtx.unlock()               # unlock worker thread
 
