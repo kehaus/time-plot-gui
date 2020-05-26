@@ -11,7 +11,27 @@ from os import path
 import json
 import numpy as np
 
-class PlotItemSettings(object):
+# ===========================================================================
+# helper class to save&store JSON files
+# ===========================================================================
+class JSONFileHandler():
+
+    def load(self, fn, mode='r'):
+        with open(fn, mode=mode) as json_file:
+            data = json.load(json_file)
+        return data
+
+    def save(self, fn, dct, mode='a', sort_keys=True, indent=4):
+        with open(fn, mode=mode) as outfile:
+            json.dump(dct, outfile, sort_keys=sort_keys, indent=indent)
+        return
+
+# ===========================================================================
+#
+# ===========================================================================
+
+
+class PlotItemSettings(JSONFileHandler):
     """ """
 
     SETTINGS_FILENAME = "custom_settings.json"
@@ -26,7 +46,10 @@ class PlotItemSettings(object):
         'xgridlines':       False,
         'ygridlines':       False,
         'gridopacity':      1,
+        #'line_settings':    {key: {'line_alpha': 1} for key in range()},
+        #'line_settings':    self.set_line_settings(number_of_lines),
         'plotalpha':        [1, False],
+        #'plotalpha':        {'0': [1, False], '1': [1, False], '2': [1, False]},
         'x_zoom':           True,
         'y_zoom':           True,
         'auto_clear_data':  True
@@ -34,9 +57,10 @@ class PlotItemSettings(object):
         # maybe more settings here
         }
 
-    def __init__(self):
+    def __init__(self, number_of_lines = 1):
         self.settings_filename = PlotItemSettings.SETTINGS_FILENAME
         settings = self._checks_for_settings_file()
+        self.number_of_lines = number_of_lines
         if settings != {}:
             self.settings = settings
         else:
@@ -56,35 +80,48 @@ class PlotItemSettings(object):
         # implement function wich checks if settings file present.
         #   return {} if not the case
         if path.exists(self.settings_filename):
-            custom_settings = self.load()
+            custom_settings = self.load(self.settings_filename)
             return custom_settings
         return {}
+
+    # def set_line_settings(self, number_of_lines):
+    #     keys = range(number_of_lines)
+    #     default_line_settings = {'line_alpha': 1}
+    #     line_settings = {key: default_line_settings for key in keys}
+    #     return
 
     # ====
     # define functions which load and save settings files/ dictionaries
     # ====
 
-    def load(self):
-        """load settings from file"""
-        # code to load settgins from file here
-        with open(self.settings_filename) as json_file:
-            data = json.load(json_file)
-        return data
+    # def load(self):
+    #     """load settings from file"""
+    #     # code to load settgins from file here
+    #     with open(self.settings_filename) as json_file:
+    #         data = json.load(json_file)
+    #     return data
 
     def update(self, **kwargs):
         self.settings.update(**kwargs)
 
-    def save(self, **kwargs):
-        """save settings to file """
+    # def save(self, **kwargs):
+    #     """save settings to file """
+    #
+    #     self.update(**kwargs)
+    #
+    #     if path.exists(self.settings_filename):
+    #         os.remove(self.settings_filename)
+    #     # find a better letter than w
+    #     with open(self.settings_filename, 'w') as outfile:
+    #         json.dump(self.settings, outfile)
+    #
+    #     return
 
+    def save_settings(self, **kwargs):
         self.update(**kwargs)
-
         if path.exists(self.settings_filename):
             os.remove(self.settings_filename)
-        # find a better letter than w
-        with open(self.settings_filename, 'w') as outfile:
-            json.dump(self.settings, outfile)
-
+        #self.save()
         return
 
     # ===
@@ -151,24 +188,24 @@ class DataRecall(object):
             os.remove(self.stored_data_filename)
 
 
-# ===========================================================================
-# helper class to save&store JSON files
-# ===========================================================================
-class JSONFileHandler():
-    
-    def load(self, fn, mode='r'):
-        with open(fn, mode=mode) as json_file:
-            data = json.load(json_file)
-        return data
-    
-    def save(self, fn, dct, mode='a', sort_keys=True, indent=4):
-        with open(fn, mode=mode) as outfile:
-            json.dump(dct, outfile, sort_keys=sort_keys, indent=indent)
-        return
-
-# ===========================================================================
-# 
-# ===========================================================================
+# # ===========================================================================
+# # helper class to save&store JSON files
+# # ===========================================================================
+# class JSONFileHandler():
+#
+#     def load(self, fn, mode='r'):
+#         with open(fn, mode=mode) as json_file:
+#             data = json.load(json_file)
+#         return data
+#
+#     def save(self, fn, dct, mode='a', sort_keys=True, indent=4):
+#         with open(fn, mode=mode) as outfile:
+#             json.dump(dct, outfile, sort_keys=sort_keys, indent=indent)
+#         return
+#
+# # ===========================================================================
+# #
+# # ===========================================================================
 if __name__ == "__main__":
     ps = PlotItemSettings()
 

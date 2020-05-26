@@ -59,21 +59,21 @@ class TimePlotGui(QWidget):
 
     start_signal = QtCore.pyqtSignal()
     stop_signal = QtCore.pyqtSignal()
-    
+
     DEFAULT_DATA_FILENAME = 'stored_data.json'
 
     def __init__(self, parent=None, window=None, devicewrapper_lst=None):
         """ """
         super(TimePlotGui, self).__init__(parent=parent)
-        
+
         self.create_absolute_time_stamp()
         self.data_fn = TimePlotGui.DEFAULT_DATA_FILENAME
-        
+
         if type(devicewrapper_lst) == DeviceWrapper:
             devicewrapper_lst = [devicewrapper_lst]
-        
+
         self.plot_item_settings = PlotItemSettings()
-        
+
 # <<<<<<< HEAD
 
 # =======
@@ -218,19 +218,19 @@ class TimePlotGui(QWidget):
         #self.graphWidget.showAxis('top', False)
         self.graphItem.setLabel('left', 'Potential (Volts)', color='white', size=30)
         self.graphItem.setLabel('bottom', 'Time (seconds)', color='white', size=30)
-        
+
         # ===============================
         # initlialize data lines
         # ===============================
         self.init_data_items(devicewrapper_lst)
         self.align_time_stamps()
-        
+
         # ===============================
         # customize plot settings with stored values
         # ===============================
         self.set_custom_settings()
-     
-        
+
+
     def init_data_items(self, devicewrapper_lst):
         self.data_table = {}
         for id_nr, dw in enumerate(devicewrapper_lst):
@@ -240,29 +240,29 @@ class TimePlotGui(QWidget):
             )
             if not self.data_options.automatic_clear_checkbox.isChecked():
                 data_item.recall_data(self.data_fn)
-            self.graphItem.addItem(data_item.get_plot_data_item())        
-        
-        
+            self.graphItem.addItem(data_item.get_plot_data_item())
+
+
     def create_absolute_time_stamp(self):
         self.t0 = time.time()
-        
+
     def reset_absolute_time_stamp(self):
         self.t0 = time.time()
-        
+
     def align_time_stamps(self):
         """compares and aligns time stamps between TimePlotGui and data_items"""
-        
+
         if not hasattr(self, 'data_table'):
             raise TimePlotGuiException(
                 'data_table variable not present. Call init_data_items() first'
             )
-        
+
         # define the TimePlotGui absolute_time to be the earliest time stemp present
         t0_lst = [
             data_item.absolute_time for data_item in self.data_table.values()
         ]
         self.t0 = min(t0_lst + [self.t0])
-        
+
         # shift times in data_item object in respect to TimePlotGui absolute_time
         for data_item in self.data_table.values():
             if not np.isclose(self.t0, data_item.absolute_time, rtol=1e-3):
@@ -270,7 +270,7 @@ class TimePlotGui(QWidget):
                 t,y = data_item.get_data()
                 data_item.set_data(t+dt, y)
                 data_item.absolute_time = self.t0
-        
+
 
     def set_custom_settings(self):
         # acquires the self.settings varibale from plot_item_settings
@@ -278,11 +278,11 @@ class TimePlotGui(QWidget):
             self.settings = self.plot_item_settings.settings
         else:
             self.settings = self.plot_item_settings.DEFAULT_SETTINGS
-        
+
         self.graphItem.setLogMode(x = self.settings['xscalelog'], y = self.settings['yscalelog'])
         self.graphItem.showGrid(x = self.settings['xgridlines'], y = self.settings['ygridlines'], \
                                 alpha = self.settings['gridopacity'])
-        # self.plotDataItem.setAlpha(alpha = self.settings['plotalpha'][0], auto = self.settings['plotalpha'][1])
+        #self.plotDataItem.setAlpha(alpha = self.settings['plotalpha'][0], auto = self.settings['plotalpha'][1])
         self.viewbox.setAutoPan(x = self.settings['autoPan'])
         self.viewbox.setRange(xRange = self.settings['xlim'], yRange = self.settings['ylim'])
         self.viewbox.enableAutoRange(x = self.settings['xautorange'], y = self.settings['yautorange'])
@@ -290,9 +290,10 @@ class TimePlotGui(QWidget):
         self.viewbox.setMouseEnabled(x = self.settings['x_zoom'], y = self.settings['y_zoom'])
 
     def save_current_settings(self):
-        self.plot_item_settings = PlotItemSettings()
+        #self.plot_item_settings = PlotItemSettings()
         viewboxstate = self.viewbox.getState()
-        self.plot_item_settings.save(
+        #print(f"{viewboxstate}")
+        self.plot_item_settings.save_settings(
             autoPan = viewboxstate['autoPan'][0],
             xscalelog = self.graphItem.ctrl.logXCheck.isChecked(),
             yscalelog = self.graphItem.ctrl.logYCheck.isChecked(),
@@ -304,15 +305,16 @@ class TimePlotGui(QWidget):
             ygridlines = self.graphItem.ctrl.yGridCheck.isChecked(),
             gridopacity = self.graphItem.ctrl.gridAlphaSlider.value()/255,
             plotalpha = self.graphItem.alphaState(),
-            x_zoom = self.zoom_settings.x_zoom_checkbox.isChecked(),
-            y_zoom = self.zoom_settings.y_zoom_checkbox.isChecked(),
+            x_zoom = viewboxstate['mouseEnabled'][0],
+            y_zoom = viewboxstate['mouseEnabled'][0],
             auto_clear_data = self.data_options.automatic_clear_checkbox.isChecked()
         )
+        self.plot_item_settings.save(self.plot_item_settings.settings_filename, self.plot_item_settings.settings)
         self.set_custom_settings()
 
     # rename as "restore_default_settings"
     def default_settings(self):
-        self.plot_item_settings = PlotItemSettings()
+        #self.plot_item_settings = PlotItemSettings()
         if path.exists(self.plot_item_settings.settings_filename):
             os.remove(self.plot_item_settings.settings_filename)
         self.set_custom_settings()
@@ -346,46 +348,46 @@ class TimePlotGui(QWidget):
         self.data_options.clear_data = clear_data
 
         automatic_clear = QtGui.QWidgetAction(self.data_options)
-        automatic_clear_checkbox = QtGui.QCheckBox()
+        automatic_clear_checkbox = QtGui.QCheckBox("Automatically Clear Data", self)
         automatic_clear.setDefaultWidget(automatic_clear_checkbox)
         self.data_options.addAction(automatic_clear)
         self.data_options.automatic_clear = automatic_clear
         self.data_options.automatic_clear_checkbox = automatic_clear_checkbox
 
-        self.zoom_settings = self.menu.addMenu("Zoom Settings")
-
-        x_zoom = QtGui.QWidgetAction(self.zoom_settings)
-        x_zoom_checkbox = QtGui.QCheckBox()
-        x_zoom.setDefaultWidget(x_zoom_checkbox)
-        x_zoom_checkbox.stateChanged.connect(self.update_zoom_settings)
-        self.zoom_settings.addAction(x_zoom)
-        self.zoom_settings.x_zoom = x_zoom
-        self.zoom_settings.x_zoom_checkbox = x_zoom_checkbox
-
-        y_zoom = QtGui.QWidgetAction(self.zoom_settings)
-        y_zoom_checkbox = QtGui.QCheckBox()
-        y_zoom.setDefaultWidget(y_zoom_checkbox)
-        self.zoom_settings.addAction(y_zoom)
-        self.zoom_settings.y_zoom = y_zoom
-        self.zoom_settings.y_zoom_checkbox = y_zoom_checkbox
+        # self.zoom_settings = self.menu.addMenu("Zoom Settings")
+        #
+        # x_zoom = QtGui.QWidgetAction(self.zoom_settings)
+        # x_zoom_checkbox = QtGui.QCheckBox()
+        # x_zoom.setDefaultWidget(x_zoom_checkbox)
+        # x_zoom_checkbox.stateChanged.connect(self.update_zoom_settings)
+        # self.zoom_settings.addAction(x_zoom)
+        # self.zoom_settings.x_zoom = x_zoom
+        # self.zoom_settings.x_zoom_checkbox = x_zoom_checkbox
+        #
+        # y_zoom = QtGui.QWidgetAction(self.zoom_settings)
+        # y_zoom_checkbox = QtGui.QCheckBox()
+        # y_zoom.setDefaultWidget(y_zoom_checkbox)
+        # self.zoom_settings.addAction(y_zoom)
+        # self.zoom_settings.y_zoom = y_zoom
+        # self.zoom_settings.y_zoom_checkbox = y_zoom_checkbox
 
     def store_all_data(self):
         """
-        **inehrits store_current_data function to adjust for multi-line-plotting** 
-        
+        **inehrits store_current_data function to adjust for multi-line-plotting**
+
         """
         for data_item in self.data_table.values():
             data_item.store_data(fn=self.data_fn)
-            
+
     def clear_all_data(self):
-        """ 
+        """
         **inherits clear_current_data function to adjust for multi-line-plotting**
         """
         self.reset_absolute_time_stamp()
         for data_item in self.data_table.values():
             data_item.clear_data()
             data_item.reset_absolute_time(absolute_time=self.t0)
-        
+
 
     def store_current_data(self, time_axis, absolute_time, y):
         """
@@ -399,7 +401,7 @@ class TimePlotGui(QWidget):
         self.data_recall.store(time_data, absolute_time_data, y_data)
 
     def clear_current_data(self):
-        """ 
+        """
         **obsolete**
         """
         self.time_array = np.array([])
@@ -429,31 +431,31 @@ class TimePlotGui(QWidget):
     def _init_multi_worker_thread(self, devicewrapper_lst):
         """initializes a worker thread for every devicewrapper"""
 
-        # set up QWaitCondition        
+        # set up QWaitCondition
         self.mutex_table = {
             idx: QMutex() for idx in range(len(devicewrapper_lst))
         }
         self.cond_table = {
             idx: QWaitCondition() for idx in range(len(devicewrapper_lst))
         }
-        
+
         # set up the measurement engine
         self.worker_table = {}
         for idx, devicewrapper in enumerate(devicewrapper_lst):
             worker = TimePlotWorker(
-                devicewrapper, 
-                self.mutex_table[idx], 
+                devicewrapper,
+                self.mutex_table[idx],
                 self.cond_table[idx],
                 id_nr=idx
             )
-        
+
             # connect signal and slot
             worker.reading.connect(self.newReading)
             self.start_signal.connect(worker.start)
             self.stop_signal.connect(worker.stop)
-            
+
             self.worker_table.update({idx: worker})
-    
+
 
     def start_thread(self):
         # self.time_array = np.array([])
@@ -533,63 +535,63 @@ class PlotDataItemV2(pg.PlotDataItem):
 # ===========================================================================
 class TimePlotDataItem(JSONFileHandler):
     """wraps the pq.PlotDataItem class to extend functionality
-    
-    Main functionality enhancement is that PlotDataItem data can now be 
+
+    Main functionality enhancement is that PlotDataItem data can now be
     extended by providing a single value. Internal functionality will take care
     of generating corresponding time value and appending the the Data object of
-    PlotCurveItem. 
+    PlotCurveItem.
     Furthermore, this class provides loading and saving capabilities for
     storing data in json files.
-    
-    
+
+
     TO INCLUDE:
         * automatic saving mechanism
-    
+
     """
-    
+
     DATA_NAME = 'data_{:d}'
-    
+
     def __init__(self, id_nr=0, absolute_time=None):
         self.id_nr = id_nr
         self.data_name = self._compose_data_name()
-        self.pdi = pg.PlotDataItem([],[])
+        self.pdi = PlotDataItemV2([],[])
         if absolute_time == None:
             self.absolute_time = time.time()
         else:
             self.absolute_time = absolute_time
-    
+
     def _compose_data_name(self):
         return TimePlotDataItem.DATA_NAME.format(self.id_nr)
-    
+
     def reset_absolute_time(self, absolute_time):
         self.absolute_time = absolute_time
-    
+
     def get_plot_data_item(self):
         """returns the pg.PlotDataItem"""
         return self.pdi
-    
+
     def add_value(self, val):
         """adds value to pg.PlotDataItem data array"""
         t, y = self.pdi.getData()
         t = np.append(t, time.time() - self.absolute_time)
         y = np.append(y, val)
         self.pdi.setData(t,y)
-        
+
     def get_data(self):
         """returns the pg.PlotDataItem time and data arrays"""
         return self.pdi.getData()
-    
+
     def set_data(self, *args, **kwargs):
         """replaces data with provided data"""
         self.pdi.setData(*args, **kwargs)
-    
+
     def clear_data(self):
         """clears all data present in this data object"""
         self.pdi.setData([],[])
-        
+
     def store_data(self, fn):
         """saves data as nested dictionary in json file"""
-        
+
         # extract data from PlotDataItem object
         t, y = self.get_data()
         t = t.tolist(); y = y.tolist()
@@ -598,18 +600,18 @@ class TimePlotDataItem(JSONFileHandler):
             'y': y,
             'absolute_time': self.absolute_time
         }
-        
-        # load all data, update and overwrite existing file to avoid 
+
+        # load all data, update and overwrite existing file to avoid
         #   json-format corruption.
         if path.exists(fn):
             all_data_dct = self.load(fn)
         else:
             all_data_dct = {}
-        
+
         all_data_dct.update({self.data_name:data_dct})
         self.save(fn, all_data_dct, mode='w')
         return
-    
+
     def recall_data(self, fn):
         """checks for data in data file and updates pq.PlotDataItem object if
         present
@@ -618,7 +620,7 @@ class TimePlotDataItem(JSONFileHandler):
             all_data_dct = self.load(fn)
         else:
             all_data_dct = {}
-       
+
         if self.data_name in all_data_dct.keys():
             data_dct = all_data_dct[self.data_name]
             t = data_dct['t']
@@ -626,15 +628,15 @@ class TimePlotDataItem(JSONFileHandler):
             self.absolute_time = data_dct['absolute_time']
             self.set_data(t,y)
         return
-            
+
 
 # class TimePlotDataTable(JSONFileHandler):
 #     """ """
-    
+
 #     DEFAULT_DATA_FILENAME = 'data.json'
-    
+
 #     def __init__(self, data_fn=None):
-        
+
 #         if data_fn == None:
 #             self.fn = TimePlotDataTable.DEFUALT_DATA_FILENAME
 
@@ -706,5 +708,5 @@ if __name__ == "__main__":
     dd3.frequency = 1.3
     dd3.signal_form = 'sin'
     dw3 = DeviceWrapper(dd3)
-    
-    main([dw1,dw2,dw3])
+
+    main([dw1, dw2, dw3])
