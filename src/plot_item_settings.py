@@ -45,11 +45,14 @@ class PlotItemSettings(JSONFileHandler):
         'yautorange':       True,
         'xgridlines':       False,
         'ygridlines':       False,
-        'gridopacity':      1,
+        'gridopacity':      3,
+        'line_settings':    {},
         #'line_settings':    {key: {'line_alpha': 1} for key in range()},
         #'line_settings':    self.set_line_settings(number_of_lines),
         'plotalpha':        [1, False],
         #'plotalpha':        {'0': [1, False], '1': [1, False], '2': [1, False]},
+        # mouseMode 1 means rectangle zooming and 3 means pan zooming
+        'mouseMode':        1,
         'x_zoom':           True,
         'y_zoom':           True,
         'auto_clear_data':  True
@@ -61,10 +64,13 @@ class PlotItemSettings(JSONFileHandler):
         self.settings_filename = PlotItemSettings.SETTINGS_FILENAME
         settings = self._checks_for_settings_file()
         self.number_of_lines = number_of_lines
+        #print(f"{number_of_lines}")
         if settings != {}:
             self.settings = settings
         else:
             self.settings = PlotItemSettings.DEFAULT_SETTINGS
+        self.set_line_settings(self.number_of_lines)
+        #print(f"{self.settings}")
 
     # =====
     # define function which automatically checks for settings file
@@ -84,11 +90,13 @@ class PlotItemSettings(JSONFileHandler):
             return custom_settings
         return {}
 
-    # def set_line_settings(self, number_of_lines):
-    #     keys = range(number_of_lines)
-    #     default_line_settings = {'line_alpha': 1}
-    #     line_settings = {key: default_line_settings for key in keys}
-    #     return
+    def set_line_settings(self, number_of_lines):
+        keys = range(number_of_lines)
+        #print(f"{keys}")
+        default_line_settings = {'line_alpha': 1}
+        line_settings = {key: default_line_settings for key in keys}
+        #print(f"{line_settings}")
+        self.settings.update(line_settings = line_settings)
 
     # ====
     # define functions which load and save settings files/ dictionaries
@@ -121,7 +129,7 @@ class PlotItemSettings(JSONFileHandler):
         self.update(**kwargs)
         if path.exists(self.settings_filename):
             os.remove(self.settings_filename)
-        #self.save()
+        self.save(self.settings_filename, self.settings)
         return
 
     # ===

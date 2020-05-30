@@ -31,7 +31,7 @@ from unittest.mock import MagicMock
 import sys
 import weakref
 from PyQt5.QtWidgets import QApplication, QWidget, QToolTip, QPushButton, QMessageBox, QMainWindow
-from PyQt5.QtWidgets import qApp, QAction, QMenu, QGridLayout, QLabel, QLineEdit, QSizePolicy
+from PyQt5.QtWidgets import qApp, QAction, QMenu, QGridLayout, QLabel, QLineEdit, QSizePolicy, QFileDialog
 from PyQt5.QtGui import QIcon, QFont, QCursor, QRegion, QPolygon
 from PyQt5 import QtCore, Qt, QtGui
 import pyqtgraph as pg
@@ -71,8 +71,8 @@ class TimePlotGui(QWidget):
 
         if type(devicewrapper_lst) == DeviceWrapper:
             devicewrapper_lst = [devicewrapper_lst]
-
-        self.plot_item_settings = PlotItemSettings()
+        self.devicewrapper = devicewrapper_lst
+        self.plot_item_settings = PlotItemSettings(number_of_lines = len(devicewrapper_lst))
 
 # <<<<<<< HEAD
 
@@ -214,10 +214,11 @@ class TimePlotGui(QWidget):
         self.modify_context_menu()
         self.graphics_layout.addWidget(self.graphWidget, 0, 0, 5, 4)
         #self.graphics_layout.addWidget(self.blankWidget2, 2, 2)
-        self.graphItem.setTitle('Potential over Time', **{'color': '#FFF', 'size': '20pt'})
-        #self.graphWidget.showAxis('top', False)
-        self.graphItem.setLabel('left', 'Potential (Volts)', color='white', size=30)
-        self.graphItem.setLabel('bottom', 'Time (seconds)', color='white', size=30)
+        self.set_custom_settings()
+        # labels = self.get_axis_labels('temp')
+        # self.graphItem.setTitle(labels['title'], **{'color': '#FFF', 'size': '20pt'})
+        # self.graphItem.setLabel('left', labels['y_label'], color='white', size=30)
+        # self.graphItem.setLabel('bottom', labels['x_label'], color='white', size=30)
 
         # ===============================
         # initlialize data lines
@@ -228,18 +229,50 @@ class TimePlotGui(QWidget):
         # ===============================
         # customize plot settings with stored values
         # ===============================
-        self.set_custom_settings()
+        #self.set_custom_settings()
+
+    def set_labels(self, key = 'potential'):
+        labels = self.get_axis_labels(key)
+        self.graphItem.setTitle(labels['title'], **{'color': '#FFF', 'size': '20pt'})
+        self.graphItem.setLabel('left', labels['y_label'], color='white', size=30)
+        self.graphItem.setLabel('bottom', labels['x_label'], color='white', size=30)
+
+    def get_axis_labels(self, key = 'potential'):
+        sample_labels = {
+                'temp':         {'x_label':     "Time (Seconds)",
+                                'y_label':      "Temperature (K)"},
+                'potential':    {'x_label':     "Time (Seconds)",
+                                'y_label':      "Potential (Volts)"},
+                'pressure':     {'x_label':     "Time (Seconds)",
+                                'y_label':      "Pressure (kPa)"}
+        }
+        labels = {
+                'x_label':  '',
+                'y_label':  '',
+                'title':    ''
+        }
+        labels['x_label'] = sample_labels[key]['x_label']
+        labels['y_label'] = sample_labels[key]['y_label']
+        labels['title'] = labels['x_label'] + ' 0ver ' + labels['y_label']
+        if self.settings['xscalelog']:
+            labels['x_label'] += '\n(Log Scale)'
+        if self.settings['yscalelog']:
+            labels['y_label'] += '\n(Log Scale)'
+        return labels
 
 
-    def init_data_items(self, devicewrapper_lst):
+    def init_data_items(self, devicewrapper_lst, new_data = None):
         self.data_table = {}
         for id_nr, dw in enumerate(devicewrapper_lst):
             data_item = TimePlotDataItem(id_nr=id_nr, absolute_time=self.t0)
             self.data_table.update(
                 {id_nr: data_item}
             )
-            if not self.data_options.automatic_clear_checkbox.isChecked():
+            #if not self.data_options.automatic_clear_checkbox.isChecked() and new_data is None:
+            if new_data is None:
                 data_item.recall_data(self.data_fn)
+            elif new_data is not None:
+                data_item.recall_data(new_data)
             self.graphItem.addItem(data_item.get_plot_data_item())
 
 
@@ -272,7 +305,7 @@ class TimePlotGui(QWidget):
                 data_item.absolute_time = self.t0
 
 
-    def set_custom_settings(self):
+    def set_custom_settings(self, key = 'potential'):
         # acquires the self.settings varibale from plot_item_settings
         if path.exists(self.plot_item_settings.SETTINGS_FILENAME):
             self.settings = self.plot_item_settings.settings
@@ -288,6 +321,11 @@ class TimePlotGui(QWidget):
         self.viewbox.enableAutoRange(x = self.settings['xautorange'], y = self.settings['yautorange'])
         self.data_options.automatic_clear_checkbox.setChecked(self.settings['auto_clear_data'])
         self.viewbox.setMouseEnabled(x = self.settings['x_zoom'], y = self.settings['y_zoom'])
+        if self.settings['mouseMode'] == 1:
+            self.viewbox.setLeftButtonAction(mode = 'rect')
+        else:
+            self.viewbox.setLeftButtonAction(mode = 'pan')
+        self.set_labels(key)
 
     def save_current_settings(self):
         #self.plot_item_settings = PlotItemSettings()
@@ -305,11 +343,12 @@ class TimePlotGui(QWidget):
             ygridlines = self.graphItem.ctrl.yGridCheck.isChecked(),
             gridopacity = self.graphItem.ctrl.gridAlphaSlider.value()/255,
             plotalpha = self.graphItem.alphaState(),
+            mouseMode = viewboxstate['mouseMode'],
             x_zoom = viewboxstate['mouseEnabled'][0],
             y_zoom = viewboxstate['mouseEnabled'][0],
             auto_clear_data = self.data_options.automatic_clear_checkbox.isChecked()
         )
-        self.plot_item_settings.save(self.plot_item_settings.settings_filename, self.plot_item_settings.settings)
+        #self.plot_item_settings.save(self.plot_item_settings.settings_filename, self.plot_item_settings.settings)
         self.set_custom_settings()
 
     # rename as "restore_default_settings"
@@ -354,8 +393,12 @@ class TimePlotGui(QWidget):
         self.data_options.automatic_clear = automatic_clear
         self.data_options.automatic_clear_checkbox = automatic_clear_checkbox
 
-        # self.zoom_settings = self.menu.addMenu("Zoom Settings")
-        #
+        #self.zoom_settings = self.menu.addMenu("Zoom Settings")
+
+        open_data = QtGui.QAction("Load Stored Data")
+        open_data.triggered.connect(self.open_finder)
+        self.menu.addAction(open_data)
+        self.menu.open_data = open_data
         # x_zoom = QtGui.QWidgetAction(self.zoom_settings)
         # x_zoom_checkbox = QtGui.QCheckBox()
         # x_zoom.setDefaultWidget(x_zoom_checkbox)
@@ -370,6 +413,14 @@ class TimePlotGui(QWidget):
         # self.zoom_settings.addAction(y_zoom)
         # self.zoom_settings.y_zoom = y_zoom
         # self.zoom_settings.y_zoom_checkbox = y_zoom_checkbox
+
+    def open_finder(self):
+        fname = QFileDialog.getOpenFileName(self, 'Open file', '~/',"JSON files (*.json)")
+        if fname[0] is not None:
+            data_items = self.graphItem.listDataItems()
+            for data_item in data_items:
+                self.graphItem.removeItem(data_item)
+            self.init_data_items(self.devicewrapper, new_data = fname[0])
 
     def store_all_data(self):
         """
@@ -472,6 +523,11 @@ class TimePlotGui(QWidget):
         """updates TimePlotDataItem object with corresponding to id_nr"""
         self.data_table[id_nr].add_value(val)
 
+    # def __exit__(self, exception_type, exception_value, traceback):
+    #     print('it worked!?')
+    #     super(TimePlotGui, self).__exit__(self, exception_type, exception_value, traceback)
+
+
     @QtCore.pyqtSlot(int, float)
     def newReading(self, id_nr, val):
         """ """
@@ -517,6 +573,8 @@ class PlotDataItemV2(pg.PlotDataItem):
     def _fourierTransform(self, x, y):
         ## Perform fourier transform. If x values are not sampled uniformly,
         ## then use np.interp to resample before taking fft.
+        # print('doing the transform')
+        # print(f"{len(x)}, {x}")
         dx = np.diff(x)
         uniform = not np.any(np.abs(dx-dx[0]) > (abs(dx[0]) / 1000.))
         if not uniform:
@@ -527,6 +585,7 @@ class PlotDataItemV2(pg.PlotDataItem):
         y = abs(f[1:int(len(f)/2)])
         dt = x[-1] - x[0]
         x = np.linspace(0, 0.5*len(x)/dt, len(y))
+        #print(f"{len(x)}, {x}")
         return x, y
 
 
@@ -662,6 +721,7 @@ class MainWindow(QMainWindow):
             devicewrapper_lst=devicewrapper_lst
         )
 
+
     def setGeometry(self, *args, **kwargs):
         """ """
         if len(args) == 0 and len(kwargs) == 0:
@@ -686,8 +746,23 @@ def main(devicewrapper_lst):
     else:
         print('QApplication instance already exists {}'.format(str(app)))
     window = MainWindow(devicewrapper_lst=devicewrapper_lst)
-    window.show()
-    app.exec_()
+    # try:
+    #     x = []
+    #     y = x[0]-x[1]
+    # except:
+    #     print('hello')
+    try:
+        print("here first")
+        window.show()
+        print('here')
+        app.exec_()
+        print('leaving...')
+    except:
+        print("THERE WAS AN ERROR!")
+        window.closeEvent()
+    print('skipped except')
+    # window.show()
+    # app.exec_()
 
 
 # ===========================================================================
