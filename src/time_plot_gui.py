@@ -30,7 +30,7 @@ from unittest.mock import MagicMock
 
 import sys
 import weakref
-from PyQt5.QtWidgets import QApplication, QWidget, QToolTip, QPushButton, QMessageBox, QMainWindow
+from PyQt5.QtWidgets import QApplication, QWidget, QToolTip, QPushButton, QMessageBox, QMainWindow, QHBoxLayout
 from PyQt5.QtWidgets import qApp, QAction, QMenu, QGridLayout, QLabel, QLineEdit, QSizePolicy, QFileDialog
 from PyQt5.QtGui import QIcon, QFont, QCursor, QRegion, QPolygon
 from PyQt5 import QtCore, Qt, QtGui
@@ -211,10 +211,10 @@ class TimePlotGui(QWidget):
         self.graphWidget = pg.PlotWidget()
         self.graphItem = self.graphWidget.getPlotItem()
         self.viewbox = self.graphItem.getViewBox()
-        self.modify_context_menu()
+        ##self.modify_context_menu()
         self.graphics_layout.addWidget(self.graphWidget, 0, 0, 5, 4)
         #self.graphics_layout.addWidget(self.blankWidget2, 2, 2)
-        self.set_custom_settings()
+        ##self.set_custom_settings()
         # labels = self.get_axis_labels('temp')
         # self.graphItem.setTitle(labels['title'], **{'color': '#FFF', 'size': '20pt'})
         # self.graphItem.setLabel('left', labels['y_label'], color='white', size=30)
@@ -224,6 +224,8 @@ class TimePlotGui(QWidget):
         # initlialize data lines
         # ===============================
         self.init_data_items(devicewrapper_lst)
+        self.modify_context_menu()
+        self.set_custom_settings()
         self.align_time_stamps()
 
         # ===============================
@@ -232,6 +234,7 @@ class TimePlotGui(QWidget):
         #self.set_custom_settings()
 
     def set_labels(self, key = 'potential'):
+        #print(f"Key: {key}")
         labels = self.get_axis_labels(key)
         self.graphItem.setTitle(labels['title'], **{'color': '#FFF', 'size': '20pt'})
         self.graphItem.setLabel('left', labels['y_label'], color='white', size=30)
@@ -305,16 +308,22 @@ class TimePlotGui(QWidget):
                 data_item.absolute_time = self.t0
 
 
-    def set_custom_settings(self, key = 'potential'):
+    def set_custom_settings(self, label_key = 'potential'):
         # acquires the self.settings varibale from plot_item_settings
-        if path.exists(self.plot_item_settings.SETTINGS_FILENAME):
-            self.settings = self.plot_item_settings.settings
-        else:
-            self.settings = self.plot_item_settings.DEFAULT_SETTINGS
+        # if path.exists(self.plot_item_settings.SETTINGS_FILENAME):
+        #     self.settings = self.plot_item_settings.settings
+        # else:
+        #     self.settings = self.plot_item_settings.DEFAULT_SETTINGS
+        self.settings = self.plot_item_settings.settings
 
         self.graphItem.setLogMode(x = self.settings['xscalelog'], y = self.settings['yscalelog'])
         self.graphItem.showGrid(x = self.settings['xgridlines'], y = self.settings['ygridlines'], \
                                 alpha = self.settings['gridopacity'])
+        for key in self.data_table:
+            time_data_item = self.data_table[key]
+            data_item = time_data_item.get_plot_data_item()
+            #print(f"{self.settings['line_settings'][key]['line_alpha']}")
+            data_item.setAlpha(alpha = self.settings['line_settings'][key]['line_alpha'], auto = False)
         #self.plotDataItem.setAlpha(alpha = self.settings['plotalpha'][0], auto = self.settings['plotalpha'][1])
         self.viewbox.setAutoPan(x = self.settings['autoPan'])
         self.viewbox.setRange(xRange = self.settings['xlim'], yRange = self.settings['ylim'])
@@ -325,7 +334,7 @@ class TimePlotGui(QWidget):
             self.viewbox.setLeftButtonAction(mode = 'rect')
         else:
             self.viewbox.setLeftButtonAction(mode = 'pan')
-        self.set_labels(key)
+        #self.set_labels(key = label_key)
 
     def save_current_settings(self):
         #self.plot_item_settings = PlotItemSettings()
@@ -349,6 +358,7 @@ class TimePlotGui(QWidget):
             auto_clear_data = self.data_options.automatic_clear_checkbox.isChecked()
         )
         #self.plot_item_settings.save(self.plot_item_settings.settings_filename, self.plot_item_settings.settings)
+        #self.save_line_settings()
         self.set_custom_settings()
 
     # rename as "restore_default_settings"
@@ -360,6 +370,35 @@ class TimePlotGui(QWidget):
 
     def modify_context_menu(self):
         self.menu = self.graphItem.getMenu()
+
+        self.alpha_menu = self.menu.addMenu("Alpha")
+
+        # hbox = QHBoxLayout()
+        # label = QtGui.QLabel("auto")
+        # alphaSlider = QtGui.QSlider()
+        # hbox.addWidget(label)
+        # hbox.addWidget(alphaSlider)
+        for key in self.data_table:
+            alpha = QtGui.QWidgetAction(self.alpha_menu)
+            title = QtGui.QAction('Line ' + str(key), self.alpha_menu)
+            title.setEnabled(False)
+            alphaSlider = QtGui.QSlider(self.alpha_menu)
+            alphaSlider.setOrientation(QtCore.Qt.Horizontal)
+            alphaSlider.setMaximum(255)
+            alphaSlider.setValue(255)
+            #print(f"{key}")
+            #alphaSlider.valueChanged.connect(self.alphaSignal.emit(value, key))
+            alphaSlider.valueChanged.connect(self.data_table[key].setAlpha)
+            #alphaSlider.valueChanged.connect(lambda value: self.set_line_settings(value, key))
+            alpha.setDefaultWidget(alphaSlider)
+            self.alpha_menu.addAction(title)
+            self.alpha_menu.title = title
+            self.alpha_menu.addAction(alpha)
+            self.alpha_menu.alpha = alpha
+            self.alpha_menu.alphaSlider = alphaSlider
+
+
+
 
         self.visualization_settings = self.menu.addMenu("Visualization Settings")
 
@@ -389,6 +428,8 @@ class TimePlotGui(QWidget):
         automatic_clear = QtGui.QWidgetAction(self.data_options)
         automatic_clear_checkbox = QtGui.QCheckBox("Automatically Clear Data", self)
         automatic_clear.setDefaultWidget(automatic_clear_checkbox)
+        #print(f"{self.plot_item_settings.settings['auto_clear_data']}")
+        automatic_clear_checkbox.stateChanged.connect(self.save_data_settings)
         self.data_options.addAction(automatic_clear)
         self.data_options.automatic_clear = automatic_clear
         self.data_options.automatic_clear_checkbox = automatic_clear_checkbox
@@ -413,6 +454,15 @@ class TimePlotGui(QWidget):
         # self.zoom_settings.addAction(y_zoom)
         # self.zoom_settings.y_zoom = y_zoom
         # self.zoom_settings.y_zoom_checkbox = y_zoom_checkbox
+        actions = self.graphItem.ctrlMenu.actions()
+        for index in [1, 2, 5]:
+            self.graphItem.ctrlMenu.removeAction(actions[index])
+        #print(f"{actions[3].Menu()}")
+
+        # core_menu = self.graphItem.getContextMenus(event = None)
+        # test = QtGui.QAction("test", core_menu)
+        # core_menu.addAction(test)
+        # core_menu.test = test
 
     def open_finder(self):
         fname = QFileDialog.getOpenFileName(self, 'Open file', '~/',"JSON files (*.json)")
@@ -421,6 +471,39 @@ class TimePlotGui(QWidget):
             for data_item in data_items:
                 self.graphItem.removeItem(data_item)
             self.init_data_items(self.devicewrapper, new_data = fname[0])
+
+    def save_data_settings(self):
+        self.plot_item_settings.save_settings( \
+            auto_clear_data = self.data_options.automatic_clear_checkbox.isChecked())
+
+    def set_line_settings(self, value, key):
+        alphas = self.alpha_menu.actions()
+        sliders = alphas[1::2]
+        #print(f"{key}, {type(key)}")
+        #print(f"{self.settings['line_settings'][key]}")
+        new_dict = {'line_alpha': value/255}
+        # temp = self.settings['line_settings'][0]
+        # print(f"{temp}")
+        self.settings['line_settings'][key] = new_dict
+        ## self.settings['line_settings'][0] = temp
+        # print(f"{self.settings['line_settings']}")
+        # self.settings['line_settings'][1] = temp
+        # #self.settings['line_settings'].update(string = new_dict)
+        # print(f"{self.settings['line_settings']}")
+        # #relevant_dictionary['line_alpha'] = value/255
+        # #print(f"{self.settings['line_settings']}")
+
+            #key +=1
+        self.set_custom_settings()
+
+        #print(f"{alphas} \n {alphas[1::2]}")
+
+    def save_line_settings(self):
+        for key in self.data_table:
+            time_data_item = self.data_table[key]
+            data_item = time_data_item.get_plot_data_item()
+            alpha = data_item.alphaState()
+            self.settings['line_settings'][key].update(line_alpha = alpha)
 
     def store_all_data(self):
         """
@@ -465,10 +548,11 @@ class TimePlotGui(QWidget):
     # def set_data(self):
     #     self.time_array, self.absolute_time, self.potential = self.data_recall.load_data()
 
-    def update_zoom_settings(self):
-        x_zoom = self.zoom_settings.x_zoom_checkbox.isChecked()
-        y_zoom = self.zoom_settings.y_zoom_checkbox.isChecked()
-        self.viewbox.setMouseEnabled(x = self.settings['x_zoom'], y = self.settings['y_zoom'])
+    # def update_zoom_settings(self):
+    #     print('worked')
+        # x_zoom = self.zoom_settings.x_zoom_checkbox.isChecked()
+        # y_zoom = self.zoom_settings.y_zoom_checkbox.isChecked()
+        # self.viewbox.setMouseEnabled(x = self.settings['x_zoom'], y = self.settings['y_zoom'])
 
 
     def _set_central_wid_properties(self):
@@ -523,9 +607,9 @@ class TimePlotGui(QWidget):
         """updates TimePlotDataItem object with corresponding to id_nr"""
         self.data_table[id_nr].add_value(val)
 
-    # def __exit__(self, exception_type, exception_value, traceback):
+    # def __del__(self):
     #     print('it worked!?')
-    #     super(TimePlotGui, self).__exit__(self, exception_type, exception_value, traceback)
+    #     super(self, TimePlotGui).__del__()
 
 
     @QtCore.pyqtSlot(int, float)
@@ -687,6 +771,9 @@ class TimePlotDataItem(JSONFileHandler):
             self.absolute_time = data_dct['absolute_time']
             self.set_data(t,y)
         return
+
+    def setAlpha(self, value):
+        self.pdi.setAlpha(value/255, False)
 
 
 # class TimePlotDataTable(JSONFileHandler):
