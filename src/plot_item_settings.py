@@ -35,7 +35,7 @@ class PlotItemSettings(JSONFileHandler):
     """ """
 
     SETTINGS_FILENAME = "custom_settings.json"
-    DEFAULT_SETTINGS = {    # i just used generic values inhere. change if necessary
+    DEFAULT_SETTINGS = {
         'autoPan':          False,
         'xscalelog':        False,
         'yscalelog':        False,
@@ -47,10 +47,7 @@ class PlotItemSettings(JSONFileHandler):
         'ygridlines':       False,
         'gridopacity':      3,
         'line_settings':    {},
-        #'line_settings':    {key: {'line_alpha': 1} for key in range()},
-        #'line_settings':    self.set_line_settings(number_of_lines),
         'plotalpha':        [1, False],
-        #'plotalpha':        {'0': [1, False], '1': [1, False], '2': [1, False]},
         # mouseMode 1 means rectangle zooming and 3 means pan zooming
         'mouseMode':        1,
         'x_zoom':           True,
@@ -64,13 +61,11 @@ class PlotItemSettings(JSONFileHandler):
         self.settings_filename = PlotItemSettings.SETTINGS_FILENAME
         settings = self._checks_for_settings_file()
         self.number_of_lines = number_of_lines
-        #print(f"{number_of_lines}")
         if settings != {}:
             self.settings = settings
         else:
             self.settings = PlotItemSettings.DEFAULT_SETTINGS
         self.set_line_settings(self.number_of_lines)
-        #print(f"{self.settings}")
 
     # =====
     # define function which automatically checks for settings file
@@ -92,38 +87,16 @@ class PlotItemSettings(JSONFileHandler):
 
     def set_line_settings(self, number_of_lines):
         keys = range(number_of_lines)
-        #print(f"{keys}")
         default_line_settings = {'line_alpha': 1}
         line_settings = {key: default_line_settings for key in keys}
-        #print(f"{line_settings}")
         self.settings.update(line_settings = line_settings)
 
     # ====
     # define functions which load and save settings files/ dictionaries
     # ====
 
-    # def load(self):
-    #     """load settings from file"""
-    #     # code to load settgins from file here
-    #     with open(self.settings_filename) as json_file:
-    #         data = json.load(json_file)
-    #     return data
-
     def update(self, **kwargs):
         self.settings.update(**kwargs)
-
-    # def save(self, **kwargs):
-    #     """save settings to file """
-    #
-    #     self.update(**kwargs)
-    #
-    #     if path.exists(self.settings_filename):
-    #         os.remove(self.settings_filename)
-    #     # find a better letter than w
-    #     with open(self.settings_filename, 'w') as outfile:
-    #         json.dump(self.settings, outfile)
-    #
-    #     return
 
     def save_settings(self, **kwargs):
         self.update(**kwargs)
@@ -174,7 +147,7 @@ class DataRecall(object):
 
         if path.exists(self.stored_data_filename):
             os.remove(self.stored_data_filename)
-        # find a better letter than w
+
         with open(self.stored_data_filename, 'w') as outfile:
             json.dump({'time': time, 'absolute_time': absolute_time, 'y': y}, outfile)
 
@@ -196,24 +169,6 @@ class DataRecall(object):
             os.remove(self.stored_data_filename)
 
 
-# # ===========================================================================
-# # helper class to save&store JSON files
-# # ===========================================================================
-# class JSONFileHandler():
-#
-#     def load(self, fn, mode='r'):
-#         with open(fn, mode=mode) as json_file:
-#             data = json.load(json_file)
-#         return data
-#
-#     def save(self, fn, dct, mode='a', sort_keys=True, indent=4):
-#         with open(fn, mode=mode) as outfile:
-#             json.dump(dct, outfile, sort_keys=sort_keys, indent=indent)
-#         return
-#
-# # ===========================================================================
-# #
-# # ===========================================================================
 if __name__ == "__main__":
     ps = PlotItemSettings()
 
