@@ -135,40 +135,6 @@ class PlotItemSettings(JSONFileHandler):
         else:
             super(PlotItemSettings, self).__setattr__(name, value)
 
-class DataRecall(object):
-    """ """
-    STORED_DATA_FILENAME = "stored_data.json"
-
-    def __init__(self):
-        self.stored_data_filename = DataRecall.STORED_DATA_FILENAME
-
-    def store(self, time, absolute_time, y):
-        """store collected data to json file """
-
-        if path.exists(self.stored_data_filename):
-            os.remove(self.stored_data_filename)
-
-        with open(self.stored_data_filename, 'w') as outfile:
-            json.dump({'time': time, 'absolute_time': absolute_time, 'y': y}, outfile)
-
-        return
-
-    def load_data(self, file = None):
-        """load stored data from json file"""
-        # code to load settgins from file here
-        if file is None:
-            file = self.stored_data_filename
-        if path.exists(file):
-            with open(file) as json_file:
-                data = json.load(json_file)
-            return np.array(data['time']), np.array(data['absolute_time']), np.array(data['y'])
-        return np.array([]), np.array([]), np.array([])
-
-    def clear_data(self):
-        if path.exists(self.stored_data_filename):
-            os.remove(self.stored_data_filename)
-
-
 if __name__ == "__main__":
     ps = PlotItemSettings()
 

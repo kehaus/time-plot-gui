@@ -440,29 +440,6 @@ class TimePlotGui(QWidget):
             data_item.reset_absolute_time(absolute_time=self.t0)
 
 
-    def store_current_data(self, time_axis, absolute_time, y):
-        """
-        **obsolete**
-        """
-        time_data = time_axis.tolist()
-        absolute_time_data = absolute_time.tolist()
-        y_data = y.tolist()
-        # for argument in **kwargs:
-        #     argument.tolist()
-        self.data_recall.store(time_data, absolute_time_data, y_data)
-
-    def clear_current_data(self):
-        """
-        **obsolete**
-        """
-        self.time_array = np.array([])
-        self.potential = np.array([])
-        self.absolute_time = np.array([])
-        self.data_recall.clear_data()
-        self.plotDataItem.setData(self.time_array, self.potential)
-        self.set_data()
-
-
     def _set_central_wid_properties(self):
         """ """
         self.central_wid.setAutoFillBackground(True)
