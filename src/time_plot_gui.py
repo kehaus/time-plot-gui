@@ -153,7 +153,7 @@ class TimePlotGui(QWidget):
         # ===============================
         # initlialize data lines
         # ===============================
-        self._init_data_items(devicewrapper_lst)
+        self.init_data_items(devicewrapper_lst)
         self._align_time_stamps()
         # ===============================
         # Customize the context menu
@@ -165,7 +165,7 @@ class TimePlotGui(QWidget):
         self.set_custom_settings()
 
 
-    def _init_data_items(self, devicewrapper_lst, new_data = None):
+    def init_data_items(self, devicewrapper_lst, new_data = None):
         self.data_table = {}
         for id_nr, dw in enumerate(devicewrapper_lst):
             data_item = TimePlotDataItem(id_nr=id_nr, absolute_time=self.t0)
@@ -270,8 +270,18 @@ class TimePlotGui(QWidget):
         return labels
 
     def save_current_settings(self):
+        # ===============================
+        # Get Viewbox so both viewbox and PlotItem (self.graphItem) parameters are accessible
+        # ===============================
         viewboxstate = self.viewbox.getState()
+        # ===============================
+        # Save setting: Line settings
+        # ===============================
         self.save_line_settings()
+        # ===============================
+        # Save setting: All other settings
+        # ===============================
+        print(f"{self.settings}")
         self.plot_item_settings.save_settings(
             autoPan = viewboxstate['autoPan'][0],
             xscalelog = self.graphItem.ctrl.logXCheck.isChecked(),
@@ -289,6 +299,7 @@ class TimePlotGui(QWidget):
             y_zoom = viewboxstate['mouseEnabled'][0],
             auto_clear_data = self.data_options.automatic_clear_checkbox.isChecked()
         )
+        print(f"{self.settings}")
 
     def restore_default_settings(self):
         # ===============================
@@ -389,18 +400,27 @@ class TimePlotGui(QWidget):
             data_items = self.graphItem.listDataItems()
             for data_item in data_items:
                 self.graphItem.removeItem(data_item)
-            self._init_data_items(self.devicewrapper, new_data = fname[0])
+            self.init_data_items(self.devicewrapper, new_data = fname[0])
 
     def save_data_settings(self):
         self.plot_item_settings.save_settings( \
             auto_clear_data = self.data_options.automatic_clear_checkbox.isChecked())
 
     def save_line_settings(self):
-        for key in self.data_table:
-            time_data_item = self.data_table[key]
-            data_item = time_data_item.get_plot_data_item()
-            alpha = data_item.alphaState()
-            self.settings['line_settings'][key].update(line_alpha = alpha)
+        alpha_sliders = self.alpha_menu.actions()[1::2]
+        number = 0
+        for slider in alpha_sliders:
+            print(f"{alpha_sliders[number].defaultWidget().value()/255}")
+            print(f"{self.settings['line_settings'][number]}")
+            #self.settings['line_settings'][number].update(line_alpha = slider.defaultWidget().value()/255)
+            self.settings['line_settings'][number]['line_alpha'] = slider.defaultWidget().value()/255
+            number += 1
+        #print(f"{alpha_sliders[0].defaultWidget().value()}")
+        # for key in self.data_table:
+        #     time_data_item = self.data_table[key]
+        #     data_item = time_data_item.get_plot_data_item()
+        #     alpha = data_item.alphaState()
+        #     self.settings['line_settings'][key].update(line_alpha = alpha)
 
     def store_all_data(self):
         """
