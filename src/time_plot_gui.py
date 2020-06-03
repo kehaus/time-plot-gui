@@ -38,7 +38,7 @@ import pyqtgraph as pg
 
 
 from time_plot_worker import TimePlotWorker
-from plot_item_settings import PlotItemSettings, DataRecall, JSONFileHandler
+from plot_item_settings import PlotItemSettings, JSONFileHandler
 
 from util.workerthread import WorkerThread,WorkerTaskBase
 from util.devicewrapper import DeviceWrapper, DummyDevice
@@ -72,7 +72,12 @@ class TimePlotGui(QWidget):
         if type(devicewrapper_lst) == DeviceWrapper:
             devicewrapper_lst = [devicewrapper_lst]
         self.devicewrapper = devicewrapper_lst
+        # ===============================
+        # Get the settings object
+        # ===============================
         self.plot_item_settings = PlotItemSettings(number_of_lines = len(devicewrapper_lst))
+        self.settings = self.plot_item_settings.settings
+
         self._init_ui(window, devicewrapper_lst)
         self._init_multi_worker_thread(devicewrapper_lst)
 
@@ -211,10 +216,6 @@ class TimePlotGui(QWidget):
 
     def set_custom_settings(self, label_key = 'potential'):
         # ===============================
-        # Get the settings object
-        # ===============================
-        self.settings = self.plot_item_settings.settings
-        # ===============================
         # Set all of the parameters accoringing to the settings parameters
         # ===============================
         self.graphItem.setLogMode(x = self.settings['xscalelog'], y = self.settings['yscalelog'])
@@ -223,7 +224,7 @@ class TimePlotGui(QWidget):
         for key in self.data_table:
             time_data_item = self.data_table[key]
             data_item = time_data_item.get_plot_data_item()
-            data_item.setAlpha(alpha = self.settings['line_settings'][key]['line_alpha'], auto = False)
+            data_item.setAlpha(alpha = self.settings['line_settings'][str(key)]['line_alpha'], auto = False)
         #self.plotDataItem.setAlpha(alpha = self.settings['plotalpha'][0], auto = self.settings['plotalpha'][1])
         self.viewbox.setAutoPan(x = self.settings['autoPan'])
         self.viewbox.setRange(xRange = self.settings['xlim'], yRange = self.settings['ylim'])
@@ -281,7 +282,6 @@ class TimePlotGui(QWidget):
         # ===============================
         # Save setting: All other settings
         # ===============================
-        print(f"{self.settings}")
         self.plot_item_settings.save_settings(
             autoPan = viewboxstate['autoPan'][0],
             xscalelog = self.graphItem.ctrl.logXCheck.isChecked(),
@@ -299,7 +299,6 @@ class TimePlotGui(QWidget):
             y_zoom = viewboxstate['mouseEnabled'][0],
             auto_clear_data = self.data_options.automatic_clear_checkbox.isChecked()
         )
-        print(f"{self.settings}")
 
     def restore_default_settings(self):
         # ===============================
@@ -338,8 +337,7 @@ class TimePlotGui(QWidget):
             alphaSlider = QtGui.QSlider(self.alpha_menu)
             alphaSlider.setOrientation(QtCore.Qt.Horizontal)
             alphaSlider.setMaximum(255)
-            alphaSlider.setValue(255)
-            #print(f"{key}")
+            alphaSlider.setValue(self.settings['line_settings'][str(key)]['line_alpha']*255)
             alphaSlider.valueChanged.connect(self.data_table[key].setAlpha)
             alpha.setDefaultWidget(alphaSlider)
             self.alpha_menu.addAction(title)
@@ -410,17 +408,8 @@ class TimePlotGui(QWidget):
         alpha_sliders = self.alpha_menu.actions()[1::2]
         number = 0
         for slider in alpha_sliders:
-            print(f"{alpha_sliders[number].defaultWidget().value()/255}")
-            print(f"{self.settings['line_settings'][number]}")
-            #self.settings['line_settings'][number].update(line_alpha = slider.defaultWidget().value()/255)
-            self.settings['line_settings'][number]['line_alpha'] = slider.defaultWidget().value()/255
+            self.settings['line_settings'][str(number)]['line_alpha'] = slider.defaultWidget().value()/255
             number += 1
-        #print(f"{alpha_sliders[0].defaultWidget().value()}")
-        # for key in self.data_table:
-        #     time_data_item = self.data_table[key]
-        #     data_item = time_data_item.get_plot_data_item()
-        #     alpha = data_item.alphaState()
-        #     self.settings['line_settings'][key].update(line_alpha = alpha)
 
     def store_all_data(self):
         """

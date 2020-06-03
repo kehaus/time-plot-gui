@@ -61,11 +61,11 @@ class PlotItemSettings(JSONFileHandler):
         self.settings_filename = PlotItemSettings.SETTINGS_FILENAME
         settings = self._checks_for_settings_file()
         self.number_of_lines = number_of_lines
+        self.set_line_settings(self.number_of_lines)
         if settings != {}:
             self.settings = settings
         else:
             self.settings = PlotItemSettings.DEFAULT_SETTINGS
-        self.set_line_settings(self.number_of_lines)
 
     # =====
     # define function which automatically checks for settings file
@@ -88,8 +88,8 @@ class PlotItemSettings(JSONFileHandler):
     def set_line_settings(self, number_of_lines):
         keys = range(number_of_lines)
         default_line_settings = {'line_alpha': 1}
-        line_settings = {key: default_line_settings for key in keys}
-        self.settings.update(line_settings = line_settings)
+        line_settings = {str(key): default_line_settings for key in keys}
+        self.DEFAULT_SETTINGS.update(line_settings = line_settings)
 
     # ====
     # define functions which load and save settings files/ dictionaries
