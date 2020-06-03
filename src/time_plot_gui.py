@@ -66,7 +66,7 @@ class TimePlotGui(QWidget):
         """ """
         super(TimePlotGui, self).__init__(parent=parent)
 
-        self.create_absolute_time_stamp()
+        self._create_absolute_time_stamp()
         self.data_fn = TimePlotGui.DEFAULT_DATA_FILENAME
 
         if type(devicewrapper_lst) == DeviceWrapper:
@@ -78,25 +78,23 @@ class TimePlotGui(QWidget):
 
 
     def _init_ui(self, mainwindow, devicewrapper_lst):
-
+        """
+        Creates and Loads the widgets in the GUI
+        """
+        # =====================================================================
+        # Creates and configures central widget for window
+        # =====================================================================
         self.central_wid = QWidget(mainwindow)
         self._set_central_wid_properties()
         self.mainwindow = mainwindow
         self.mainwindow.setCentralWidget(self.central_wid)
-
-
-
-        # grid layout to put all widgets
-        self.wid_layout = QGridLayout()
         # =====================================================================
-        # control panel
+        # control panel - initializes layout item to put widgets
         # =====================================================================
         self.graphics_layout = QGridLayout()
-
         # =====================================================================
-        # control buttons - layout
+        # control buttons - Non-plot widgets (stop/start buttons and spacers) created
         # =====================================================================
-
         self.playBtn = QPushButton()
         self.playBtn.setFixedSize(QSize(30, 30))
         self.playBtn.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed))
@@ -116,55 +114,130 @@ class TimePlotGui(QWidget):
 
         self.blankWidget = QWidget()
         self.blankWidget.setFixedSize(QSize(500, 30))
-        self.graphics_layout.addWidget(self.blankWidget, 0, 2)
 
         self.blankWidget2 = QWidget()
         self.blankWidget2.setFixedSize(QSize(30, 30))
+        # =====================================================================
+        # Initialize the plot
+        # =====================================================================
+        self._init_plot(devicewrapper_lst)
+        # =====================================================================
+        # Add Widgets to layout, including the Plot itself. Note that the order
+        # in which these are added matters because several widgets overlap.
+        # =====================================================================
+        self.graphics_layout.addWidget(self.blankWidget, 0, 2)
         self.graphics_layout.addWidget(self.blankWidget2, 0, 1)
-
-
-        self.init_plot(devicewrapper_lst)
+        self.graphics_layout.addWidget(self.graphWidget, 0, 0, 5, 4)
         self.graphics_layout.addWidget(self.squarestopBtn, 0, 0)
         self.graphics_layout.addWidget(self.playBtn, 0, 0)
-        self.graphics_layout.addWidget(self.blankWidget2, 0, 1)
-
         # =====================================================================
         # control buttons - connections
         # =====================================================================
-
         self.playBtn.clicked.connect(self.start_thread)
         self.squarestopBtn.clicked.connect(self.stop_thread)
-
-       # ============================================================
-        # put everything together
         # ============================================================
-        self.wid_layout.addItem(self.graphics_layout, 0, 0, 6, 6)
+        # Assign layout widget to window
+        # ============================================================
+        self.central_wid.setLayout(self.graphics_layout)
 
-        self.central_wid.setLayout(self.wid_layout)
 
-    def init_plot(self, devicewrapper_lst):
+    def _init_plot(self, devicewrapper_lst):
         """ """
         print("initializing plot...")
+        # ===============================
+        # Initializes plot by generating the plotWidget, plotItem, and ViewBox objects that are callable
+        # ===============================
         self.graphWidget = pg.PlotWidget()
         self.graphItem = self.graphWidget.getPlotItem()
         self.viewbox = self.graphItem.getViewBox()
-        ##self.modify_context_menu()
-        self.graphics_layout.addWidget(self.graphWidget, 0, 0, 5, 4)
-        #self.graphics_layout.addWidget(self.blankWidget2, 2, 2)
-        ##self.set_custom_settings()
-
         # ===============================
         # initlialize data lines
         # ===============================
-        self.init_data_items(devicewrapper_lst)
-        self.modify_context_menu()
-        self.set_custom_settings()
-        self.align_time_stamps()
-
+        self._init_data_items(devicewrapper_lst)
+        self._align_time_stamps()
+        # ===============================
+        # Customize the context menu
+        # ===============================
+        self._modify_context_menu()
         # ===============================
         # customize plot settings with stored values
         # ===============================
-        #self.set_custom_settings()
+        self.set_custom_settings()
+
+
+    def _init_data_items(self, devicewrapper_lst, new_data = None):
+        self.data_table = {}
+        for id_nr, dw in enumerate(devicewrapper_lst):
+            data_item = TimePlotDataItem(id_nr=id_nr, absolute_time=self.t0)
+            self.data_table.update(
+                {id_nr: data_item}
+            )
+            #if not self.data_options.automatic_clear_checkbox.isChecked() and new_data is None:
+            if new_data is None:
+                data_item.recall_data(self.data_fn)
+            elif new_data is not None:
+                data_item.recall_data(new_data)
+            self.graphItem.addItem(data_item.get_plot_data_item())
+
+
+    def _create_absolute_time_stamp(self):
+        self.t0 = time.time()
+
+    def reset_absolute_time_stamp(self):
+        self.t0 = time.time()
+
+    def _align_time_stamps(self):
+        """compares and aligns time stamps between TimePlotGui and data_items"""
+
+        if not hasattr(self, 'data_table'):
+            raise TimePlotGuiException(
+                'data_table variable not present. Call init_data_items() first'
+            )
+
+        # define the TimePlotGui absolute_time to be the earliest time stemp present
+        t0_lst = [
+            data_item.absolute_time for data_item in self.data_table.values()
+        ]
+        self.t0 = min(t0_lst + [self.t0])
+
+        # shift times in data_item object in respect to TimePlotGui absolute_time
+        for data_item in self.data_table.values():
+            if not np.isclose(self.t0, data_item.absolute_time, rtol=1e-3):
+                dt = data_item.absolute_time - self.t0
+                t,y = data_item.get_data()
+                data_item.set_data(t+dt, y)
+                data_item.absolute_time = self.t0
+
+
+    def set_custom_settings(self, label_key = 'potential'):
+        # ===============================
+        # Get the settings object
+        # ===============================
+        self.settings = self.plot_item_settings.settings
+        # ===============================
+        # Set all of the parameters accoringing to the settings parameters
+        # ===============================
+        self.graphItem.setLogMode(x = self.settings['xscalelog'], y = self.settings['yscalelog'])
+        self.graphItem.showGrid(x = self.settings['xgridlines'], y = self.settings['ygridlines'], \
+                                alpha = self.settings['gridopacity'])
+        for key in self.data_table:
+            time_data_item = self.data_table[key]
+            data_item = time_data_item.get_plot_data_item()
+            data_item.setAlpha(alpha = self.settings['line_settings'][key]['line_alpha'], auto = False)
+        #self.plotDataItem.setAlpha(alpha = self.settings['plotalpha'][0], auto = self.settings['plotalpha'][1])
+        self.viewbox.setAutoPan(x = self.settings['autoPan'])
+        self.viewbox.setRange(xRange = self.settings['xlim'], yRange = self.settings['ylim'])
+        self.viewbox.enableAutoRange(x = self.settings['xautorange'], y = self.settings['yautorange'])
+        self.data_options.automatic_clear_checkbox.setChecked(self.settings['auto_clear_data'])
+        self.viewbox.setMouseEnabled(x = self.settings['x_zoom'], y = self.settings['y_zoom'])
+        if self.settings['mouseMode'] == 1:
+            self.viewbox.setLeftButtonAction(mode = 'rect')
+        else:
+            self.viewbox.setLeftButtonAction(mode = 'pan')
+        # ===============================
+        # Assign axis labels accordingly
+        # ===============================
+        #self.set_labels(key = label_key)
 
     def set_labels(self, key = 'potential'):
         #print(f"Key: {key}")
@@ -196,77 +269,9 @@ class TimePlotGui(QWidget):
             labels['y_label'] += '\n(Log Scale)'
         return labels
 
-
-    def init_data_items(self, devicewrapper_lst, new_data = None):
-        self.data_table = {}
-        for id_nr, dw in enumerate(devicewrapper_lst):
-            data_item = TimePlotDataItem(id_nr=id_nr, absolute_time=self.t0)
-            self.data_table.update(
-                {id_nr: data_item}
-            )
-            #if not self.data_options.automatic_clear_checkbox.isChecked() and new_data is None:
-            if new_data is None:
-                data_item.recall_data(self.data_fn)
-            elif new_data is not None:
-                data_item.recall_data(new_data)
-            self.graphItem.addItem(data_item.get_plot_data_item())
-
-
-    def create_absolute_time_stamp(self):
-        self.t0 = time.time()
-
-    def reset_absolute_time_stamp(self):
-        self.t0 = time.time()
-
-    def align_time_stamps(self):
-        """compares and aligns time stamps between TimePlotGui and data_items"""
-
-        if not hasattr(self, 'data_table'):
-            raise TimePlotGuiException(
-                'data_table variable not present. Call init_data_items() first'
-            )
-
-        # define the TimePlotGui absolute_time to be the earliest time stemp present
-        t0_lst = [
-            data_item.absolute_time for data_item in self.data_table.values()
-        ]
-        self.t0 = min(t0_lst + [self.t0])
-
-        # shift times in data_item object in respect to TimePlotGui absolute_time
-        for data_item in self.data_table.values():
-            if not np.isclose(self.t0, data_item.absolute_time, rtol=1e-3):
-                dt = data_item.absolute_time - self.t0
-                t,y = data_item.get_data()
-                data_item.set_data(t+dt, y)
-                data_item.absolute_time = self.t0
-
-
-    def set_custom_settings(self, label_key = 'potential'):
-        self.settings = self.plot_item_settings.settings
-
-        self.graphItem.setLogMode(x = self.settings['xscalelog'], y = self.settings['yscalelog'])
-        self.graphItem.showGrid(x = self.settings['xgridlines'], y = self.settings['ygridlines'], \
-                                alpha = self.settings['gridopacity'])
-        for key in self.data_table:
-            time_data_item = self.data_table[key]
-            print(f"{type(time_data_item)}")
-            data_item = time_data_item.get_plot_data_item()
-            data_item.setAlpha(alpha = self.settings['line_settings'][key]['line_alpha'], auto = False)
-        #self.plotDataItem.setAlpha(alpha = self.settings['plotalpha'][0], auto = self.settings['plotalpha'][1])
-        self.viewbox.setAutoPan(x = self.settings['autoPan'])
-        self.viewbox.setRange(xRange = self.settings['xlim'], yRange = self.settings['ylim'])
-        self.viewbox.enableAutoRange(x = self.settings['xautorange'], y = self.settings['yautorange'])
-        self.data_options.automatic_clear_checkbox.setChecked(self.settings['auto_clear_data'])
-        self.viewbox.setMouseEnabled(x = self.settings['x_zoom'], y = self.settings['y_zoom'])
-        if self.settings['mouseMode'] == 1:
-            self.viewbox.setLeftButtonAction(mode = 'rect')
-        else:
-            self.viewbox.setLeftButtonAction(mode = 'pan')
-        #self.set_labels(key = label_key)
-
     def save_current_settings(self):
         viewboxstate = self.viewbox.getState()
-        #print(f"{viewboxstate}")
+        self.save_line_settings()
         self.plot_item_settings.save_settings(
             autoPan = viewboxstate['autoPan'][0],
             xscalelog = self.graphItem.ctrl.logXCheck.isChecked(),
@@ -284,20 +289,37 @@ class TimePlotGui(QWidget):
             y_zoom = viewboxstate['mouseEnabled'][0],
             auto_clear_data = self.data_options.automatic_clear_checkbox.isChecked()
         )
-        #self.save_line_settings()
-        self.set_custom_settings()
 
-    # rename as "restore_default_settings"
-    def default_settings(self):
+    def restore_default_settings(self):
+        # ===============================
+        # Delete stored file settings
+        # ===============================
         if path.exists(self.plot_item_settings.settings_filename):
             os.remove(self.plot_item_settings.settings_filename)
+        # ===============================
+        # Delete PlotItemSettings instance and create new one
+        # ===============================
+        del self.plot_item_settings
+        self.plot_item_settings = PlotItemSettings(number_of_lines = len(self.devicewrapper))
+        # ===============================
+        # Implement the settings
+        # ===============================
         self.set_custom_settings()
 
-    def modify_context_menu(self):
+    def _modify_context_menu(self):
+        # ===============================
+        # Get the context menu as a callable object
+        # ===============================
         self.menu = self.graphItem.getMenu()
-
+        # ===============================
+        # Create submenus (in order)
+        # ===============================
         self.alpha_menu = self.menu.addMenu("Alpha")
-
+        self.visualization_settings = self.menu.addMenu("Visualization Settings")
+        self.data_options = self.menu.addMenu("Data Options")
+        # ===============================
+        # Submenu Formation: alpha
+        # ===============================
         for key in self.data_table:
             alpha = QtGui.QWidgetAction(self.alpha_menu)
             title = QtGui.QAction('Line ' + str(key), self.alpha_menu)
@@ -314,11 +336,11 @@ class TimePlotGui(QWidget):
             self.alpha_menu.addAction(alpha)
             self.alpha_menu.alpha = alpha
             self.alpha_menu.alphaSlider = alphaSlider
-
-        self.visualization_settings = self.menu.addMenu("Visualization Settings")
-
+        # ===============================
+        # Submenu Formation: visualization_settings
+        # ===============================
         restore_default = QtGui.QAction("Restore Default Plot Settings", self.visualization_settings)
-        restore_default.triggered.connect(self.default_settings)
+        restore_default.triggered.connect(self.restore_default_settings)
         self.visualization_settings.addAction(restore_default)
         self.visualization_settings.restore_default = restore_default
 
@@ -331,9 +353,9 @@ class TimePlotGui(QWidget):
         save_settings.triggered.connect(self.save_current_settings)
         self.visualization_settings.addAction(save_settings)
         self.visualization_settings.save_settings = save_settings
-
-        self.data_options = self.menu.addMenu("Data Options")
-
+        # ===============================
+        # Submenu Formation: Data Options
+        # ===============================
         clear_data = QtGui.QAction("Clear Data", self.data_options)
         clear_data.triggered.connect(self.clear_all_data)
         self.data_options.addAction(clear_data)
@@ -346,13 +368,16 @@ class TimePlotGui(QWidget):
         self.data_options.addAction(automatic_clear)
         self.data_options.automatic_clear = automatic_clear
         self.data_options.automatic_clear_checkbox = automatic_clear_checkbox
-
+        # ===============================
+        # Function Formation: Load Past Data
+        # ===============================
         open_data = QtGui.QAction("Load Stored Data")
         open_data.triggered.connect(self.open_finder)
         self.menu.addAction(open_data)
         self.menu.open_data = open_data
-
-        # This removes unnecessary submenus from the context menu
+        # ===============================
+        # Remove unnecesary default context menu operations
+        # ===============================
         actions = self.graphItem.ctrlMenu.actions()
         for index in [1, 2, 5]:
             self.graphItem.ctrlMenu.removeAction(actions[index])
@@ -364,7 +389,7 @@ class TimePlotGui(QWidget):
             data_items = self.graphItem.listDataItems()
             for data_item in data_items:
                 self.graphItem.removeItem(data_item)
-            self.init_data_items(self.devicewrapper, new_data = fname[0])
+            self._init_data_items(self.devicewrapper, new_data = fname[0])
 
     def save_data_settings(self):
         self.plot_item_settings.save_settings( \
