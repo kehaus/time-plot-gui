@@ -148,7 +148,6 @@ class TimePlotGui(QWidget):
 
     def _init_plot(self, devicewrapper_lst):
         """ """
-        print("initializing plot...")
         # ===============================
         # Initializes plot by generating the plotWidget, plotItem, and ViewBox objects that are callable
         # ===============================
@@ -314,6 +313,7 @@ class TimePlotGui(QWidget):
         # ===============================
         # Implement the settings
         # ===============================
+        self.ammend_context_menu()
         self.set_custom_settings()
 
     def _modify_context_menu(self):
@@ -390,6 +390,13 @@ class TimePlotGui(QWidget):
         actions = self.graphItem.ctrlMenu.actions()
         for index in [1, 2, 5]:
             self.graphItem.ctrlMenu.removeAction(actions[index])
+
+    def ammend_context_menu(self):
+        alpha_sliders = self.alpha_menu.actions()[1::2]
+        key = 0
+        for slider in alpha_sliders:
+            slider.defaultWidget().setValue(self.settings['line_settings'][str(key)]['line_alpha']*255)
+            key += 1
 
 
     def open_finder(self):
@@ -705,15 +712,10 @@ def main(devicewrapper_lst):
         print('QApplication instance already exists {}'.format(str(app)))
     window = MainWindow(devicewrapper_lst=devicewrapper_lst)
     try:
-        print("here first")
         window.show()
-        print('here')
         app.exec_()
-        print('leaving...')
     except:
-        print("THERE WAS AN ERROR!")
         window.closeEvent()
-    print('skipped except')
     # window.show()
     # app.exec_()
 
