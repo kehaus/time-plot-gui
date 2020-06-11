@@ -33,8 +33,9 @@ class JSONFileHandler():
 
 class PlotItemSettings(JSONFileHandler):
     """ """
-
+    FOLDER_FILENAME = "saved_info"
     SETTINGS_FILENAME = "custom_settings.json"
+
     DEFAULT_SETTINGS = {
         'autoPan':          False,
         'xscalelog':        False,
@@ -52,13 +53,19 @@ class PlotItemSettings(JSONFileHandler):
         'mouseMode':        1,
         'x_zoom':           True,
         'y_zoom':           True,
-        'auto_clear_data':  True
+        'auto_clear_data':  True,
+        'zoom_lines':       [0, 1, -1, 1],
+        'frequency_state':  False
         # in plotalpha, the first item is the alpha and the second is whether the value is autodetermined
         # maybe more settings here
         }
 
-    def __init__(self, number_of_lines = 1):
-        self.settings_filename = PlotItemSettings.SETTINGS_FILENAME
+    def __init__(self, number_of_lines = 1, unusal_settings_file = None):
+        if unusal_settings_file is None:
+            self.settings_filename = os.path.join(PlotItemSettings.FOLDER_FILENAME, PlotItemSettings.SETTINGS_FILENAME)
+        else:
+            self.settings_filename = unusal_settings_file
+        #self.settings_filename = PlotItemSettings.SETTINGS_FILENAME
         settings = self._checks_for_settings_file()
         self.number_of_lines = number_of_lines
         self.set_line_settings(self.number_of_lines)
@@ -87,8 +94,8 @@ class PlotItemSettings(JSONFileHandler):
 
     def set_line_settings(self, number_of_lines):
         keys = range(number_of_lines)
-        default_line_settings = {'line_alpha': 1}
-        line_settings = {str(key): default_line_settings for key in keys}
+        self.default_line_settings = {'line_alpha': 1, 'line_width': 1}
+        line_settings = {str(key): self.default_line_settings for key in keys}
         self.DEFAULT_SETTINGS.update(line_settings = line_settings)
 
     # ====

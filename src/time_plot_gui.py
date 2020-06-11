@@ -32,6 +32,7 @@ import sys
 import weakref
 from PyQt5.QtWidgets import QApplication, QWidget, QToolTip, QPushButton, QMessageBox, QMainWindow, QHBoxLayout
 from PyQt5.QtWidgets import qApp, QAction, QMenu, QGridLayout, QLabel, QLineEdit, QSizePolicy, QFileDialog
+from PyQt5.QtWidgets import QInputDialog
 from PyQt5.QtGui import QIcon, QFont, QCursor, QRegion, QPolygon
 from PyQt5 import QtCore, Qt, QtGui
 import pyqtgraph as pg
@@ -59,7 +60,6 @@ class TimePlotGui(QWidget):
 
     start_signal = QtCore.pyqtSignal()
     stop_signal = QtCore.pyqtSignal()
-
     DEFAULT_DATA_FILENAME = 'stored_data.json'
 
     def __init__(self, parent=None, window=None, devicewrapper_lst=None):
@@ -67,16 +67,25 @@ class TimePlotGui(QWidget):
         super(TimePlotGui, self).__init__(parent=parent)
 
         self._create_absolute_time_stamp()
-        self.data_fn = TimePlotGui.DEFAULT_DATA_FILENAME
 
         if type(devicewrapper_lst) == DeviceWrapper:
             devicewrapper_lst = [devicewrapper_lst]
         self.devicewrapper = devicewrapper_lst
         # ===============================
+        # Allow for coercion of data and settings to the same number of lines
+        # ===============================
+        self.started = False
+        # ===============================
         # Get the settings object
         # ===============================
         self.plot_item_settings = PlotItemSettings(number_of_lines = len(devicewrapper_lst))
         self.settings = self.plot_item_settings.settings
+        self.data_fn = os.path.join(PlotItemSettings.FOLDER_FILENAME, self.DEFAULT_DATA_FILENAME)
+        # ===============================
+        # Set up the label machine
+        # ===============================
+        #self.plot_label_machine = PlotLabelMachine()
+        #self.label_state = self.plot_label_machine.state
 
         self._init_ui(window, devicewrapper_lst)
         self._init_multi_worker_thread(devicewrapper_lst)
@@ -138,6 +147,7 @@ class TimePlotGui(QWidget):
         # =====================================================================
         # control buttons - connections
         # =====================================================================
+        self.playBtn.clicked.connect(self.thread_status_changed)
         self.playBtn.clicked.connect(self.start_thread)
         self.squarestopBtn.clicked.connect(self.stop_thread)
         # ============================================================
@@ -155,9 +165,38 @@ class TimePlotGui(QWidget):
         self.graphItem = self.graphWidget.getPlotItem()
         self.viewbox = self.graphItem.getViewBox()
         # ===============================
+        # Enable Automatic Axis Label Updates
+        # ===============================
+        self.graphItem.ctrl.fftCheck.stateChanged.connect(self.change_label_state)
+        # # ===============================
+        # # Zoom lines created
+        # # ===============================
+        # self.left_bound = pg.InfiniteLine(movable=True, angle=90, label='x={value:0.2f}',
+        #                labelOpts={'position':0.1, 'color': (200,0,0), 'fill': (200,200,200,50), 'movable': True})
+        # self.right_bound = pg.InfiniteLine(movable=True, angle=90, label='x={value:0.2f}',
+        #                labelOpts={'position':0.1, 'color': (200,0,0), 'fill': (200,200,200,50), 'movable': True})
+        # self.upper_bound = pg.InfiniteLine(movable=True, angle=0, label='y={value:0.2f}',
+        #                labelOpts={'position':0.1, 'color': (200,0,0), 'fill': (200,200,200,50), 'movable': True})
+        # self.lower_bound = pg.InfiniteLine(movable=True, angle=0, label='y={value:0.2f}',
+        #                labelOpts={'position':0.1, 'color': (200,0,0), 'fill': (200,200,200,50), 'movable': True})
+        # # ===============================
+        # # Zoom lines added to graphWidget
+        # # ===============================
+        # self.graphWidget.addItem(self.left_bound)
+        # self.graphWidget.addItem(self.right_bound)
+        # self.graphWidget.addItem(self.upper_bound)
+        # self.graphWidget.addItem(self.lower_bound)
+        # # ===============================
+        # # Zoom lines connected to changing bounds
+        # # ===============================
+        # self.upper_bound.sigPositionChanged.connect(self.ammend_y_bounds)
+        # self.lower_bound.sigPositionChanged.connect(self.ammend_y_bounds)
+        # self.right_bound.sigPositionChanged.connect(self.ammend_x_bounds)
+        # self.left_bound.sigPositionChanged.connect(self.ammend_x_bounds)
+        # ===============================
         # initlialize data lines
         # ===============================
-        self.init_data_items(devicewrapper_lst)
+        self._init_data_items(devicewrapper_lst)
         self._align_time_stamps()
         # ===============================
         # Customize the context menu
@@ -169,19 +208,24 @@ class TimePlotGui(QWidget):
         self.set_custom_settings()
 
 
-    def init_data_items(self, devicewrapper_lst, new_data = None):
+    def _init_data_items(self, devicewrapper_lst, new_data = None):
         self.data_table = {}
-        for id_nr, dw in enumerate(devicewrapper_lst):
+        #for id_nr, dw in enumerate(devicewrapper_lst):
+        #for id_nr in range(len(self.settings['line_settings'])):
+        id_nr = 0
+        while True:
             data_item = TimePlotDataItem(id_nr=id_nr, absolute_time=self.t0)
-            self.data_table.update(
-                {id_nr: data_item}
-            )
-            #if not self.data_options.automatic_clear_checkbox.isChecked() and new_data is None:
             if new_data is None:
                 data_item.recall_data(self.data_fn)
             elif new_data is not None:
                 data_item.recall_data(new_data)
+            if len(data_item.get_plot_data_item().xData) == 0:
+                break
+            self.data_table.update(
+                {id_nr: data_item}
+            )
             self.graphItem.addItem(data_item.get_plot_data_item())
+            id_nr += 1
 
 
     def _create_absolute_time_stamp(self):
@@ -212,6 +256,42 @@ class TimePlotGui(QWidget):
                 data_item.set_data(t+dt, y)
                 data_item.absolute_time = self.t0
 
+    def thread_status_changed(self):
+        self.started = not self.started
+        self.resize_line_settings()
+        self.add_line_settings_menu()
+
+    def resize_line_settings(self):
+        if self.started:
+            self.coerce_same_length(data_length = len(self.devicewrapper))
+            self.resize_data_table()
+        else:
+            self.coerce_same_length(data_length = len(self.data_table))
+
+    def resize_data_table(self):
+        while len(self.devicewrapper) != len(self.data_table):
+            if len(self.devicewrapper) > len(self.data_table):
+                id_nr = len(self.data_table)
+                data_item = TimePlotDataItem(id_nr=id_nr, absolute_time=self.t0)
+                self.data_table.update(
+                    {id_nr: data_item}
+                )
+                self.graphItem.addItem(data_item.get_plot_data_item())
+            elif len(self.devicewrapper) < len(self.data_table):
+                timeplotdataitem = self.data_table[max(self.data_table.keys())]
+                self.graphItem.removeItem(self.data_table[max(self.data_table.keys())].get_plot_data_item())
+                del timeplotdataitem
+                self.data_table.popitem()
+
+
+    def coerce_same_length(self, data_length):
+        while data_length != len(self.settings['line_settings']):
+            if data_length > len(self.settings['line_settings']):
+                self.settings['line_settings'][str(len(self.settings['line_settings']))] = \
+                            self.plot_item_settings.default_line_settings
+            elif data_length < len(self.settings['line_settings']):
+                self.settings['line_settings'].popitem()
+
 
     def set_custom_settings(self, label_key = 'potential'):
         # ===============================
@@ -224,6 +304,8 @@ class TimePlotGui(QWidget):
             time_data_item = self.data_table[key]
             data_item = time_data_item.get_plot_data_item()
             data_item.setAlpha(alpha = self.settings['line_settings'][str(key)]['line_alpha'], auto = False)
+            data_item.setPen(pg.mkPen(width = self.settings['line_settings'][str(key)]['line_width']))
+            data_item.setFftMode(self.settings['frequency_state'])
         #self.plotDataItem.setAlpha(alpha = self.settings['plotalpha'][0], auto = self.settings['plotalpha'][1])
         self.viewbox.setAutoPan(x = self.settings['autoPan'])
         self.viewbox.setRange(xRange = self.settings['xlim'], yRange = self.settings['ylim'])
@@ -234,13 +316,44 @@ class TimePlotGui(QWidget):
             self.viewbox.setLeftButtonAction(mode = 'rect')
         else:
             self.viewbox.setLeftButtonAction(mode = 'pan')
+        self.frequency_state = self.settings['frequency_state']
+        self.graphItem.ctrl.fftCheck.setChecked(self.frequency_state)
+        # self.left_bound.setValue(self.settings['zoom_lines'][0])
+        # self.right_bound.setValue(self.settings['zoom_lines'][1])
+        # self.lower_bound.setValue(self.settings['zoom_lines'][2])
+        # self.upper_bound.setValue(self.settings['zoom_lines'][3])
         # ===============================
         # Assign axis labels accordingly
         # ===============================
-        #self.set_labels(key = label_key)
+        self.update_plot_labels()
 
-    def set_labels(self, key = 'potential'):
-        #print(f"Key: {key}")
+    # def set_labels(self):
+    #     #self.label_state = PlotLabelMachine().state
+    #     if self.counter not in globals():
+    #         self.counter = int(self.settings['time_state'])
+    #     if self.counter % 2 == 1:
+    #         self.set_time_labels()
+    #     else:
+    #         self.set_frequency_labels()
+    #     counter += 1
+    def update_plot_labels(self):
+        if self.frequency_state:
+            self.set_frequency_labels()
+        else:
+            self.set_time_labels()
+
+    def change_label_state(self):
+        self.frequency_state = not self.frequency_state
+        self.update_plot_labels()
+
+    def set_frequency_labels(self, key = 'potential'):
+        labels = self.get_axis_labels(key)
+        title = 'Fourier Transform of ' + labels['title']
+        self.graphItem.setTitle(title, **{'color': '#FFF', 'size': '20pt'})
+        self.graphItem.setLabel('left', 'Amplitude', color='white', size=30)
+        self.graphItem.setLabel('bottom', 'Frequency', color='white', size=30)
+
+    def set_time_labels(self, key = 'potential'):
         labels = self.get_axis_labels(key)
         self.graphItem.setTitle(labels['title'], **{'color': '#FFF', 'size': '20pt'})
         self.graphItem.setLabel('left', labels['y_label'], color='white', size=30)
@@ -296,7 +409,9 @@ class TimePlotGui(QWidget):
             mouseMode = viewboxstate['mouseMode'],
             x_zoom = viewboxstate['mouseEnabled'][0],
             y_zoom = viewboxstate['mouseEnabled'][0],
-            auto_clear_data = self.data_options.automatic_clear_checkbox.isChecked()
+            auto_clear_data = self.data_options.automatic_clear_checkbox.isChecked(),
+            frequency_state = self.graphItem.ctrl.fftCheck.isChecked()
+            # zoom_lines = self.get_zoom_lines()
         )
 
     def restore_default_settings(self):
@@ -310,6 +425,8 @@ class TimePlotGui(QWidget):
         # ===============================
         del self.plot_item_settings
         self.plot_item_settings = PlotItemSettings(number_of_lines = len(self.devicewrapper))
+        self.settings = self.plot_item_settings.DEFAULT_SETTINGS
+        self.resize_line_settings()
         # ===============================
         # Implement the settings
         # ===============================
@@ -317,6 +434,7 @@ class TimePlotGui(QWidget):
         self.set_custom_settings()
 
     def _modify_context_menu(self):
+        self.resize_line_settings()
         # ===============================
         # Get the context menu as a callable object
         # ===============================
@@ -324,27 +442,13 @@ class TimePlotGui(QWidget):
         # ===============================
         # Create submenus (in order)
         # ===============================
-        self.alpha_menu = self.menu.addMenu("Alpha")
+        self.line_settings_menu = self.menu.addMenu("Line Settings")
         self.visualization_settings = self.menu.addMenu("Visualization Settings")
         self.data_options = self.menu.addMenu("Data Options")
         # ===============================
-        # Submenu Formation: alpha
+        # Submenu Formation: line_settings
         # ===============================
-        for key in self.data_table:
-            alpha = QtGui.QWidgetAction(self.alpha_menu)
-            title = QtGui.QAction('Line ' + str(key), self.alpha_menu)
-            title.setEnabled(False)
-            alphaSlider = QtGui.QSlider(self.alpha_menu)
-            alphaSlider.setOrientation(QtCore.Qt.Horizontal)
-            alphaSlider.setMaximum(255)
-            alphaSlider.setValue(self.settings['line_settings'][str(key)]['line_alpha']*255)
-            alphaSlider.valueChanged.connect(self.data_table[key].setAlpha)
-            alpha.setDefaultWidget(alphaSlider)
-            self.alpha_menu.addAction(title)
-            self.alpha_menu.title = title
-            self.alpha_menu.addAction(alpha)
-            self.alpha_menu.alpha = alpha
-            self.alpha_menu.alphaSlider = alphaSlider
+        self.add_line_settings_menu()
         # ===============================
         # Submenu Formation: visualization_settings
         # ===============================
@@ -384,6 +488,13 @@ class TimePlotGui(QWidget):
         open_data.triggered.connect(self.open_finder)
         self.menu.addAction(open_data)
         self.menu.open_data = open_data
+        # # ===============================
+        # # Function Formation: Set Zoom lines
+        # # ===============================
+        # get_zoom_lines = QtGui.QAction("Zoom Lines")
+        # get_zoom_lines.triggered.connect(self.set_zoom_lines)
+        # self.menu.addAction(get_zoom_lines)
+        # self.menu.get_zoom_lines = get_zoom_lines
         # ===============================
         # Remove unnecesary default context menu operations
         # ===============================
@@ -392,30 +503,135 @@ class TimePlotGui(QWidget):
             self.graphItem.ctrlMenu.removeAction(actions[index])
 
     def ammend_context_menu(self):
-        alpha_sliders = self.alpha_menu.actions()[1::2]
+        alpha_sliders = self.line_settings_menu.actions()[1::4]
+        width_sliders = self.line_settings_menu.actions()[2::4]
         key = 0
         for slider in alpha_sliders:
             slider.defaultWidget().setValue(self.settings['line_settings'][str(key)]['line_alpha']*255)
             key += 1
+        key = 0
+        for slider in width_sliders:
+            slider.defaultWidget().setValue(self.settings['line_settings'][str(key)]['line_width']*255)
+            key += 1
 
+    def add_line_settings_menu(self):
+        # ===============================
+        # remove existing items from the menu
+        # ===============================
+        self.line_settings_menu.clear()
+        # ===============================
+        # Submenu Formation: line_settings
+        # ===============================
+        for key in self.data_table:
+            # ===============================
+            # title
+            # ===============================
+            title = QtGui.QAction('Line ' + str(key), self.line_settings_menu)
+            title.setEnabled(False)
+            self.line_settings_menu.addAction(title)
+            self.line_settings_menu.title = title
+            # ===============================
+            # alpha
+            # ===============================
+            alpha = QtGui.QWidgetAction(self.line_settings_menu)
+            alphaSlider = QtGui.QSlider(self.line_settings_menu)
+            alphaSlider.setOrientation(QtCore.Qt.Horizontal)
+            alphaSlider.setMaximum(255)
+            alphaSlider.setValue(self.settings['line_settings'][str(key)]['line_alpha']*255)
+            alphaSlider.valueChanged.connect(self.data_table[key].setAlpha)
+            alpha.setDefaultWidget(alphaSlider)
+            self.line_settings_menu.addAction(alpha)
+            self.line_settings_menu.alpha = alpha
+            self.line_settings_menu.alphaSlider = alphaSlider
+            # ===============================
+            # width
+            # ===============================
+            width = QtGui.QWidgetAction(self.line_settings_menu)
+            widthSlider = QtGui.QSlider(self.line_settings_menu)
+            widthSlider.setOrientation(QtCore.Qt.Horizontal)
+            widthSlider.setMaximum(2550)
+            widthSlider.setMinimum(255)
+            widthSlider.setValue(self.settings['line_settings'][str(key)]['line_width']*255)
+            widthSlider.valueChanged.connect(self.data_table[key].setWidth)
+            width.setDefaultWidget(widthSlider)
+            self.line_settings_menu.addAction(width)
+            self.line_settings_menu.width = width
+            self.line_settings_menu.widthSlider = widthSlider
+            # ===============================
+            # width
+            # ===============================
+            widthintermediate = QtGui.QWidgetAction(self.line_settings_menu)
+            widthbox = QtGui.QInputDialog(self.line_settings_menu)
+            widthbox.NoButtons
+            widthintermediate.setDefaultWidget(widthbox)
+            self.line_settings_menu.addAction(widthintermediate)
+            self.line_settings_menu.widthintermediate = widthintermediate
+            self.line_settings_menu.widthbox = widthbox
+
+    # ===============================
+    # The Following functions are unused unless the zoom lines are re-added
+    # ===============================
+    def set_zoom_lines(self):
+        multiplier1 = 0.0376562
+        multiplier2 = 0.03099
+        self.upper_bound.setValue(self.viewbox.getState()['targetRange'][1][1]- \
+            multiplier1*(self.viewbox.getState()['targetRange'][1][1]- self.viewbox.getState()['targetRange'][1][0]))
+        self.lower_bound.setValue(self.viewbox.getState()['targetRange'][1][0]+ \
+            multiplier1*(self.viewbox.getState()['targetRange'][1][1]- self.viewbox.getState()['targetRange'][1][0]))
+        self.right_bound.setValue(self.viewbox.getState()['targetRange'][0][1]- \
+            multiplier1*(self.viewbox.getState()['targetRange'][0][1]- self.viewbox.getState()['targetRange'][0][0]))
+        self.left_bound.setValue(self.viewbox.getState()['targetRange'][0][0]+ \
+            multiplier1*(self.viewbox.getState()['targetRange'][0][1]- self.viewbox.getState()['targetRange'][0][0]))
+
+    def get_zoom_lines(self):
+        return [self.left_bound.getXPos(), self.right_bound.getXPos(), \
+                self.lower_bound.getYPos(), self.upper_bound.getYPos()]
+
+    def ammend_bounds(self):
+        self.viewbox.setRange(xRange = [self.left_bound.getXPos(), self.right_bound.getXPos()],
+                            yRange = [self.lower_bound.getYPos(), self.upper_bound.getYPos()])
+
+    def ammend_x_bounds(self):
+        self.viewbox.setXRange(max = self.right_bound.getXPos(), min = self.left_bound.getXPos())
+
+    def ammend_y_bounds(self):
+        self.viewbox.setYRange(max = self.upper_bound.getYPos(), min = self.lower_bound.getYPos())
+    # ===============================
+    # (end of obsolete functions... the below functions are used)
+    # ===============================
 
     def open_finder(self):
-        fname = QFileDialog.getOpenFileName(self, 'Open file', '~/',"JSON files (*.json)")
-        if fname[0] is not None:
-            data_items = self.graphItem.listDataItems()
-            for data_item in data_items:
-                self.graphItem.removeItem(data_item)
-            self.init_data_items(self.devicewrapper, new_data = fname[0])
+        self.started = False
+        data_fname = QFileDialog.getOpenFileName(self, 'Open file', '~/',"JSON files (*.json)")
+        settings_fname = QFileDialog.getOpenFileName(self, 'Open file', '~/',"JSON files (*.json)")
+        if settings_fname[0] !='':
+            del self.plot_item_settings
+            self.plot_item_settings = PlotItemSettings(unusal_settings_file = settings_fname[0])
+        if data_fname[0] is not None:
+            self.clear_all_plot_data_items()
+            self._init_data_items(self.devicewrapper, new_data = data_fname[0])
+            self._modify_context_menu()
+            self.set_custom_settings()
+
+    def clear_all_plot_data_items(self):
+        data_items = self.graphItem.listDataItems()
+        for data_item in data_items:
+            self.graphItem.removeItem(data_item)
 
     def save_data_settings(self):
         self.plot_item_settings.save_settings( \
             auto_clear_data = self.data_options.automatic_clear_checkbox.isChecked())
 
     def save_line_settings(self):
-        alpha_sliders = self.alpha_menu.actions()[1::2]
+        alpha_sliders = self.line_settings_menu.actions()[1::4]
+        width_sliders = self.line_settings_menu.actions()[2::4]
         number = 0
         for slider in alpha_sliders:
             self.settings['line_settings'][str(number)]['line_alpha'] = slider.defaultWidget().value()/255
+            number += 1
+        number = 0
+        for slider in width_sliders:
+            self.settings['line_settings'][str(number)]['line_width'] = slider.defaultWidget().value()/255
             number += 1
 
     def store_all_data(self):
@@ -484,10 +700,11 @@ class TimePlotGui(QWidget):
     def update_datapoint(self, id_nr, val):
         """updates TimePlotDataItem object with corresponding to id_nr"""
         self.data_table[id_nr].add_value(val)
+        #self.set_zoom_lines()
 
     # def __del__(self):
     #     print('it worked!?')
-    #     super(self, TimePlotGui).__del__()
+    #     #super(self, TimePlotGui).__del__()
 
 
     @QtCore.pyqtSlot(int, float)
@@ -537,6 +754,7 @@ class PlotDataItemV2(pg.PlotDataItem):
         """
         # print('doing the transform')
         # print(f"{len(x)}, {x}")
+        #self.plot_label_machine.switch_event('fourier')
         dx = np.diff(x)
         uniform = not np.any(np.abs(dx-dx[0]) > (abs(dx[0]) / 1000.))
         if not uniform:
@@ -549,6 +767,32 @@ class PlotDataItemV2(pg.PlotDataItem):
         x = np.linspace(0, 0.5*len(x)/dt, len(y))
         #print(f"{len(x)}, {x}")
         return x, y
+
+class PlotLabelMachine():
+    """ """
+
+    def __init__(self, time_state = True):
+        if time_state:
+            self.state = TimeState()
+        else:
+            self.state = FrequencyState()
+
+    def switch_event(self, text = None):
+        return self.state.switch_state(text)
+
+class FrequencyState(PlotLabelMachine):
+    """ """
+
+    def switch_state(self, text):
+        if text is None or 'time' in text:
+            return TimeState()
+
+class TimeState(PlotLabelMachine):
+    """ """
+
+    def switch_state(self, text):
+        if text is None or 'fourier' in text:
+            return FrequencyState()
 
 
 # ===========================================================================
@@ -653,6 +897,8 @@ class TimePlotDataItem(JSONFileHandler):
     def setAlpha(self, value):
         self.pdi.setAlpha(value/255, False)
 
+    def setWidth(self, value):
+        self.pdi.setPen(pg.mkPen(width = value/255))
 
 # class TimePlotDataTable(JSONFileHandler):
 #     """ """
@@ -739,4 +985,4 @@ if __name__ == "__main__":
     dd3.signal_form = 'sin'
     dw3 = DeviceWrapper(dd3)
 
-    main([dw1, dw2, dw3])
+    main([dw1, dw2])
