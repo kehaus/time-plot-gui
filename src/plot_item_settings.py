@@ -94,7 +94,7 @@ class PlotItemSettings(JSONFileHandler):
 
     def set_line_settings(self, number_of_lines):
         keys = range(number_of_lines)
-        self.default_line_settings = {'line_alpha': 1, 'line_width': 1}
+        self.default_line_settings = {'line_alpha': 1, 'line_width': 1, 'line_color': (255, 255, 255, 255)}
         line_settings = {str(key): self.default_line_settings for key in keys}
         self.DEFAULT_SETTINGS.update(line_settings = line_settings)
 

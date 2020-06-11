@@ -32,7 +32,7 @@ import sys
 import weakref
 from PyQt5.QtWidgets import QApplication, QWidget, QToolTip, QPushButton, QMessageBox, QMainWindow, QHBoxLayout
 from PyQt5.QtWidgets import qApp, QAction, QMenu, QGridLayout, QLabel, QLineEdit, QSizePolicy, QFileDialog
-from PyQt5.QtWidgets import QInputDialog
+from PyQt5.QtWidgets import QInputDialog, QColorDialog
 from PyQt5.QtGui import QIcon, QFont, QCursor, QRegion, QPolygon
 from PyQt5 import QtCore, Qt, QtGui
 import pyqtgraph as pg
@@ -304,7 +304,8 @@ class TimePlotGui(QWidget):
             time_data_item = self.data_table[key]
             data_item = time_data_item.get_plot_data_item()
             data_item.setAlpha(alpha = self.settings['line_settings'][str(key)]['line_alpha'], auto = False)
-            data_item.setPen(pg.mkPen(width = self.settings['line_settings'][str(key)]['line_width']))
+            data_item.setPen(pg.mkPen(width = self.settings['line_settings'][str(key)]['line_width'], \
+                            color = self.settings['line_settings'][str(key)]['line_color']))
             data_item.setFftMode(self.settings['frequency_state'])
         #self.plotDataItem.setAlpha(alpha = self.settings['plotalpha'][0], auto = self.settings['plotalpha'][1])
         self.viewbox.setAutoPan(x = self.settings['autoPan'])
@@ -410,7 +411,8 @@ class TimePlotGui(QWidget):
             x_zoom = viewboxstate['mouseEnabled'][0],
             y_zoom = viewboxstate['mouseEnabled'][0],
             auto_clear_data = self.data_options.automatic_clear_checkbox.isChecked(),
-            frequency_state = self.graphItem.ctrl.fftCheck.isChecked()
+            frequency_state = False
+            #frequency_state = self.graphItem.ctrl.fftCheck.isChecked()
             # zoom_lines = self.get_zoom_lines()
         )
 
@@ -557,16 +559,23 @@ class TimePlotGui(QWidget):
             self.line_settings_menu.addAction(width)
             self.line_settings_menu.width = width
             self.line_settings_menu.widthSlider = widthSlider
+            # # ===============================
+            # # width
+            # # ===============================
+            # widthintermediate = QtGui.QWidgetAction(self.line_settings_menu)
+            # widthbox = QtGui.QInputDialog(self.line_settings_menu)
+            # widthbox.NoButtons
+            # widthintermediate.setDefaultWidget(widthbox)
+            # self.line_settings_menu.addAction(widthintermediate)
+            # self.line_settings_menu.widthintermediate = widthintermediate
+            # self.line_settings_menu.widthbox = widthbox
             # ===============================
-            # width
+            # color
             # ===============================
-            widthintermediate = QtGui.QWidgetAction(self.line_settings_menu)
-            widthbox = QtGui.QInputDialog(self.line_settings_menu)
-            widthbox.NoButtons
-            widthintermediate.setDefaultWidget(widthbox)
-            self.line_settings_menu.addAction(widthintermediate)
-            self.line_settings_menu.widthintermediate = widthintermediate
-            self.line_settings_menu.widthbox = widthbox
+            change_line_color = QtGui.QAction("Change Line Color", self.line_settings_menu)
+            change_line_color.triggered.connect(self.data_table[key].open_color_dialog)
+            self.line_settings_menu.addAction(change_line_color)
+            self.line_settings_menu.change_line_color = change_line_color
 
     # ===============================
     # The Following functions are unused unless the zoom lines are re-added
@@ -639,8 +648,13 @@ class TimePlotGui(QWidget):
         **inehrits store_current_data function to adjust for multi-line-plotting**
 
         """
+        frequency_state = self.frequency_state
+        self.graphItem.ctrl.fftCheck.setChecked(False)
+        if path.exists(self.data_fn):
+            os.remove(self.data_fn)
         for data_item in self.data_table.values():
             data_item.store_data(fn=self.data_fn)
+        self.graphItem.ctrl.fftCheck.setChecked(frequency_state)
 
     def clear_all_data(self):
         """
@@ -691,6 +705,7 @@ class TimePlotGui(QWidget):
 
     def start_thread(self):
         if self.data_options.automatic_clear_checkbox.isChecked():
+            self.graphItem.ctrl.fftCheck.setChecked(False)
             self.clear_all_data()
         self.start_signal.emit()
 
@@ -755,8 +770,6 @@ class PlotDataItemV2(pg.PlotDataItem):
         """Perform fourier transform. If x values are not sampled uniformly,
         then use np.interp to resample before taking fft.
         """
-        # print('doing the transform')
-        # print(f"{len(x)}, {x}")
         #self.plot_label_machine.switch_event('fourier')
         dx = np.diff(x)
         uniform = not np.any(np.abs(dx-dx[0]) > (abs(dx[0]) / 1000.))
@@ -768,7 +781,6 @@ class PlotDataItemV2(pg.PlotDataItem):
         y = abs(f[1:int(len(f)/2)])
         dt = x[-1] - x[0]
         x = np.linspace(0, 0.5*len(x)/dt, len(y))
-        #print(f"{len(x)}, {x}")
         return x, y
 
 class PlotLabelMachine():
@@ -903,6 +915,11 @@ class TimePlotDataItem(JSONFileHandler):
     def setWidth(self, value):
         self.pdi.setPen(pg.mkPen(width = value/255))
 
+    def open_color_dialog(self):
+        color_dialog = QColorDialog.getColor()
+        self.pdi.setPen(pg.mkPen(color = color_dialog.getRgb()))
+
+
 # class TimePlotDataTable(JSONFileHandler):
 #     """ """
 
@@ -988,4 +1005,4 @@ if __name__ == "__main__":
     dd3.signal_form = 'sin'
     dw3 = DeviceWrapper(dd3)
 
-    main([dw1, dw2])
+    main([dw1, dw2, dw3])
