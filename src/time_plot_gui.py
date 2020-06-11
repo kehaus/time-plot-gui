@@ -699,7 +699,10 @@ class TimePlotGui(QWidget):
 
     def update_datapoint(self, id_nr, val):
         """updates TimePlotDataItem object with corresponding to id_nr"""
+        frequency_state = self.frequency_state
+        self.graphItem.ctrl.fftCheck.setChecked(False)
         self.data_table[id_nr].add_value(val)
+        self.graphItem.ctrl.fftCheck.setChecked(frequency_state)
         #self.set_zoom_lines()
 
     # def __del__(self):
