@@ -164,6 +164,9 @@ class TimePlotGui(QWidget):
         self.graphWidget = pg.PlotWidget()
         self.graphItem = self.graphWidget.getPlotItem()
         self.viewbox = self.graphItem.getViewBox()
+
+        # self.barrier = PlotDataItemV2([],[])
+        # self.graphItem.addItem(self.barrier)
         # ===============================
         # Enable Automatic Axis Label Updates
         # ===============================
@@ -625,7 +628,8 @@ class TimePlotGui(QWidget):
         if data_fname[0] is not None:
             self.clear_all_plot_data_items()
             self._init_data_items(self.devicewrapper, new_data = data_fname[0])
-            self._modify_context_menu()
+            self.resize_line_settings()
+            self.add_line_settings_menu()
             self.set_custom_settings()
 
     def clear_all_plot_data_items(self):
@@ -727,6 +731,12 @@ class TimePlotGui(QWidget):
                 is_checked = True
             self.graphItem.ctrl.fftCheck.setChecked(False)
             self.clear_all_data()
+        # elif not self.data_options.automatic_clear_checkbox.isChecked() \
+        #             and len(self.data_table[0].get_plot_data_item().getData()[0]) != 0:
+        #     barrier_data_x, barrier_data_y = self.barrier.getData()
+        #     barrier_data_x = np.append(barrier_data_x, self.data_table[0].get_plot_data_item().getData()[0][-1])
+        #     barrier_data_y = np.append(barrier_data_y, self.data_table[0].get_plot_data_item().getData()[1][-1])
+        #     self.barrier.setData(barrier_data_x, barrier_data_y)
         self.start_signal.emit()
         if is_checked:
             self.leaving_fft_mode()
@@ -740,6 +750,12 @@ class TimePlotGui(QWidget):
         self.graphItem.ctrl.fftCheck.setChecked(False)
         self.data_table[id_nr].add_value(val, time_val)
         self.graphItem.ctrl.fftCheck.setChecked(frequency_state)
+        # if len(self.barrier.getData()[0]) == 1 and id_nr == 0:
+        #     barrier_data_x, barrier_data_y = self.barrier.getData()
+        #     barrier_data_x = np.append(barrier_data_x, time_val - self.t0)
+        #     barrier_data_y = np.append(barrier_data_y, val)
+        #     self.barrier.setData(barrier_data_x, barrier_data_y)
+        #     self.barrier.setPen(pg.mkPen(style=QtCore.Qt.DotLine, width = 10, color = (255,80,10,255)))
         #self.set_zoom_lines()
 
     # def __del__(self):
