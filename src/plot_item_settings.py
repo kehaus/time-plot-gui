@@ -66,6 +66,8 @@ class PlotItemSettings(JSONFileHandler):
         else:
             self.settings_filename = unusal_settings_file
         #self.settings_filename = PlotItemSettings.SETTINGS_FILENAME
+        if not os.path.exists(self.FOLDER_FILENAME):
+            os.makedirs(self.FOLDER_FILENAME)
         settings = self._checks_for_settings_file()
         self.number_of_lines = number_of_lines
         self.set_line_settings(self.number_of_lines)

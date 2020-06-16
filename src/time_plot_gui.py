@@ -267,6 +267,7 @@ class TimePlotGui(QWidget):
             self.resize_data_table()
         else:
             self.coerce_same_length(data_length = len(self.data_table))
+        self.set_line_settings()
 
     def resize_data_table(self):
         while len(self.devicewrapper) != len(self.data_table):
@@ -300,13 +301,7 @@ class TimePlotGui(QWidget):
         self.graphItem.setLogMode(x = self.settings['xscalelog'], y = self.settings['yscalelog'])
         self.graphItem.showGrid(x = self.settings['xgridlines'], y = self.settings['ygridlines'], \
                                 alpha = self.settings['gridopacity'])
-        for key in self.data_table:
-            time_data_item = self.data_table[key]
-            data_item = time_data_item.get_plot_data_item()
-            data_item.setAlpha(alpha = self.settings['line_settings'][str(key)]['line_alpha'], auto = False)
-            data_item.setPen(pg.mkPen(width = self.settings['line_settings'][str(key)]['line_width'], \
-                            color = self.settings['line_settings'][str(key)]['line_color']))
-            data_item.setFftMode(self.settings['frequency_state'])
+        self.set_line_settings()
         #self.plotDataItem.setAlpha(alpha = self.settings['plotalpha'][0], auto = self.settings['plotalpha'][1])
         self.viewbox.setAutoPan(x = self.settings['autoPan'])
         self.viewbox.setRange(xRange = self.settings['xlim'], yRange = self.settings['ylim'])
@@ -337,6 +332,16 @@ class TimePlotGui(QWidget):
     #     else:
     #         self.set_frequency_labels()
     #     counter += 1
+
+    def set_line_settings(self):
+        for key in self.data_table:
+            time_data_item = self.data_table[key]
+            data_item = time_data_item.get_plot_data_item()
+            data_item.setAlpha(alpha = self.settings['line_settings'][str(key)]['line_alpha'], auto = False)
+            data_item.setPen(pg.mkPen(width = self.settings['line_settings'][str(key)]['line_width'], \
+                            color = self.settings['line_settings'][str(key)]['line_color']))
+            data_item.setFftMode(self.settings['frequency_state'])
+
     def update_plot_labels(self):
         if self.frequency_state:
             self.set_frequency_labels()
@@ -344,10 +349,11 @@ class TimePlotGui(QWidget):
             self.set_time_labels()
 
     def change_label_state(self):
-        self.frequency_state = not self.frequency_state
+        self.frequency_state = self.graphItem.ctrl.fftCheck.isChecked()
         self.update_plot_labels()
 
     def set_frequency_labels(self, key = 'potential'):
+        print('setting frequency labels')
         labels = self.get_axis_labels(key)
         title = 'Fourier Transform of ' + labels['title']
         self.graphItem.setTitle(title, **{'color': '#FFF', 'size': '20pt'})
@@ -411,8 +417,8 @@ class TimePlotGui(QWidget):
             x_zoom = viewboxstate['mouseEnabled'][0],
             y_zoom = viewboxstate['mouseEnabled'][0],
             auto_clear_data = self.data_options.automatic_clear_checkbox.isChecked(),
-            frequency_state = False
-            #frequency_state = self.graphItem.ctrl.fftCheck.isChecked()
+            # frequency_state = False
+            frequency_state = self.graphItem.ctrl.fftCheck.isChecked()
             # zoom_lines = self.get_zoom_lines()
         )
 
@@ -642,6 +648,9 @@ class TimePlotGui(QWidget):
         for slider in width_sliders:
             self.settings['line_settings'][str(number)]['line_width'] = slider.defaultWidget().value()/255
             number += 1
+        for key in range(len(self.data_table)):
+            self.settings['line_settings'][str(key)]['line_color'] = \
+                self.data_table[key].get_plot_data_item().get_color()
 
     def store_all_data(self):
         """
@@ -702,21 +711,34 @@ class TimePlotGui(QWidget):
 
             self.worker_table.update({idx: worker})
 
+    def leaving_fft_mode(self):
+        print('here')
+        mode_change_popup = QMessageBox()
+        mode_change_popup.setText("You are exiting FFT Transform mode and entering Time Dependence mode." \
+            "If you would like to re-enter FFT Transform mode, you may do so from the context menu")
+        mode_change_popup.setIcon(QMessageBox.Information)
+        mode_change_popup.exec_()
+
 
     def start_thread(self):
+        is_checked = False
         if self.data_options.automatic_clear_checkbox.isChecked():
+            if self.graphItem.ctrl.fftCheck.isChecked():
+                is_checked = True
             self.graphItem.ctrl.fftCheck.setChecked(False)
             self.clear_all_data()
         self.start_signal.emit()
+        if is_checked:
+            self.leaving_fft_mode()
 
     def stop_thread(self):
         self.stop_signal.emit()
 
-    def update_datapoint(self, id_nr, val):
+    def update_datapoint(self, id_nr, val, time_val):
         """updates TimePlotDataItem object with corresponding to id_nr"""
         frequency_state = self.frequency_state
         self.graphItem.ctrl.fftCheck.setChecked(False)
-        self.data_table[id_nr].add_value(val)
+        self.data_table[id_nr].add_value(val, time_val)
         self.graphItem.ctrl.fftCheck.setChecked(frequency_state)
         #self.set_zoom_lines()
 
@@ -725,11 +747,11 @@ class TimePlotGui(QWidget):
     #     #super(self, TimePlotGui).__del__()
 
 
-    @QtCore.pyqtSlot(int, float)
-    def newReading(self, id_nr, val):
+    @QtCore.pyqtSlot(int, float, float)
+    def newReading(self, id_nr, val, time_val):
         """ """
         pg.QtGui.QApplication.processEvents()
-        self.update_datapoint(id_nr, val)
+        self.update_datapoint(id_nr, val, time_val)
         time.sleep(0.01)         # necessary to avoid worker to freeze
         self.cond_table[id_nr].wakeAll()     # wake worker thread up
         return
@@ -782,6 +804,9 @@ class PlotDataItemV2(pg.PlotDataItem):
         dt = x[-1] - x[0]
         x = np.linspace(0, 0.5*len(x)/dt, len(y))
         return x, y
+
+    def get_color(self):
+        return self.opts['pen'].color().getRgb()
 
 class PlotLabelMachine():
     """ """
@@ -850,10 +875,10 @@ class TimePlotDataItem(JSONFileHandler):
         """returns the pg.PlotDataItem"""
         return self.pdi
 
-    def add_value(self, val):
+    def add_value(self, val, time_val):
         """adds value to pg.PlotDataItem data array"""
         t, y = self.pdi.getData()
-        t = np.append(t, time.time() - self.absolute_time)
+        t = np.append(t, time_val - self.absolute_time)
         y = np.append(y, val)
         self.pdi.setData(t,y)
 
@@ -917,7 +942,9 @@ class TimePlotDataItem(JSONFileHandler):
 
     def open_color_dialog(self):
         color_dialog = QColorDialog.getColor()
-        self.pdi.setPen(pg.mkPen(color = color_dialog.getRgb()))
+        # self.pdi.setPen(pg.mkPen(color = color_dialog.getRgb()))
+        self.pdi.opts['pen'].setColor(color_dialog)
+        self.pdi.setPen(self.pdi.opts['pen'])
 
 
 # class TimePlotDataTable(JSONFileHandler):

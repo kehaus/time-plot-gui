@@ -3,7 +3,7 @@
 """
 Worker class for GUI classes
 
-This class extends the workerthread and Devicewrapper classes to allow 
+This class extends the workerthread and Devicewrapper classes to allow
 continuous data updates in the GUI classes (e.g. TimePlotGui)
 
 
@@ -31,12 +31,12 @@ from util.devicewrapper import DeviceWrapper, DummyDevice
 
 class TimePlotWorker(QObject):       # change class name to MeasurementEngine ?
     """ """
-    
-    reading = pyqtSignal(int, float)
+
+    reading = pyqtSignal(int, float, float)
     finished = pyqtSignal()
     started = pyqtSignal()
     killed = pyqtSignal()
-    
+
     def __init__(self, devicewrapper , mutex, cond, *args, id_nr=0, **kwargs):
         """ """
         QObject.__init__(self)
@@ -45,7 +45,7 @@ class TimePlotWorker(QObject):       # change class name to MeasurementEngine ?
         self.wt = self.dw.wt
         self.dd = self.dw.d
         self.id_nr = id_nr
-        
+
         self.mtx = mutex
         self.cond = cond
         self._init_workertask()
@@ -64,9 +64,13 @@ class TimePlotWorker(QObject):       # change class name to MeasurementEngine ?
     def read_value(self, val, verbose=True):
         if verbose:
             print('read val: {:.2f}'.format(val))
-        
+
         self.mtx.lock()                 # lock worker-thread
-        self.reading.emit(self.id_nr, val)          # emit signalt to update gui
+        time_val = time.time()
+        arg = []
+        arg.append(val)
+        arg.append(time_val)
+        self.reading.emit(self.id_nr, val, time_val)          # emit signalt to update gui
         self.cond.wait(self.mtx)        # wait until gui is updated
         self.mtx.unlock()               # unlock worker thread
 
@@ -76,18 +80,16 @@ class TimePlotWorker(QObject):       # change class name to MeasurementEngine ?
         """ """
         print('start worker')
         self.wt.start()
-        
+
         # inform mainWindow
-#        self.started.emit()       
+#        self.started.emit()
         return
-    
+
     @pyqtSlot()
     def stop(self):
         self.wt.stop()
         print('stopped worker')
-        
+
         # inform mainWindow
 #        self.killed.emit()
         return
-
-
