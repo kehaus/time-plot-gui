@@ -147,6 +147,7 @@ class TimePlotGui(QWidget):
         # =====================================================================
         # control buttons - connections
         # =====================================================================
+        self.playBtn.clicked.connect(self.save_line_settings)
         self.playBtn.clicked.connect(self.thread_status_changed)
         self.playBtn.clicked.connect(self.start_thread)
         self.squarestopBtn.clicked.connect(self.stop_thread)
@@ -780,6 +781,7 @@ class TimePlotGui(QWidget):
         if reply == QMessageBox.Yes:
             self.save_current_settings()
             self.store_all_data()
+            self.stop_thread()
             event.accept()
         else:
             event.ignore()
@@ -823,6 +825,14 @@ class PlotDataItemV2(pg.PlotDataItem):
 
     def get_color(self):
         return self.opts['pen'].color().getRgb()
+
+    def update_width(self, value):
+        self.opts['pen'].setWidth(value/255)
+        self.updateItems()
+
+    def update_color(self, color_dialog):
+        self.opts['pen'].setColor(color_dialog.currentColor())
+        self.updateItems()
 
 class PlotLabelMachine():
     """ """
@@ -954,14 +964,23 @@ class TimePlotDataItem(JSONFileHandler):
         self.pdi.setAlpha(value/255, False)
 
     def setWidth(self, value):
-        self.pdi.setPen(pg.mkPen(width = value/255))
+        self.pdi.update_width(value)
+        # self.pdi.setPen(pg.mkPen(width = value/255))
 
     def open_color_dialog(self):
-        color_dialog = QColorDialog.getColor()
+        self.color_dialog = QtGui.QColorDialog()
+        self.color_dialog.currentColorChanged.connect(self.set_color)
+        self.color_dialog.open()
         # self.pdi.setPen(pg.mkPen(color = color_dialog.getRgb()))
-        self.pdi.opts['pen'].setColor(color_dialog)
-        self.pdi.setPen(self.pdi.opts['pen'])
+        # print(self.pdi.opts['pen'])
+        #self.pdi.update_color(self.color_dialog)
+        # print(self.pdi.opts['pen'])
+        # self.pdi.setPen(self.pdi.opts['pen'])
 
+    def set_color(self):
+        self.pdi.update_color(self.color_dialog)
+    #     self.pdi.opts['pen'].setColor(color_dialog.currentColor())
+    #     self.pdi.setPen(self.pdi.opts['pen'])
 
 # class TimePlotDataTable(JSONFileHandler):
 #     """ """
