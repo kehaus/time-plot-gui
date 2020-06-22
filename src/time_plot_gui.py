@@ -101,7 +101,7 @@ class TimePlotGui(QWidget):
         self.central_wid = QWidget(mainwindow)
         self._set_central_wid_properties()
         self.mainwindow = mainwindow
-        self.mainwindow.setCentralWidget(self.central_wid)
+        # self.mainwindow.setCentralWidget(self.central_wid)
         # if isinstance(self.mainwindow, MainWindow) or isinstance(self.mainwindow, SubWindow):
         #     self.mainwindow.setCentralWidget(self.central_wid)
         # else:

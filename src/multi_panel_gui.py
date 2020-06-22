@@ -12,7 +12,7 @@ import weakref
 from PyQt5.QtWidgets import QApplication, QWidget, QToolTip, QPushButton, QMessageBox, QMainWindow, QHBoxLayout
 from PyQt5.QtWidgets import qApp, QAction, QMenu, QGridLayout, QLabel, QLineEdit, QSizePolicy, QFileDialog
 from PyQt5.QtWidgets import QInputDialog, QColorDialog
-from PyQt5.QtGui import QIcon, QFont, QCursor, QRegion, QPolygon
+from PyQt5.QtGui import QIcon, QFont, QCursor, QRegion, QPolygon, QWindow
 from PyQt5 import QtCore, Qt, QtGui
 import pyqtgraph as pg
 
@@ -63,7 +63,7 @@ class MultiPanelGui(QWidget):
             window= self.mainwindow.subwindow,
             devicewrapper_lst = devicewrapper_lst2
         )
-        self.sub_gui_2.show()
+        #self.sub_gui_2.show()
         print('created sub 2')
         # self.sub_gui_1.setFixedSize(QSize(10, 10))
         #self.sub_gui_2.setFixedSize(QSize(500, 30))
@@ -141,7 +141,7 @@ class PrimaryWindow(QMainWindow):
         self.subwindow.create_window(width, height)
         self.subwindow.show()
 
-class SubWindow(QWindow):
+class SubWindow(QWidget):
     def create_window(self, width, height, parent=None,):
        super(SubWindow,self).__init__(parent)
        self.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
