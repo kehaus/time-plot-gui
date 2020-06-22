@@ -33,7 +33,7 @@ import weakref
 from PyQt5.QtWidgets import QApplication, QWidget, QToolTip, QPushButton, QMessageBox, QMainWindow, QHBoxLayout
 from PyQt5.QtWidgets import qApp, QAction, QMenu, QGridLayout, QLabel, QLineEdit, QSizePolicy, QFileDialog
 from PyQt5.QtWidgets import QInputDialog, QColorDialog
-from PyQt5.QtGui import QIcon, QFont, QCursor, QRegion, QPolygon
+from PyQt5.QtGui import QIcon, QFont, QCursor, QRegion, QPolygon, QWindow
 from PyQt5 import QtCore, Qt, QtGui
 import pyqtgraph as pg
 
@@ -102,6 +102,10 @@ class TimePlotGui(QWidget):
         self._set_central_wid_properties()
         self.mainwindow = mainwindow
         self.mainwindow.setCentralWidget(self.central_wid)
+        # if isinstance(self.mainwindow, MainWindow) or isinstance(self.mainwindow, SubWindow):
+        #     self.mainwindow.setCentralWidget(self.central_wid)
+        # else:
+        #     print('else case')
         # =====================================================================
         # control panel - initializes layout item to put widgets
         # =====================================================================
@@ -516,14 +520,14 @@ class TimePlotGui(QWidget):
 
     def ammend_context_menu(self):
         alpha_sliders = self.line_settings_menu.actions()[1::4]
-        width_sliders = self.line_settings_menu.actions()[2::4]
+        width_boxes = self.line_settings_menu.actions()[2::4]
         key = 0
         for slider in alpha_sliders:
             slider.defaultWidget().setValue(self.settings['line_settings'][str(key)]['line_alpha']*255)
             key += 1
         key = 0
-        for slider in width_sliders:
-            slider.defaultWidget().setValue(self.settings['line_settings'][str(key)]['line_width']*255)
+        for box in width_boxes:
+            box.defaultWidget().setIntValue(self.settings['line_settings'][str(key)]['line_width'])
             key += 1
 
     def add_line_settings_menu(self):
@@ -555,30 +559,36 @@ class TimePlotGui(QWidget):
             self.line_settings_menu.addAction(alpha)
             self.line_settings_menu.alpha = alpha
             self.line_settings_menu.alphaSlider = alphaSlider
-            # ===============================
-            # width
-            # ===============================
-            width = QtGui.QWidgetAction(self.line_settings_menu)
-            widthSlider = QtGui.QSlider(self.line_settings_menu)
-            widthSlider.setOrientation(QtCore.Qt.Horizontal)
-            widthSlider.setMaximum(2550)
-            widthSlider.setMinimum(255)
-            widthSlider.setValue(self.settings['line_settings'][str(key)]['line_width']*255)
-            widthSlider.valueChanged.connect(self.data_table[key].setWidth)
-            width.setDefaultWidget(widthSlider)
-            self.line_settings_menu.addAction(width)
-            self.line_settings_menu.width = width
-            self.line_settings_menu.widthSlider = widthSlider
             # # ===============================
             # # width
             # # ===============================
-            # widthintermediate = QtGui.QWidgetAction(self.line_settings_menu)
-            # widthbox = QtGui.QInputDialog(self.line_settings_menu)
-            # widthbox.NoButtons
-            # widthintermediate.setDefaultWidget(widthbox)
-            # self.line_settings_menu.addAction(widthintermediate)
-            # self.line_settings_menu.widthintermediate = widthintermediate
-            # self.line_settings_menu.widthbox = widthbox
+            # width = QtGui.QWidgetAction(self.line_settings_menu)
+            # widthSlider = QtGui.QSlider(self.line_settings_menu)
+            # widthSlider.setOrientation(QtCore.Qt.Horizontal)
+            # widthSlider.setMaximum(2550)
+            # widthSlider.setMinimum(255)
+            # widthSlider.setValue(self.settings['line_settings'][str(key)]['line_width']*255)
+            # widthSlider.valueChanged.connect(self.data_table[key].setWidth)
+            # width.setDefaultWidget(widthSlider)
+            # self.line_settings_menu.addAction(width)
+            # self.line_settings_menu.width = width
+            # self.line_settings_menu.widthSlider = widthSlider
+            # # ===============================
+            # # width
+            # # ===============================
+            widthintermediate = QtGui.QWidgetAction(self.line_settings_menu)
+            widthbox = QtGui.QInputDialog(self.line_settings_menu)
+            widthbox.setInputMode(1)
+            widthbox.setLabelText("Width")
+            widthbox.setOptions(widthbox.NoButtons)
+            widthbox.setIntRange(1, 15)
+            widthbox.setIntStep(1)
+            widthbox.setIntValue(self.settings['line_settings'][str(key)]['line_width'])
+            widthbox.intValueChanged.connect(self.data_table[key].setWidth)
+            widthintermediate.setDefaultWidget(widthbox)
+            self.line_settings_menu.addAction(widthintermediate)
+            self.line_settings_menu.widthintermediate = widthintermediate
+            self.line_settings_menu.widthbox = widthbox
             # ===============================
             # color
             # ===============================
@@ -644,14 +654,14 @@ class TimePlotGui(QWidget):
 
     def save_line_settings(self):
         alpha_sliders = self.line_settings_menu.actions()[1::4]
-        width_sliders = self.line_settings_menu.actions()[2::4]
+        width_boxes = self.line_settings_menu.actions()[2::4]
         number = 0
         for slider in alpha_sliders:
             self.settings['line_settings'][str(number)]['line_alpha'] = slider.defaultWidget().value()/255
             number += 1
         number = 0
-        for slider in width_sliders:
-            self.settings['line_settings'][str(number)]['line_width'] = slider.defaultWidget().value()/255
+        for box in width_boxes:
+            self.settings['line_settings'][str(number)]['line_width'] = box.defaultWidget().intValue()
             number += 1
         for key in range(len(self.data_table)):
             self.settings['line_settings'][str(key)]['line_color'] = \
@@ -827,7 +837,8 @@ class PlotDataItemV2(pg.PlotDataItem):
         return self.opts['pen'].color().getRgb()
 
     def update_width(self, value):
-        self.opts['pen'].setWidth(value/255)
+        # /255
+        self.opts['pen'].setWidth(value)
         self.updateItems()
 
     def update_color(self, color_dialog):
