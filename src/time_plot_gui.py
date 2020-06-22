@@ -316,6 +316,7 @@ class TimePlotGui(QWidget):
         self.viewbox.enableAutoRange(x = self.settings['xautorange'], y = self.settings['yautorange'])
         self.data_options.automatic_clear_checkbox.setChecked(self.settings['auto_clear_data'])
         self.viewbox.setMouseEnabled(x = self.settings['x_zoom'], y = self.settings['y_zoom'])
+        self.viewbox.setAutoVisible(x = True, y = True)
         if self.settings['mouseMode'] == 1:
             self.viewbox.setLeftButtonAction(mode = 'rect')
         else:
@@ -504,6 +505,16 @@ class TimePlotGui(QWidget):
         open_data.triggered.connect(self.open_finder)
         self.menu.addAction(open_data)
         self.menu.open_data = open_data
+
+        print_viewbox = QtGui.QAction("print_viewbox")
+        print_viewbox.triggered.connect(self.print_viewbox)
+        self.menu.addAction(print_viewbox)
+        self.menu.print_viewbox = print_viewbox
+
+        viewbox1 = QtGui.QAction("viewbox1")
+        viewbox1.triggered.connect(self.viewbox1)
+        self.menu.addAction(viewbox1)
+        self.menu.viewbox1 = viewbox1
         # # ===============================
         # # Function Formation: Set Zoom lines
         # # ===============================
@@ -517,6 +528,16 @@ class TimePlotGui(QWidget):
         actions = self.graphItem.ctrlMenu.actions()
         for index in [1, 2, 5]:
             self.graphItem.ctrlMenu.removeAction(actions[index])
+
+    def print_viewbox(self):
+        print(self.viewbox.getState())
+
+    def viewbox1(self):
+        self.print_viewbox()
+        self.viewbox.setAutoVisible(x = False, y = False)
+        self.viewbox.setAutoPan(x = True)
+        self.viewbox.autoRange()
+        self.print_viewbox()
 
     def ammend_context_menu(self):
         alpha_sliders = self.line_settings_menu.actions()[1::4]
