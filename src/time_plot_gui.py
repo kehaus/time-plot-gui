@@ -100,8 +100,8 @@ class TimePlotGui(QWidget):
         # =====================================================================
         self.central_wid = QWidget(mainwindow)
         self._set_central_wid_properties()
-        self.mainwindow = mainwindow
-        self.mainwindow.setCentralWidget(self.central_wid)
+        # self.mainwindow = mainwindow
+        # self.mainwindow.setCentralWidget(self.central_wid)
         # if isinstance(self.mainwindow, MainWindow) or isinstance(self.mainwindow, SubWindow):
         #     self.mainwindow.setCentralWidget(self.central_wid)
         # else:
@@ -1045,6 +1045,11 @@ class MainWindow(QMainWindow):
             window=self,
             devicewrapper_lst=devicewrapper_lst
         )
+        self.test_widget = QWidget()
+        self.layout = QGridLayout()
+        self.setCentralWidget(self.test_widget)
+        self.layout.addWidget(self.time_plot_ui.central_wid, 0, 0, 1, 1)
+        self.test_widget.setLayout(self.layout)
 
 
     def setGeometry(self, *args, **kwargs):
