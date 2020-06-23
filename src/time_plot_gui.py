@@ -62,7 +62,7 @@ class TimePlotGui(QWidget):
     stop_signal = QtCore.pyqtSignal()
     DEFAULT_DATA_FILENAME = 'stored_data.json'
 
-    def __init__(self, parent=None, window=None, devicewrapper_lst=None):
+    def __init__(self, parent=None, window=None, devicewrapper_lst=None, folder_filename = None):
         """ """
         super(TimePlotGui, self).__init__(parent=parent)
 
@@ -78,9 +78,9 @@ class TimePlotGui(QWidget):
         # ===============================
         # Get the settings object
         # ===============================
-        self.plot_item_settings = PlotItemSettings(number_of_lines = len(devicewrapper_lst))
+        self.plot_item_settings = PlotItemSettings(number_of_lines = len(devicewrapper_lst), folder_filename = folder_filename)
         self.settings = self.plot_item_settings.settings
-        self.data_fn = os.path.join(PlotItemSettings.FOLDER_FILENAME, self.DEFAULT_DATA_FILENAME)
+        self.data_fn = os.path.join(self.plot_item_settings.folder_filename, self.DEFAULT_DATA_FILENAME)
         # ===============================
         # Set up the label machine
         # ===============================
@@ -783,19 +783,24 @@ class TimePlotGui(QWidget):
         self.cond_table[id_nr].wakeAll()     # wake worker thread up
         return
 
-    def closeEvent(self, event):
-        reply = QMessageBox.question(self, 'Message',
-            "Are you sure to quit?", QMessageBox.Yes |
-            QMessageBox.No, QMessageBox.Yes)
+    def closeEvent(self, event, auto_accept = False):
+        if not auto_accept:
+            reply = QMessageBox.question(self, 'Message',
+                "Are you sure to quit?", QMessageBox.Yes |
+                QMessageBox.No, QMessageBox.Yes)
 
-        if reply == QMessageBox.Yes:
-            self.save_current_settings()
-            self.store_all_data()
-            self.stop_thread()
-            event.accept()
+            if reply == QMessageBox.Yes:
+                self.accept_close_event(event)
+            else:
+                event.ignore()
         else:
-            event.ignore()
+            self.accept_close_event(event)
 
+    def accept_close_event(self, event):
+        self.save_current_settings()
+        self.store_all_data()
+        self.stop_thread()
+        event.accept()
 
 
 # ===========================================================================
@@ -1022,22 +1027,13 @@ class MainWindow(QMainWindow):
         self.time_plot_ui = TimePlotGui(
             parent=None,
             window=self,
-            devicewrapper_lst=devicewrapper_lst
+            devicewrapper_lst=devicewrapper_lst,
+            folder_filename = None
         )
-        self.time_plot_ui2 = TimePlotGui(
-            parent=None,
-            window=self,
-            devicewrapper_lst=devicewrapper_lst
-        )
-        self.button = QPushButton()
-        self.button.setStyleSheet("background-color: rgb(120,120,120);")
-        self.time_plot_ui.setStyleSheet("background-color: rgb(120,120,120);")
         self.test_widget = QWidget()
         self.layout = QGridLayout()
         self.setCentralWidget(self.test_widget)
-        self.layout.addWidget(self.time_plot_ui.central_wid, 1, 1, 1, 1)
-        self.layout.addWidget(self.time_plot_ui2.central_wid, 0, 0, 1, 1)
-        self.layout.addWidget(self.button, 0, 1, 1, 1)
+        self.layout.addWidget(self.time_plot_ui.central_wid, 0, 0, 1, 1)
         self.test_widget.setLayout(self.layout)
 
 

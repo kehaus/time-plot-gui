@@ -60,14 +60,18 @@ class PlotItemSettings(JSONFileHandler):
         # maybe more settings here
         }
 
-    def __init__(self, number_of_lines = 1, unusal_settings_file = None):
+    def __init__(self, number_of_lines = 1, folder_filename = None, unusal_settings_file = None):
+        if folder_filename is not None:
+            self.folder_filename = folder_filename
+        else:
+            self.folder_filename = self.FOLDER_FILENAME
         if unusal_settings_file is None:
-            self.settings_filename = os.path.join(PlotItemSettings.FOLDER_FILENAME, PlotItemSettings.SETTINGS_FILENAME)
+            self.settings_filename = os.path.join(self.folder_filename, PlotItemSettings.SETTINGS_FILENAME)
         else:
             self.settings_filename = unusal_settings_file
         #self.settings_filename = PlotItemSettings.SETTINGS_FILENAME
-        if not os.path.exists(self.FOLDER_FILENAME):
-            os.makedirs(self.FOLDER_FILENAME)
+        if not os.path.exists(self.folder_filename):
+            os.makedirs(self.folder_filename)
         settings = self._checks_for_settings_file()
         self.number_of_lines = number_of_lines
         self.set_line_settings(self.number_of_lines)
