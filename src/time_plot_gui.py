@@ -33,7 +33,7 @@ import weakref
 from PyQt5.QtWidgets import QApplication, QWidget, QToolTip, QPushButton, QMessageBox, QMainWindow, QHBoxLayout
 from PyQt5.QtWidgets import qApp, QAction, QMenu, QGridLayout, QLabel, QLineEdit, QSizePolicy, QFileDialog
 from PyQt5.QtWidgets import QInputDialog, QColorDialog
-from PyQt5.QtGui import QIcon, QFont, QCursor, QRegion, QPolygon, QWindow
+from PyQt5.QtGui import QIcon, QFont, QCursor, QRegion, QPolygon, QWindow, QColor
 from PyQt5 import QtCore, Qt, QtGui
 import pyqtgraph as pg
 
@@ -847,7 +847,10 @@ class PlotDataItemV2(pg.PlotDataItem):
         self.updateItems()
 
     def update_color(self, color_dialog):
-        self.opts['pen'].setColor(color_dialog.currentColor())
+        if type(color_dialog) is QColor:
+            self.opts['pen'].setColor(color_dialog)
+        else:
+            self.opts['pen'].setColor(color_dialog.currentColor())
         self.updateItems()
 
 class PlotLabelMachine():
@@ -984,8 +987,11 @@ class TimePlotDataItem(JSONFileHandler):
         # self.pdi.setPen(pg.mkPen(width = value/255))
 
     def open_color_dialog(self):
+        # self.restorable_color = self.pdi.get_color()
+        self.restorable_color = self.pdi.opts['pen'].color()
         self.color_dialog = QtGui.QColorDialog()
         self.color_dialog.currentColorChanged.connect(self.set_color)
+        self.color_dialog.rejected.connect(self.cancel_color_dialog)
         self.color_dialog.open()
         # self.pdi.setPen(pg.mkPen(color = color_dialog.getRgb()))
         # print(self.pdi.opts['pen'])
@@ -997,6 +1003,9 @@ class TimePlotDataItem(JSONFileHandler):
         self.pdi.update_color(self.color_dialog)
     #     self.pdi.opts['pen'].setColor(color_dialog.currentColor())
     #     self.pdi.setPen(self.pdi.opts['pen'])
+
+    def cancel_color_dialog(self):
+        self.pdi.update_color(self.restorable_color)
 
 # class TimePlotDataTable(JSONFileHandler):
 #     """ """
