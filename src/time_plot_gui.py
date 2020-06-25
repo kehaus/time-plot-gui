@@ -271,13 +271,17 @@ class TimePlotGui(QWidget):
 
     def resize_line_settings(self):
         if self.started:
+            # print(len(self.devicewrapper))
             self.coerce_same_length(data_length = len(self.devicewrapper))
+            # print(len(self.data_table))
             self.resize_data_table()
+            # print(len(self.data_table))
         else:
             self.coerce_same_length(data_length = len(self.data_table))
         self.set_line_settings()
 
     def resize_data_table(self):
+        # print('resizing data table')
         while len(self.devicewrapper) != len(self.data_table):
             if len(self.devicewrapper) > len(self.data_table):
                 id_nr = len(self.data_table)
@@ -539,6 +543,7 @@ class TimePlotGui(QWidget):
         # Submenu Formation: line_settings
         # ===============================
         for key in self.data_table:
+            # print(key)
             # ===============================
             # title
             # ===============================
@@ -748,9 +753,14 @@ class TimePlotGui(QWidget):
         #     barrier_data_x = np.append(barrier_data_x, self.data_table[0].get_plot_data_item().getData()[0][-1])
         #     barrier_data_y = np.append(barrier_data_y, self.data_table[0].get_plot_data_item().getData()[1][-1])
         #     self.barrier.setData(barrier_data_x, barrier_data_y)
+        # print(self.data_table)
+        # for key in self.data_table:
+        #     print(type(key))
+        #     print(self.data_table[key])
         self.start_signal.emit()
         if is_checked:
             self.leaving_fft_mode()
+        # print(self.data_table)
 
     def stop_thread(self):
         self.stop_signal.emit()
@@ -778,6 +788,8 @@ class TimePlotGui(QWidget):
     def newReading(self, id_nr, val, time_val):
         """ """
         pg.QtGui.QApplication.processEvents()
+        # print(id_nr)
+        # print(self.data_table)
         self.update_datapoint(id_nr, val, time_val)
         time.sleep(0.01)         # necessary to avoid worker to freeze
         self.cond_table[id_nr].wakeAll()     # wake worker thread up

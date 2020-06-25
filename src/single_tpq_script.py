@@ -30,6 +30,9 @@ class PrimaryWindow(QMainWindow):
         self._init_ui(devicewrapper_lst1 = devicewrapper_lst1, devicewrapper_lst2 = devicewrapper_lst2)
 
     def _init_ui(self, window_geometry=None, devicewrapper_lst1=None, devicewrapper_lst2 = None):
+        self.devicewrapper_lst1 = devicewrapper_lst1
+        print(devicewrapper_lst1)
+        print(devicewrapper_lst2)
         self.setGeometry()
         self.setWindowTitle('time-plot')
         self.setStyleSheet("background-color: black;")
@@ -40,13 +43,7 @@ class PrimaryWindow(QMainWindow):
             parent=None,
             window=self,
             devicewrapper_lst=devicewrapper_lst1,
-            folder_filename = "gui1"
-        )
-        self.time_plot_ui2 = TimePlotGui(
-            parent=None,
-            window=self,
-            devicewrapper_lst=devicewrapper_lst2,
-            folder_filename = "gui2"
+            folder_filename = "gui"
         )
         self.test_widget = QWidget()
         self.layout = QGridLayout()
@@ -55,12 +52,27 @@ class PrimaryWindow(QMainWindow):
         # ===============================
         # This is where you would add additional widgets or reorganize the layout of the widgets
         # ===============================
-        self.layout.addWidget(self.time_plot_ui1.central_wid, 0, 0, 1, 1)
-        self.layout.addWidget(self.time_plot_ui2.central_wid, 0, 1, 1, 1)
+        self.layout.addWidget(self.time_plot_ui1.central_wid, 0, 0, 6, 6)
+        # for number in range(len(devicewrapper_lst1))
+        for number in range(len(devicewrapper_lst1)):
+            frequency = QtGui.QInputDialog()
+            frequency.setStyleSheet("color: white")
+            frequency.setInputMode(0)
+            frequency.setLabelText("Frequency")
+            frequency.setOptions(frequency.NoButtons)
+            frequency.setDoubleRange(1, 15)
+            frequency.setDoubleStep(.1)
+            frequency.setDoubleValue(2)
+            frequency.doubleValueChanged.connect(self.devicewrapper_lst1[number].d.set_frequency)
+            self.layout.addWidget(frequency, number, 7, 1, 1)
         # ===============================
         # ===============================
 
         self.test_widget.setLayout(self.layout)
+
+    def test(self, value):
+        print(value)
+        self.devicewrapper_lst1[0].d.set_frequency(value)
 
 
     def setGeometry(self, *args, **kwargs):
@@ -78,7 +90,6 @@ class PrimaryWindow(QMainWindow):
         # (You can set all auto_accept arguments to True but it is not recommended so you dont close the gui accidentally)
         # ===============================
         self.time_plot_ui1.closeEvent(event)
-        self.time_plot_ui2.closeEvent(event, auto_accept = True)
 #        event.accept
 
     def create_subwindow(self, width, height):
@@ -86,7 +97,7 @@ class PrimaryWindow(QMainWindow):
         self.subwindow.create_window(width, height)
         self.subwindow.show()
 
-def main(devicewrapper_lst1, devicewrapper_lst2):
+def main(devicewrapper_lst1, devicewrapper_lst2 = None):
     """ """
     app = QApplication.instance()
     if app is None:
@@ -121,4 +132,4 @@ if __name__ == "__main__":
 # ===============================
 # Specify devicewrapper_lst for each TimePlotGui object
 # ===============================
-    main([dw1], [dw2])
+    main([dw1, dw2, dw3])
