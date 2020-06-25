@@ -32,7 +32,7 @@ import sys
 import weakref
 from PyQt5.QtWidgets import QApplication, QWidget, QToolTip, QPushButton, QMessageBox, QMainWindow, QHBoxLayout
 from PyQt5.QtWidgets import qApp, QAction, QMenu, QGridLayout, QLabel, QLineEdit, QSizePolicy, QFileDialog
-from PyQt5.QtWidgets import QInputDialog, QColorDialog
+from PyQt5.QtWidgets import QInputDialog, QColorDialog, QSpinBox
 from PyQt5.QtGui import QIcon, QFont, QCursor, QRegion, QPolygon, QWindow, QColor
 from PyQt5 import QtCore, Qt, QtGui
 import pyqtgraph as pg
@@ -508,6 +508,7 @@ class TimePlotGui(QWidget):
         open_data.triggered.connect(self.open_finder)
         self.menu.addAction(open_data)
         self.menu.open_data = open_data
+
         # # ===============================
         # # Function Formation: Set Zoom lines
         # # ===============================
@@ -578,22 +579,33 @@ class TimePlotGui(QWidget):
             # self.line_settings_menu.addAction(width)
             # self.line_settings_menu.width = width
             # self.line_settings_menu.widthSlider = widthSlider
-            # # ===============================
-            # # width
-            # # ===============================
+            # ===============================
+            # width
+            # ===============================
             widthintermediate = QtGui.QWidgetAction(self.line_settings_menu)
-            widthbox = QtGui.QInputDialog(self.line_settings_menu)
-            widthbox.setInputMode(1)
-            widthbox.setLabelText("Width")
-            widthbox.setOptions(widthbox.NoButtons)
-            widthbox.setIntRange(1, 15)
-            widthbox.setIntStep(1)
-            widthbox.setIntValue(self.settings['line_settings'][str(key)]['line_width'])
-            widthbox.intValueChanged.connect(self.data_table[key].setWidth)
-            widthintermediate.setDefaultWidget(widthbox)
+            width_widget = QtGui.QWidget()
+            label = QLabel("Line Width:")
+            spinbox = QSpinBox()
+            spinbox.setValue(self.settings['line_settings'][str(key)]['line_width'])
+            spinbox.setRange(1, 15)
+            spinbox.setSingleStep(1)
+            width_layout = QHBoxLayout()
+            width_layout.addWidget(label)
+            width_layout.addWidget(spinbox)
+            width_widget.setLayout(width_layout)
+            spinbox.valueChanged.connect(self.data_table[key].setWidth)
+            widthintermediate.setDefaultWidget(width_widget)
             self.line_settings_menu.addAction(widthintermediate)
             self.line_settings_menu.widthintermediate = widthintermediate
-            self.line_settings_menu.widthbox = widthbox
+            # widthbox = QtGui.QInputDialog(self.line_settings_menu)
+            # widthbox.setInputMode(1)
+            # widthbox.setLabelText("Width")
+            # widthbox.setOptions(widthbox.NoButtons)
+            # widthbox.setIntRange(1, 15)
+            # widthbox.setIntStep(1)
+            # widthbox.setIntValue(self.settings['line_settings'][str(key)]['line_width'])
+            # widthbox.intValueChanged.connect(self.data_table[key].setWidth)
+            # self.line_settings_menu.widthbox = widthbox
             # ===============================
             # color
             # ===============================
@@ -666,7 +678,7 @@ class TimePlotGui(QWidget):
             number += 1
         number = 0
         for box in width_boxes:
-            self.settings['line_settings'][str(number)]['line_width'] = box.defaultWidget().intValue()
+            self.settings['line_settings'][str(number)]['line_width'] = box.defaultWidget().layout().itemAt(1).widget().value()
             number += 1
         for key in range(len(self.data_table)):
             self.settings['line_settings'][str(key)]['line_color'] = \
