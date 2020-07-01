@@ -60,9 +60,11 @@ class TimePlotGui(QWidget):
 
     start_signal = QtCore.pyqtSignal()
     stop_signal = QtCore.pyqtSignal()
+    pause_signal = QtCore.pyqtSignal()
+    restart_signal = QtCore.pyqtSignal()
     DEFAULT_DATA_FILENAME = 'stored_data.json'
 
-    def __init__(self, parent=None, window=None, devicewrapper_lst=None, folder_filename = None):
+    def __init__(self, parent=None, window=None, devicewrapper_lst=None, folder_filename = None, sampling_latency = .01):
         """ """
         super(TimePlotGui, self).__init__(parent=parent)
 
@@ -75,6 +77,11 @@ class TimePlotGui(QWidget):
         # Allow for coercion of data and settings to the same number of lines
         # ===============================
         self.started = False
+        self.start_button_counter = 0
+        # ===============================
+        # Allow customization of delay between samples
+        # ===============================
+        self.sampling_latency = sampling_latency
         # ===============================
         # Get the settings object
         # ===============================
@@ -148,13 +155,22 @@ class TimePlotGui(QWidget):
         self.graphics_layout.addWidget(self.graphWidget, 0, 0, 5, 4)
         self.graphics_layout.addWidget(self.squarestopBtn, 0, 0)
         self.graphics_layout.addWidget(self.playBtn, 0, 0)
+
+        # self.pauseBtn = QPushButton()
+        # self.restartBtn = QPushButton()
+        # self.pauseBtn.setStyleSheet("background-color: rgb(120,120,120);")
+        # self.restartBtn.setStyleSheet("background-color: rgb(120,120,120);")
+        # self.graphics_layout.addWidget(self.pauseBtn, 0, 6, 1, 1)
+        # self.pauseBtn.clicked.connect(self.pause_thread)
+        # self.graphics_layout.addWidget(self.restartBtn, 1, 6, 1, 1)
+        # self.restartBtn.clicked.connect(self.restart_thread)
         # =====================================================================
         # control buttons - connections
         # =====================================================================
         self.playBtn.clicked.connect(self.save_line_settings)
         self.playBtn.clicked.connect(self.thread_status_changed)
         self.playBtn.clicked.connect(self.start_thread)
-        self.squarestopBtn.clicked.connect(self.stop_thread)
+        self.squarestopBtn.clicked.connect(self.pause_thread)
         # ============================================================
         # Assign layout widget to window
         # ============================================================
@@ -520,19 +536,19 @@ class TimePlotGui(QWidget):
         # Remove unnecesary default context menu operations
         # ===============================
         actions = self.graphItem.ctrlMenu.actions()
-        for index in [1, 2, 5]:
+        for index in [1, 2, 3, 5]:
             self.graphItem.ctrlMenu.removeAction(actions[index])
 
     def ammend_context_menu(self):
-        alpha_sliders = self.line_settings_menu.actions()[1::4]
-        width_boxes = self.line_settings_menu.actions()[2::4]
+        alpha_sliders = self.line_settings_menu.actions()[0::2]
+        width_boxes = self.line_settings_menu.actions()[0::2]
         key = 0
         for slider in alpha_sliders:
-            slider.defaultWidget().setValue(self.settings['line_settings'][str(key)]['line_alpha']*255)
+            slider.defaultWidget().layout().itemAt(2).widget().setValue(self.settings['line_settings'][str(key)]['line_alpha'])
             key += 1
         key = 0
         for box in width_boxes:
-            box.defaultWidget().setIntValue(self.settings['line_settings'][str(key)]['line_width'])
+            box.defaultWidget().layout().itemAt(4).widget().setValue(self.settings['line_settings'][str(key)]['line_width'])
             key += 1
 
     def add_line_settings_menu(self):
@@ -545,26 +561,26 @@ class TimePlotGui(QWidget):
         # ===============================
         for key in self.data_table:
             # print(key)
-            # ===============================
-            # title
-            # ===============================
-            title = QtGui.QAction('Line ' + str(key), self.line_settings_menu)
-            title.setEnabled(False)
-            self.line_settings_menu.addAction(title)
-            self.line_settings_menu.title = title
-            # ===============================
-            # alpha
-            # ===============================
-            alpha = QtGui.QWidgetAction(self.line_settings_menu)
-            alphaSlider = QtGui.QSlider(self.line_settings_menu)
-            alphaSlider.setOrientation(QtCore.Qt.Horizontal)
-            alphaSlider.setMaximum(255)
-            alphaSlider.setValue(self.settings['line_settings'][str(key)]['line_alpha']*255)
-            alphaSlider.valueChanged.connect(self.data_table[key].setAlpha)
-            alpha.setDefaultWidget(alphaSlider)
-            self.line_settings_menu.addAction(alpha)
-            self.line_settings_menu.alpha = alpha
-            self.line_settings_menu.alphaSlider = alphaSlider
+            # # ===============================
+            # # title
+            # # ===============================
+            # title = QtGui.QAction('Line ' + str(key), self.line_settings_menu)
+            # title.setEnabled(False)
+            # self.line_settings_menu.addAction(title)
+            # self.line_settings_menu.title = title
+            # # ===============================
+            # # alpha
+            # # ===============================
+            # alpha = QtGui.QWidgetAction(self.line_settings_menu)
+            # alphaSlider = QtGui.QSlider(self.line_settings_menu)
+            # alphaSlider.setOrientation(QtCore.Qt.Horizontal)
+            # alphaSlider.setMaximum(255)
+            # alphaSlider.setValue(self.settings['line_settings'][str(key)]['line_alpha']*255)
+            # alphaSlider.valueChanged.connect(self.data_table[key].setAlpha)
+            # alpha.setDefaultWidget(alphaSlider)
+            # self.line_settings_menu.addAction(alpha)
+            # self.line_settings_menu.alpha = alpha
+            # self.line_settings_menu.alphaSlider = alphaSlider
             # # ===============================
             # # width
             # # ===============================
@@ -582,18 +598,34 @@ class TimePlotGui(QWidget):
             # ===============================
             # width
             # ===============================
+            mainlabel = QLabel('Line '+str(key))
+            mainlabel.setAlignment(QtCore.Qt.AlignCenter)
             widthintermediate = QtGui.QWidgetAction(self.line_settings_menu)
             width_widget = QtGui.QWidget()
-            label = QLabel("Line Width:")
+            widthlabel = QLabel("Line Width:")
             spinbox = QSpinBox()
             spinbox.setValue(self.settings['line_settings'][str(key)]['line_width'])
             spinbox.setRange(1, 15)
             spinbox.setSingleStep(1)
-            width_layout = QHBoxLayout()
-            width_layout.addWidget(label)
-            width_layout.addWidget(spinbox)
+
+            alphalabel = QLabel("Alpha")
+            alphaSlider = QtGui.QSlider(self.line_settings_menu)
+            alphaSlider.setOrientation(QtCore.Qt.Horizontal)
+            alphaSlider.setMaximum(255)
+            alphaSlider.setValue(self.settings['line_settings'][str(key)]['line_alpha']*255)
+
+            width_layout = QGridLayout()
+            width_layout.addWidget(mainlabel, 0, 0, 1, 2)
+            width_layout.addWidget(alphalabel, 1, 0, 1, 1)
+            width_layout.addWidget(alphaSlider, 1, 1, 1, 1)
+            width_layout.addWidget(widthlabel, 2, 0, 1, 1)
+            width_layout.addWidget(spinbox, 2, 1, 1, 1)
             width_widget.setLayout(width_layout)
+            # width_widget.setStyleSheet("border-bottom: 1px solid")
+
             spinbox.valueChanged.connect(self.data_table[key].setWidth)
+            alphaSlider.valueChanged.connect(self.data_table[key].setAlpha)
+
             widthintermediate.setDefaultWidget(width_widget)
             self.line_settings_menu.addAction(widthintermediate)
             self.line_settings_menu.widthintermediate = widthintermediate
@@ -609,8 +641,16 @@ class TimePlotGui(QWidget):
             # ===============================
             # color
             # ===============================
-            change_line_color = QtGui.QAction("Change Line Color", self.line_settings_menu)
-            change_line_color.triggered.connect(self.data_table[key].open_color_dialog)
+            # change_line_color = QtGui.QAction("Change Line Color", self.line_settings_menu)
+            # # change_line_color.setStyleSheet("border-bottom: 1px solid")
+            # change_line_color.triggered.connect(self.data_table[key].open_color_dialog)
+            # self.line_settings_menu.addAction(change_line_color)
+            # self.line_settings_menu.change_line_color = change_line_color
+
+            change_line_color = QtGui.QWidgetAction(self.line_settings_menu)
+            color_button = QPushButton("Change line color")
+            color_button.clicked.connect(self.data_table[key].open_color_dialog)
+            change_line_color.setDefaultWidget(color_button)
             self.line_settings_menu.addAction(change_line_color)
             self.line_settings_menu.change_line_color = change_line_color
 
@@ -670,15 +710,15 @@ class TimePlotGui(QWidget):
             auto_clear_data = self.data_options.automatic_clear_checkbox.isChecked())
 
     def save_line_settings(self):
-        alpha_sliders = self.line_settings_menu.actions()[1::4]
-        width_boxes = self.line_settings_menu.actions()[2::4]
+        alpha_sliders = self.line_settings_menu.actions()[0::2]
+        width_boxes = self.line_settings_menu.actions()[0::2]
         number = 0
         for slider in alpha_sliders:
-            self.settings['line_settings'][str(number)]['line_alpha'] = slider.defaultWidget().value()/255
+            self.settings['line_settings'][str(number)]['line_alpha'] = slider.defaultWidget().layout().itemAt(2).widget().value()/255
             number += 1
         number = 0
         for box in width_boxes:
-            self.settings['line_settings'][str(number)]['line_width'] = box.defaultWidget().layout().itemAt(1).widget().value()
+            self.settings['line_settings'][str(number)]['line_width'] = box.defaultWidget().layout().itemAt(4).widget().value()
             number += 1
         for key in range(len(self.data_table)):
             self.settings['line_settings'][str(key)]['line_color'] = \
@@ -740,6 +780,8 @@ class TimePlotGui(QWidget):
             worker.reading.connect(self.newReading)
             self.start_signal.connect(worker.start)
             self.stop_signal.connect(worker.stop)
+            self.pause_signal.connect(worker.pause)
+            self.restart_signal.connect(worker.restart)
 
             self.worker_table.update({idx: worker})
 
@@ -753,26 +795,37 @@ class TimePlotGui(QWidget):
 
 
     def start_thread(self):
-        is_checked = False
-        if self.data_options.automatic_clear_checkbox.isChecked():
-            if self.graphItem.ctrl.fftCheck.isChecked():
-                is_checked = True
-            self.graphItem.ctrl.fftCheck.setChecked(False)
-            self.clear_all_data()
-        # elif not self.data_options.automatic_clear_checkbox.isChecked() \
-        #             and len(self.data_table[0].get_plot_data_item().getData()[0]) != 0:
-        #     barrier_data_x, barrier_data_y = self.barrier.getData()
-        #     barrier_data_x = np.append(barrier_data_x, self.data_table[0].get_plot_data_item().getData()[0][-1])
-        #     barrier_data_y = np.append(barrier_data_y, self.data_table[0].get_plot_data_item().getData()[1][-1])
-        #     self.barrier.setData(barrier_data_x, barrier_data_y)
-        # print(self.data_table)
-        # for key in self.data_table:
-        #     print(type(key))
-        #     print(self.data_table[key])
-        self.start_signal.emit()
-        if is_checked:
-            self.leaving_fft_mode()
-        # print(self.data_table)
+        if self.start_button_counter == 0:
+            self.start_button_counter += 1
+            is_checked = False
+            if self.data_options.automatic_clear_checkbox.isChecked():
+                if self.graphItem.ctrl.fftCheck.isChecked():
+                    is_checked = True
+                self.graphItem.ctrl.fftCheck.setChecked(False)
+                self.clear_all_data()
+            # elif not self.data_options.automatic_clear_checkbox.isChecked() \
+            #             and len(self.data_table[0].get_plot_data_item().getData()[0]) != 0:
+            #     barrier_data_x, barrier_data_y = self.barrier.getData()
+            #     barrier_data_x = np.append(barrier_data_x, self.data_table[0].get_plot_data_item().getData()[0][-1])
+            #     barrier_data_y = np.append(barrier_data_y, self.data_table[0].get_plot_data_item().getData()[1][-1])
+            #     self.barrier.setData(barrier_data_x, barrier_data_y)
+            # print(self.data_table)
+            # for key in self.data_table:
+            #     print(type(key))
+            #     print(self.data_table[key])
+            self.start_signal.emit()
+            if is_checked:
+                self.leaving_fft_mode()
+            # print(self.data_table)
+        else:
+            self.restart_thread()
+
+    def pause_thread(self):
+        self.stop_thread()
+        # self.pause_signal.emit()
+
+    def restart_thread(self):
+        self.restart_signal.emit()
 
     def stop_thread(self):
         self.stop_signal.emit()
@@ -803,11 +856,17 @@ class TimePlotGui(QWidget):
         # print(id_nr)
         # print(self.data_table)
         self.update_datapoint(id_nr, val, time_val)
-        time.sleep(0.01)         # necessary to avoid worker to freeze
+        time.sleep(self.sampling_latency)
+        # time.sleep(0.01)         # necessary to avoid worker to freeze
         self.cond_table[id_nr].wakeAll()     # wake worker thread up
         return
 
     def closeEvent(self, event, auto_accept = False):
+        """
+        By default, this function generates a pop-up confirming you want to close the gui before running
+        closing protocol. This pop-up can be overridden with the auto_accept argument which is espcially
+        useful in avoiding mulitple redundant popups in large gui with multiple TimePlotGui objects.
+        """
         if not auto_accept:
             reply = QMessageBox.question(self, 'Message',
                 "Are you sure to quit?", QMessageBox.Yes |
@@ -821,6 +880,7 @@ class TimePlotGui(QWidget):
             self.accept_close_event(event)
 
     def accept_close_event(self, event):
+        """This runs all of the standard protocol for closing the GUI properly"""
         self.save_current_settings()
         self.store_all_data()
         self.stop_thread()

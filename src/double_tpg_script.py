@@ -121,4 +121,4 @@ if __name__ == "__main__":
 # ===============================
 # Specify devicewrapper_lst for each TimePlotGui object
 # ===============================
-    main([dw1], [dw2])
+    main([dw1], [dw2, dw3])

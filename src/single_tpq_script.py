@@ -43,7 +43,8 @@ class PrimaryWindow(QMainWindow):
             parent=None,
             window=self,
             devicewrapper_lst=devicewrapper_lst1,
-            folder_filename = "gui"
+            folder_filename = "gui",
+            sampling_latency = .1
         )
         self.test_widget = QWidget()
         self.layout = QGridLayout()
@@ -92,11 +93,6 @@ class PrimaryWindow(QMainWindow):
         self.time_plot_ui1.closeEvent(event)
 #        event.accept
 
-    def create_subwindow(self, width, height):
-        self.subwindow = SubWindow()
-        self.subwindow.create_window(width, height)
-        self.subwindow.show()
-
 def main(devicewrapper_lst1, devicewrapper_lst2 = None):
     """ """
     app = QApplication.instance()
@@ -132,4 +128,4 @@ if __name__ == "__main__":
 # ===============================
 # Specify devicewrapper_lst for each TimePlotGui object
 # ===============================
-    main([dw1, dw2, dw3])
+    main([dw1, dw2])

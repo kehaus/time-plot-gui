@@ -55,7 +55,11 @@ class PlotItemSettings(JSONFileHandler):
         'y_zoom':           True,
         'auto_clear_data':  True,
         'zoom_lines':       [0, 1, -1, 1],
-        'frequency_state':  False
+        'frequency_state':  False,
+        'x_axis_font_size': 30,
+        'y_axis_font_size': 30,
+        'title_text':       None,
+        'title_font_size':  20
         # in plotalpha, the first item is the alpha and the second is whether the value is autodetermined
         # maybe more settings here
         }

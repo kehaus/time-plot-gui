@@ -50,6 +50,8 @@ class TimePlotWorker(QObject):       # change class name to MeasurementEngine ?
         self.cond = cond
         self._init_workertask()
 
+        self.is_paused = False
+
 
 
     def _init_workertask(self):
@@ -62,6 +64,11 @@ class TimePlotWorker(QObject):       # change class name to MeasurementEngine ?
 
 
     def read_value(self, val, verbose=True):
+        if self.is_paused:
+            self.mtx.lock()
+            self.cond.wait(self.mtx)
+            self.mtx.unlock()
+
         if verbose:
             print('read val: {:.2f}'.format(val))
 
@@ -84,6 +91,25 @@ class TimePlotWorker(QObject):       # change class name to MeasurementEngine ?
         # inform mainWindow
 #        self.started.emit()
         return
+
+    @pyqtSlot()
+    def pause(self):
+        """ """
+        print('pause worker')
+        self.is_paused = True
+        # self.mtx.lock()
+        # print('locked')
+        # self.cond.wait(self.mtx)
+        # print('here')
+
+    @pyqtSlot()
+    def restart(self):
+        """ """
+        print('restart worker')
+        self.is_paused = False
+        self.cond.wakeAll()
+        # self.mtx.unlock()
+        # print('here')
 
     @pyqtSlot()
     def stop(self):
