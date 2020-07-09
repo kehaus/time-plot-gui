@@ -544,7 +544,7 @@ class TimePlotGui(QWidget):
         width_boxes = self.line_settings_menu.actions()[0::2]
         key = 0
         for slider in alpha_sliders:
-            slider.defaultWidget().layout().itemAt(2).widget().setValue(self.settings['line_settings'][str(key)]['line_alpha'])
+            slider.defaultWidget().layout().itemAt(2).widget().setValue(255*self.settings['line_settings'][str(key)]['line_alpha'])
             key += 1
         key = 0
         for box in width_boxes:
@@ -689,16 +689,20 @@ class TimePlotGui(QWidget):
     def open_finder(self):
         self.started = False
         data_fname = QFileDialog.getOpenFileName(self, 'Open file', '~/',"JSON files (*.json)")
-        settings_fname = QFileDialog.getOpenFileName(self, 'Open file', '~/',"JSON files (*.json)")
-        if settings_fname[0] !='':
-            del self.plot_item_settings
-            self.plot_item_settings = PlotItemSettings(unusal_settings_file = settings_fname[0])
-        if data_fname[0] is not None:
-            self.clear_all_plot_data_items()
-            self._init_data_items(self.devicewrapper, new_data = data_fname[0])
-            self.resize_line_settings()
-            self.add_line_settings_menu()
-            self.set_custom_settings()
+        if data_fname[0] !='':
+            settings_fname = QFileDialog.getOpenFileName(self, 'Open file', '~/',"JSON files (*.json)")
+            # print(settings_fname)
+            if settings_fname[0] !='':
+                del self.plot_item_settings
+                self.plot_item_settings = PlotItemSettings(unusal_settings_file = settings_fname[0])
+                self.settings = self.plot_item_settings.settings
+                # print(self.settings)
+            if data_fname[0] is not None:
+                self.clear_all_plot_data_items()
+                self._init_data_items(self.devicewrapper, new_data = data_fname[0])
+                self.resize_line_settings()
+                self.add_line_settings_menu()
+                self.set_custom_settings()
 
     def clear_all_plot_data_items(self):
         data_items = self.graphItem.listDataItems()
@@ -723,6 +727,7 @@ class TimePlotGui(QWidget):
         for key in range(len(self.data_table)):
             self.settings['line_settings'][str(key)]['line_color'] = \
                 self.data_table[key].get_plot_data_item().get_color()
+        self.plot_item_settings.save_settings(line_settings = self.settings['line_settings'])
 
     def store_all_data(self):
         """
@@ -1182,4 +1187,4 @@ if __name__ == "__main__":
     dd3.signal_form = 'sin'
     dw3 = DeviceWrapper(dd3)
 
-    main([dw1, dw2, dw3])
+    main([dw1])
