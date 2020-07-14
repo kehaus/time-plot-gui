@@ -77,8 +77,9 @@ class PrimaryWindow(QMainWindow):
         # close all the TimePlotGui objects. To avoid repeated popups, set auto_accept to True in all but one object
         # (You can set all auto_accept arguments to True but it is not recommended so you dont close the gui accidentally)
         # ===============================
-        self.time_plot_ui1.closeEvent(event)
-        self.time_plot_ui2.closeEvent(event, auto_accept = True)
+        close_accepted = self.time_plot_ui1.closeEvent(event)
+        if close_accepted:
+            self.time_plot_ui2.closeEvent(event, auto_accept = True)
 #        event.accept
 
     def create_subwindow(self, width, height):

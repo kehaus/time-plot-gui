@@ -411,6 +411,7 @@ class TimePlotGui(QWidget):
         )
 
     def restore_default_settings(self):
+        temp_line_settings = self.settings['line_settings']
         # ===============================
         # Delete stored file settings
         # ===============================
@@ -422,12 +423,18 @@ class TimePlotGui(QWidget):
         del self.plot_item_settings
         self.plot_item_settings = PlotItemSettings(number_of_lines = len(self.devicewrapper))
         self.settings = self.plot_item_settings.DEFAULT_SETTINGS
+        self.settings['line_settings'] = temp_line_settings
         self.resize_line_settings()
         # ===============================
         # Implement the settings
         # ===============================
         self.ammend_context_menu()
         self.set_custom_settings()
+
+    def clear_line_settings(self):
+        self.settings['line_settings'] = self.plot_item_settings.DEFAULT_SETTINGS['line_settings']
+        self.set_line_settings()
+        self.ammend_context_menu()
 
     def _modify_context_menu(self):
         self.resize_line_settings()
@@ -462,6 +469,11 @@ class TimePlotGui(QWidget):
         save_settings.triggered.connect(self.save_current_settings)
         self.visualization_settings.addAction(save_settings)
         self.visualization_settings.save_settings = save_settings
+
+        clear_line_settings = QtGui.QAction("Clear Line Settings", self.visualization_settings)
+        clear_line_settings.triggered.connect(self.clear_line_settings)
+        self.visualization_settings.addAction(clear_line_settings)
+        self.visualization_settings.clear_line_settings = clear_line_settings
         # ===============================
         # Submenu Formation: Data Options
         # ===============================
@@ -484,6 +496,16 @@ class TimePlotGui(QWidget):
         open_data.triggered.connect(self.open_finder)
         self.menu.addAction(open_data)
         self.menu.open_data = open_data
+        # ===============================
+        # Function Formation: local fourier transform
+        # ===============================
+        local_fourier = QtGui.QWidgetAction(self.menu)
+        local_fourier_checkbox = QtGui.QCheckBox("Local Fourier Transform", self)
+        local_fourier.setDefaultWidget(local_fourier_checkbox)
+        local_fourier_checkbox.stateChanged.connect(self.local_fourier_transform)
+        self.menu.addAction(local_fourier)
+        self.menu.local_fourier = local_fourier
+        self.menu.local_fourier_checkbox = local_fourier_checkbox
         # ===============================
         # Remove unnecesary default context menu operations
         # ===============================
@@ -569,6 +591,30 @@ class TimePlotGui(QWidget):
                 self.resize_line_settings()
                 self.add_line_settings_menu()
                 self.set_custom_settings()
+                # self.ammend_context_menu()
+
+    def local_fourier_transform(self):
+        if self.menu.local_fourier_checkbox.isChecked():
+            viewboxstate = self.viewbox.getState()
+            xmin = viewboxstate['targetRange'][0][0]
+            xmax = viewboxstate['targetRange'][0][1]
+            for data_item in self.data_table.values():
+                data_item.time_array, data_item.y_array = data_item.get_data()
+                local_t = []
+                local_y = []
+                for entry in range(len(data_item.time_array)):
+                    if xmin <= data_item.time_array[entry] <= xmax:
+                        local_t.append(data_item.time_array[entry])
+                        local_y.append(data_item.y_array[entry])
+                new_t, new_y = data_item.pdi._fourierTransform(local_t, local_y)
+                data_item.local_transform_status(True)
+                data_item.pdi.setData(new_t, new_y)
+                self.set_frequency_labels()
+        else:
+            for data_item in self.data_table.values():
+                data_item.local_transform_status(False)
+                data_item.pdi.setData(data_item.time_array, data_item.y_array)
+                self.set_time_labels()
 
     def clear_all_plot_data_items(self):
         data_items = self.graphItem.listDataItems()
@@ -695,6 +741,8 @@ class TimePlotGui(QWidget):
         self.restart_signal.emit()
 
     def stop_thread(self):
+        # self.restart_signal.emit()
+        # time.sleep(2)
         self.stop_signal.emit()
 
     def update_datapoint(self, id_nr, val, time_val):
@@ -743,8 +791,10 @@ class TimePlotGui(QWidget):
                 self.accept_close_event(event)
             else:
                 event.ignore()
+                return False
         else:
             self.accept_close_event(event)
+            return True
 
     def accept_close_event(self, event):
         """This runs all of the standard protocol for closing the GUI properly"""
@@ -853,9 +903,11 @@ class TimePlotDataItem(JSONFileHandler):
     DATA_NAME = 'data_{:d}'
 
     def __init__(self, id_nr=0, absolute_time=None):
+        self.local_transform = False
         self.id_nr = id_nr
         self.data_name = self._compose_data_name()
         self.pdi = PlotDataItemV2([],[])
+        self.time_array, self.y_array = self.pdi.getData()
         if absolute_time == None:
             self.absolute_time = time.time()
         else:
@@ -871,12 +923,19 @@ class TimePlotDataItem(JSONFileHandler):
         """returns the pg.PlotDataItem"""
         return self.pdi
 
+    def local_transform_status(self, status):
+        self.local_transform = status
+
     def add_value(self, val, time_val):
         """adds value to pg.PlotDataItem data array"""
-        t, y = self.pdi.getData()
-        t = np.append(t, time_val - self.absolute_time)
-        y = np.append(y, val)
-        self.pdi.setData(t,y)
+        if not self.local_transform:
+            t, y = self.pdi.getData()
+            t = np.append(t, time_val - self.absolute_time)
+            y = np.append(y, val)
+            self.pdi.setData(t,y)
+        else:
+            self.time_array = np.append(self.time_array, time_val - self.absolute_time)
+            self.y_array = np.append(self.y_array, val)
 
     def get_data(self):
         """returns the pg.PlotDataItem time and data arrays"""
@@ -1049,4 +1108,4 @@ if __name__ == "__main__":
     dd3.signal_form = 'sin'
     dw3 = DeviceWrapper(dd3)
 
-    main([dw1])
+    main([dw1, dw2])
