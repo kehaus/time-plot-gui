@@ -345,13 +345,15 @@ class TimePlotGui(QWidget):
         print('setting frequency labels')
         labels = self.get_axis_labels(key)
         title = 'Fourier Transform of ' + labels['title']
-        self.graphItem.setTitle(title, **{'color': '#FFF', 'size': '20pt'})
+        size = str(self.settings['title_font_size']) + 'pt'
+        self.graphItem.setTitle(title, **{'color': '#FFF', 'size': size})
         self.graphItem.setLabel('left', 'Amplitude', color='white', size=30)
         self.graphItem.setLabel('bottom', 'Frequency', color='white', size=30)
 
     def set_time_labels(self, key = 'potential'):
         labels = self.get_axis_labels(key)
-        self.graphItem.setTitle(labels['title'], **{'color': '#FFF', 'size': '20pt'})
+        size = str(self.settings['title_font_size']) + 'pt'
+        self.graphItem.setTitle(labels['title'], **{'color': '#FFF', 'size': size})
         self.graphItem.setLabel('left', labels['y_label'], color='white', size=30)
         self.graphItem.setLabel('bottom', labels['x_label'], color='white', size=30)
 
@@ -371,7 +373,10 @@ class TimePlotGui(QWidget):
         }
         labels['x_label'] = sample_labels[key]['x_label']
         labels['y_label'] = sample_labels[key]['y_label']
-        labels['title'] = labels['x_label'] + ' 0ver ' + labels['y_label']
+        if self.settings['title_text'] is None:
+            labels['title'] = labels['x_label'] + ' 0ver ' + labels['y_label']
+        else:
+            labels['title'] = self.settings['title_text']
         if self.settings['xscalelog']:
             labels['x_label'] += '\n(Log Scale)'
         if self.settings['yscalelog']:
