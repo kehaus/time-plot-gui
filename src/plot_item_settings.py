@@ -56,10 +56,14 @@ class PlotItemSettings(JSONFileHandler):
         'auto_clear_data':  True,
         'zoom_lines':       [0, 1, -1, 1],
         'frequency_state':  False,
-        'x_axis_font_size': 30,
-        'y_axis_font_size': 30,
-        'title_text':       None,
-        'title_font_size':  20
+        'labels':           {'title_text':       None,
+                            'title_font_size':  20,
+                            'x_axis_data_type': "Time",
+                            'x_axis_unit':      "Seconds",
+                            'x_axis_font_size': 15,
+                            'y_axis_data_type': "Potential",
+                            'y_axis_unit':      "Volts",
+                            'y_axis_font_size': 15}
         # in plotalpha, the first item is the alpha and the second is whether the value is autodetermined
         # maybe more settings here
         }
