@@ -171,6 +171,12 @@ class TimePlotGui(QWidget):
         self.playBtn.clicked.connect(self.thread_status_changed)
         self.playBtn.clicked.connect(self.start_thread)
         self.squarestopBtn.clicked.connect(self.pause_thread)
+
+        print(self.graphItem.titleLabel)
+        # self.graphItem.titleLabel.clicked.connect(self.change_title)
+        self.clicked_signal = pg.GraphicsScene.sigMouseClicked
+        print(self.clicked_signal)
+        # self.clicked_signal.connect(self.change_title)
         # ============================================================
         # Assign layout widget to window
         # ============================================================
@@ -516,6 +522,12 @@ class TimePlotGui(QWidget):
         self.menu.addAction(local_fourier)
         self.menu.local_fourier = local_fourier
         self.menu.local_fourier_checkbox = local_fourier_checkbox
+
+        change_title = QtGui.QAction("change_title")
+        change_title.triggered.connect(self.change_title)
+        self.menu.addAction(change_title)
+        self.menu.change_title = change_title
+
         # ===============================
         # Remove unnecesary default context menu operations
         # ===============================
@@ -669,6 +681,11 @@ class TimePlotGui(QWidget):
             data_item.clear_data()
             data_item.reset_absolute_time(absolute_time=self.t0)
 
+    def change_title(self):
+        title, acccepted = QInputDialog.getText(self, 'Input Dialog',
+                                        'Enter your name:')
+        if acccepted:
+            self.graphItem.setTitle(title)
 
     def _set_central_wid_properties(self):
         """ """
@@ -701,6 +718,7 @@ class TimePlotGui(QWidget):
 
             # connect signal and slot
             worker.reading.connect(self.newReading)
+            print(self.start_signal)
             self.start_signal.connect(worker.start)
             self.stop_signal.connect(worker.stop)
             self.pause_signal.connect(worker.pause)
