@@ -342,41 +342,46 @@ class TimePlotGui(QWidget):
         self.update_plot_labels()
 
     def set_frequency_labels(self, key = 'potential'):
-        print('setting frequency labels')
         labels = self.get_axis_labels(key)
         title = 'Fourier Transform of ' + labels['title']
-        size = str(self.settings['labels']['title_font_size']) + 'pt'
-        self.graphItem.setTitle(title, **{'color': '#FFF', 'size': size})
-        self.graphItem.setLabel('left', 'Amplitude', color='white', size=30)
-        self.graphItem.setLabel('bottom', 'Frequency', color='white', size=30)
+        title_font_size = str(self.settings['labels']['title_font_size']) + 'pt'
+        x_font_size = str(self.settings['labels']['x_axis_font_size']) + 'pt'
+        y_font_size = str(self.settings['labels']['y_axis_font_size']) + 'pt'
+        self.graphItem.setTitle(title, **{'color': '#FFF', 'size': title_font_size})
+        self.graphItem.setLabel('left', 'Amplitude', **{'color': '#FFF', 'font-size': y_font_size})
+        self.graphItem.setLabel('bottom', 'Frequency',  **{'color': '#FFF', 'font-size': x_font_size})
 
     def set_time_labels(self, key = 'potential'):
         labels = self.get_axis_labels(key)
-        size = str(self.settings['labels']['title_font_size']) + 'pt'
-        self.graphItem.setTitle(labels['title'], **{'color': '#FFF', 'size': size})
-        self.graphItem.setLabel('left', labels['y_label'], color='white', size=30)
-        self.graphItem.setLabel('bottom', labels['x_label'], color='white', size=30)
+        title_font_size = str(self.settings['labels']['title_font_size']) + 'pt'
+        x_font_size = str(self.settings['labels']['x_axis_font_size']) + 'pt'
+        y_font_size = str(self.settings['labels']['y_axis_font_size']) + 'pt'
+        self.graphItem.setTitle(labels['title'], **{'color': '#FFF', 'size': title_font_size})
+        self.graphItem.setLabel('left', labels['y_label'], **{'color': '#FFF', 'font-size': y_font_size})
+        self.graphItem.setLabel('bottom', labels['x_label'], **{'color': '#FFF', 'font-size': x_font_size})
 
     def get_axis_labels(self, key = 'potential'):
-        sample_labels = {
-                'temp':         {'x_label':     "Time (Seconds)",
-                                'y_label':      "Temperature (K)"},
-                'potential':    {'x_label':     "Time (Seconds)",
-                                'y_label':      "Potential (Volts)"},
-                'pressure':     {'x_label':     "Time (Seconds)",
-                                'y_label':      "Pressure (kPa)"}
-        }
+        # sample_labels = {
+        #         'temp':         {'x_label':     "Time (Seconds)",
+        #                         'y_label':      "Temperature (K)"},
+        #         'potential':    {'x_label':     "Time (Seconds)",
+        #                         'y_label':      "Potential (Volts)"},
+        #         'pressure':     {'x_label':     "Time (Seconds)",
+        #                         'y_label':      "Pressure (kPa)"}
+        # }
         labels = {
                 'x_label':  '',
                 'y_label':  '',
                 'title':    ''
         }
-        labels['x_label'] = sample_labels[key]['x_label']
-        labels['y_label'] = sample_labels[key]['y_label']
+        # labels['x_label'] = sample_labels[key]['x_label']
+        # labels['y_label'] = sample_labels[key]['y_label']
+        labels['x_label'] = self.settings['labels']['x_axis_data_type'] + " (" + self.settings['labels']['x_axis_unit'] + ")"
+        labels['y_label'] = self.settings['labels']['y_axis_data_type'] + " (" + self.settings['labels']['y_axis_unit'] + ")"
         if self.settings['labels']['title_text'] is None:
             labels['title'] = labels['x_label'] + ' 0ver ' + labels['y_label']
         else:
-            labels['title'] = self.settings['title_text']
+            labels['title'] = self.settings['labels']['title_text']
         if self.settings['xscalelog']:
             labels['x_label'] += '\n(Log Scale)'
         if self.settings['yscalelog']:
