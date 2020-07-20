@@ -523,7 +523,7 @@ class TimePlotGui(QWidget):
         self.menu.local_fourier = local_fourier
         self.menu.local_fourier_checkbox = local_fourier_checkbox
 
-        change_title = QtGui.QAction("change_title")
+        change_title = QtGui.QAction("Change Title")
         change_title.triggered.connect(self.change_title)
         self.menu.addAction(change_title)
         self.menu.change_title = change_title
@@ -682,8 +682,8 @@ class TimePlotGui(QWidget):
             data_item.reset_absolute_time(absolute_time=self.t0)
 
     def change_title(self):
-        title, acccepted = QInputDialog.getText(self, 'Input Dialog',
-                                        'Enter your name:')
+        title, acccepted = QInputDialog.getText(self, 'Change Title',
+                                        'Enter New Title:')
         if acccepted:
             self.graphItem.setTitle(title)
 
@@ -718,7 +718,6 @@ class TimePlotGui(QWidget):
 
             # connect signal and slot
             worker.reading.connect(self.newReading)
-            print(self.start_signal)
             self.start_signal.connect(worker.start)
             self.stop_signal.connect(worker.stop)
             self.pause_signal.connect(worker.pause)
