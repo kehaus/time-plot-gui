@@ -848,6 +848,120 @@ class PlotDataItemV2(pg.PlotDataItem):
 
 
     """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.opts.update({
+            'fftLocal':     False
+        })
+
+    def getData(self):
+        if self.xData is None:
+            return (None, None)
+
+        if self.xDisp is None:
+            x = self.xData
+            y = self.yData
+
+
+            if self.opts['fftMode']:
+                if self.opts['fftLocal']:
+                    x,y = self._get_data_in_local_ft_boundaries(x,y)
+                x,y = self._fourierTransform(x, y)
+                # Ignore the first bin for fft data if we have a logx scale
+                if self.opts['logMode'][0]:
+                    x=x[1:]
+                    y=y[1:]
+
+            if self.opts['logMode'][0]:
+                x = np.log10(x)
+            if self.opts['logMode'][1]:
+                y = np.log10(y)
+
+            ds = self.opts['downsample']
+            if not isinstance(ds, int):
+                ds = 1
+
+            if self.opts['autoDownsample']:
+                # this option presumes that x-values have uniform spacing
+                range = self.viewRect()
+                if range is not None:
+                    dx = float(x[-1]-x[0]) / (len(x)-1)
+                    x0 = (range.left()-x[0]) / dx
+                    x1 = (range.right()-x[0]) / dx
+                    width = self.getViewBox().width()
+                    if width != 0.0:
+                        ds = int(max(1, int((x1-x0) / (width*self.opts['autoDownsampleFactor']))))
+                    ## downsampling is expensive; delay until after clipping.
+
+            if self.opts['clipToView']:
+                view = self.getViewBox()
+                if view is None or not view.autoRangeEnabled()[0]:
+                    # this option presumes that x-values have uniform spacing
+                    range = self.viewRect()
+                    if range is not None and len(x) > 1:
+                        dx = float(x[-1]-x[0]) / (len(x)-1)
+                        # clip to visible region extended by downsampling value
+                        x0 = np.clip(int((range.left()-x[0])/dx)-1*ds , 0, len(x)-1)
+                        x1 = np.clip(int((range.right()-x[0])/dx)+2*ds , 0, len(x)-1)
+                        x = x[x0:x1]
+                        y = y[x0:x1]
+
+            if ds > 1:
+                if self.opts['downsampleMethod'] == 'subsample':
+                    x = x[::ds]
+                    y = y[::ds]
+                elif self.opts['downsampleMethod'] == 'mean':
+                    n = len(x) // ds
+                    x = x[:n*ds:ds]
+                    y = y[:n*ds].reshape(n,ds).mean(axis=1)
+                elif self.opts['downsampleMethod'] == 'peak':
+                    n = len(x) // ds
+                    x1 = np.empty((n,2))
+                    x1[:] = x[:n*ds:ds,np.newaxis]
+                    x = x1.reshape(n*2)
+                    y1 = np.empty((n,2))
+                    y2 = y[:n*ds].reshape((n, ds))
+                    y1[:,0] = y2.max(axis=1)
+                    y1[:,1] = y2.min(axis=1)
+                    y = y1.reshape(n*2)
+
+
+            self.xDisp = x
+            self.yDisp = y
+        return self.xDisp, self.yDisp
+
+    def _get_data_in_local_ft_boundaries(self, x, y):
+        """truncates x and y to values displayed in correspinding viewbox """
+        # get viebox x limits
+        if not hasattr(self, '_local_ft_xmin') or not hasattr(self, '_local_ft_xmax'):
+            self.start_local_ft_mode()
+        xmin, xmax = self._local_ft_xmin, self._local_ft_xmax
+        print('************* xmin: ', xmin)
+        print('************* xmin: ', xmax)
+
+        # truncate x and y
+        idx_lst = (xmin<x) & (x<xmax)
+        x_, y_ = x[idx_lst], y[idx_lst]
+        return x_,y_
+
+    def _get_viewbox_boundaries(self):
+        vb = self.getViewBox()
+        vbstate = vb.getState()
+        xmin, xmax = vbstate['targetRange'][0]
+        return xmin, xmax
+
+    def set_local_ft_boundaries(self, xmin, xmax):
+        self._local_ft_xmin = xmin
+        self._local_ft_xmax = xmax
+
+    def start_local_ft_mode(self):
+        xmin, xmax = self._get_viewbox_boundaries()
+        self.set_local_ft_boundaries(xmin, xmax)
+        self.opts['fftLocal'] = True
+
+    def stop_local_ft_mode(self):
+        self.opts['fftLocal'] = False
 
     def _fourierTransform(self, x, y):
         """Perform fourier transform. If x values are not sampled uniformly,
