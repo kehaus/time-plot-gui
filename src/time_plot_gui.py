@@ -620,9 +620,13 @@ class TimePlotGui(QWidget):
         state
         """
         if self.menu.local_fourier_checkbox.isChecked():
-            for dataitem in self.data_table.values():
-                dataitem.start_local_ft_mode()
-                print('%%%%%% started local fourier mode')
+            if not self.graphItem.ctrl.fftCheck.isChecked():
+                for dataitem in self.data_table.values():
+                    dataitem.start_local_ft_mode()
+                    print('%%%%%% started local fourier mode')
+            else:
+                self.menu.local_fourier_checkbox.setChecked(False)
+                self.local_ft_error()
         else:
             for dataitem in self.data_table.values():
                 dataitem.stop_local_ft_mode()
@@ -720,9 +724,16 @@ class TimePlotGui(QWidget):
         print('here')
         mode_change_popup = QMessageBox()
         mode_change_popup.setText("You are exiting FFT Transform mode and entering Time Dependence mode." \
-            "If you would like to re-enter FFT Transform mode, you may do so from the context menu")
+            "If you would like to re-enter FFT Transform mode, you may do so from the context menu.")
         mode_change_popup.setIcon(QMessageBox.Information)
         mode_change_popup.exec_()
+
+    def local_ft_error(self):
+        local_ft_error = QMessageBox()
+        local_ft_error.setText("You are already in FFT mode. If you would like a local transform," \
+            "please select a region in Time Dependence mode.")
+        local_ft_error.setIcon(QMessageBox.Warning)
+        local_ft_error.exec_()
 
 
     def start_thread(self):
@@ -1035,11 +1046,9 @@ class TimePlotDataItem(JSONFileHandler):
     DATA_NAME = 'data_{:d}'
 
     def __init__(self, id_nr=0, absolute_time=None):
-        self.local_transform = False
         self.id_nr = id_nr
         self.data_name = self._compose_data_name()
         self.pdi = PlotDataItemV2([],[])
-        self.time_array, self.y_array = self.pdi.getData()
         if absolute_time == None:
             self.absolute_time = time.time()
         else:
@@ -1055,19 +1064,12 @@ class TimePlotDataItem(JSONFileHandler):
         """returns the pg.PlotDataItem"""
         return self.pdi
 
-    def local_transform_status(self, status):
-        self.local_transform = status
-
     def add_value(self, val, time_val):
         """adds value to pg.PlotDataItem data array"""
-        if not self.local_transform:
-            t, y = self.pdi.getData()
-            t = np.append(t, time_val - self.absolute_time)
-            y = np.append(y, val)
-            self.pdi.setData(t,y)
-        else:
-            self.time_array = np.append(self.time_array, time_val - self.absolute_time)
-            self.y_array = np.append(self.y_array, val)
+        t, y = self.pdi.getData()
+        t = np.append(t, time_val - self.absolute_time)
+        y = np.append(y, val)
+        self.pdi.setData(t,y)
 
     def get_data(self):
         """returns the pg.PlotDataItem time and data arrays"""
@@ -1080,6 +1082,12 @@ class TimePlotDataItem(JSONFileHandler):
     def clear_data(self):
         """clears all data present in this data object"""
         self.pdi.setData([],[])
+
+    def start_local_ft_mode(self):
+        self.pdi.start_local_ft_mode()
+
+    def stop_local_ft_mode(self):
+        self.pdi.stop_local_ft_mode()
 
     def store_data(self, fn):
         """saves data as nested dictionary in json file"""
