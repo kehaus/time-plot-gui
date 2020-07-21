@@ -518,7 +518,7 @@ class TimePlotGui(QWidget):
         local_fourier = QtGui.QWidgetAction(self.menu)
         local_fourier_checkbox = QtGui.QCheckBox("Local Fourier Transform", self)
         local_fourier.setDefaultWidget(local_fourier_checkbox)
-        local_fourier_checkbox.stateChanged.connect(self.local_fourier_transform)
+        local_fourier_checkbox.stateChanged.connect(self.set_local_ft_mode)
         self.menu.addAction(local_fourier)
         self.menu.local_fourier = local_fourier
         self.menu.local_fourier_checkbox = local_fourier_checkbox
@@ -615,28 +615,19 @@ class TimePlotGui(QWidget):
                 self.set_custom_settings()
                 # self.ammend_context_menu()
 
-    def local_fourier_transform(self):
+    def set_local_ft_mode(self):
+        """starts or stops the local FT mode depending on local fourier checkbox
+        state
+        """
         if self.menu.local_fourier_checkbox.isChecked():
-            viewboxstate = self.viewbox.getState()
-            xmin = viewboxstate['targetRange'][0][0]
-            xmax = viewboxstate['targetRange'][0][1]
-            for data_item in self.data_table.values():
-                data_item.time_array, data_item.y_array = data_item.get_data()
-                local_t = []
-                local_y = []
-                for entry in range(len(data_item.time_array)):
-                    if xmin <= data_item.time_array[entry] <= xmax:
-                        local_t.append(data_item.time_array[entry])
-                        local_y.append(data_item.y_array[entry])
-                new_t, new_y = data_item.pdi._fourierTransform(local_t, local_y)
-                data_item.local_transform_status(True)
-                data_item.pdi.setData(new_t, new_y)
-                self.set_frequency_labels()
+            for dataitem in self.data_table.values():
+                dataitem.start_local_ft_mode()
+                print('%%%%%% started local fourier mode')
         else:
-            for data_item in self.data_table.values():
-                data_item.local_transform_status(False)
-                data_item.pdi.setData(data_item.time_array, data_item.y_array)
-                self.set_time_labels()
+            for dataitem in self.data_table.values():
+                dataitem.stop_local_ft_mode()
+                print('%%%%%% stopped local fourier mode')
+        return
 
     def clear_all_plot_data_items(self):
         data_items = self.graphItem.listDataItems()
