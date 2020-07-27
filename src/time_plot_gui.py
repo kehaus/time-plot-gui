@@ -24,6 +24,7 @@ from os import path
 import ctypes as ct
 import numpy as np
 import time
+import datetime
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QMutex, QWaitCondition, QSize, QPoint
 from unittest.mock import MagicMock
 
@@ -32,7 +33,7 @@ import sys
 import weakref
 from PyQt5.QtWidgets import QApplication, QWidget, QToolTip, QPushButton, QMessageBox, QMainWindow, QHBoxLayout
 from PyQt5.QtWidgets import qApp, QAction, QMenu, QGridLayout, QLabel, QLineEdit, QSizePolicy, QFileDialog
-from PyQt5.QtWidgets import QInputDialog, QColorDialog, QSpinBox
+from PyQt5.QtWidgets import QInputDialog, QColorDialog, QSpinBox, QGraphicsWidget, QComboBox, QDialog
 from PyQt5.QtGui import QIcon, QFont, QCursor, QRegion, QPolygon, QWindow, QColor
 from PyQt5 import QtCore, Qt, QtGui
 import pyqtgraph as pg
@@ -173,10 +174,12 @@ class TimePlotGui(QWidget):
         self.squarestopBtn.clicked.connect(self.pause_thread)
 
         print(self.graphItem.titleLabel)
-        # self.graphItem.titleLabel.clicked.connect(self.change_title)
-        self.clicked_signal = pg.GraphicsScene.sigMouseClicked
-        print(self.clicked_signal)
+        # # self.graphItem.titleLabel.setAcceptedMouseButtons()
+        # # self.graphItem.titleLabel.clicked.connect(self.change_title)
+        # self.clicked_signal = pg.GraphicsScene.sigMouseClicked
+        # print(self.clicked_signal)
         # self.clicked_signal.connect(self.change_title)
+        # # self.clicked_signal.connect(self.change_title)
         # ============================================================
         # Assign layout widget to window
         # ============================================================
@@ -302,6 +305,19 @@ class TimePlotGui(QWidget):
             elif data_length < len(self.settings['line_settings']):
                 self.settings['line_settings'].popitem()
 
+    def traditional_times(self):
+        traditional_time_array = []
+        time_array, y = self.data_table[0].get_data()
+        for entry in time_array:
+            print(entry)
+            print(time.asctime(time.localtime(entry + self.t0)))
+            test = time.mktime(datetime.datetime.now().timetuple())
+            print(f"now: {test}")
+            traditional_time_array.append(time.asctime(time.localtime(entry + self.t0)))
+        # for value in self.data_table.values():
+        #     print(value)
+        #     time_array, y = self.data_table[0].get_data()
+        #     value.set_data(traditional_time_array, y)
 
     def set_custom_settings(self, label_key = 'potential'):
         # ===============================
@@ -423,7 +439,8 @@ class TimePlotGui(QWidget):
             y_zoom = viewboxstate['mouseEnabled'][0],
             auto_clear_data = self.data_options.automatic_clear_checkbox.isChecked(),
             # frequency_state = False
-            frequency_state = self.graphItem.ctrl.fftCheck.isChecked()
+            frequency_state = self.graphItem.ctrl.fftCheck.isChecked(),
+            labels = self.settings['labels']
         )
 
     def restore_default_settings(self):
@@ -464,6 +481,7 @@ class TimePlotGui(QWidget):
         self.line_settings_menu = self.menu.addMenu("Line Settings")
         self.visualization_settings = self.menu.addMenu("Visualization Settings")
         self.data_options = self.menu.addMenu("Data Options")
+        self.change_labels_menu = self.menu.addMenu("Change Labels")
         # ===============================
         # Submenu Formation: line_settings
         # ===============================
@@ -506,6 +524,23 @@ class TimePlotGui(QWidget):
         self.data_options.automatic_clear = automatic_clear
         self.data_options.automatic_clear_checkbox = automatic_clear_checkbox
         # ===============================
+        # Submenu Formation: Change Labels
+        # ===============================
+        change_title = QtGui.QAction("Change Plot Title", self.change_labels_menu)
+        change_title.triggered.connect(self.change_title)
+        self.change_labels_menu.addAction(change_title)
+        self.change_labels_menu.change_title = change_title
+
+        change_x_axis_label = QtGui.QAction("Change X Axis Label", self.change_labels_menu)
+        change_x_axis_label.triggered.connect(self.change_x_axis_label)
+        self.change_labels_menu.addAction(change_x_axis_label)
+        self.change_labels_menu.change_x_axis_label = change_x_axis_label
+
+        change_y_axis_label = QtGui.QAction("Change Y Axis Label", self.change_labels_menu)
+        change_y_axis_label.triggered.connect(self.change_y_axis_label)
+        self.change_labels_menu.addAction(change_y_axis_label)
+        self.change_labels_menu.change_y_axis_label = change_y_axis_label
+        # ===============================
         # Function Formation: Load Past Data
         # ===============================
         open_data = QtGui.QAction("Load Stored Data")
@@ -516,24 +551,35 @@ class TimePlotGui(QWidget):
         # Function Formation: local fourier transform
         # ===============================
         local_fourier = QtGui.QWidgetAction(self.menu)
-        local_fourier_checkbox = QtGui.QCheckBox("Local Fourier Transform", self)
-        local_fourier.setDefaultWidget(local_fourier_checkbox)
+        local_fourier_widget = QWidget()
+        lf_label = QLabel("Local Fourier Mode")
+        local_fourier_checkbox = QtGui.QCheckBox(self)
         local_fourier_checkbox.stateChanged.connect(self.set_local_ft_mode)
+        lf_layout = QHBoxLayout()
+        lf_layout.addWidget(lf_label)
+        lf_layout.addWidget(local_fourier_checkbox)
+        local_fourier_widget.setLayout(lf_layout)
+        local_fourier.setDefaultWidget(local_fourier_widget)
         self.menu.addAction(local_fourier)
         self.menu.local_fourier = local_fourier
-        self.menu.local_fourier_checkbox = local_fourier_checkbox
 
-        change_title = QtGui.QAction("Change Title")
-        change_title.triggered.connect(self.change_title)
-        self.menu.addAction(change_title)
-        self.menu.change_title = change_title
+
+        traditional_times = QtGui.QAction("traditional time")
+        traditional_times.triggered.connect(self.traditional_times)
+        self.menu.addAction(traditional_times)
+        self.menu.traditional_times = traditional_times
 
         # ===============================
         # Remove unnecesary default context menu operations
         # ===============================
         actions = self.graphItem.ctrlMenu.actions()
-        for index in [1, 2, 3, 5]:
+        #1,2,3,5
+        for index in range(len(actions)):
             self.graphItem.ctrlMenu.removeAction(actions[index])
+        # actions = self.graphItem.ctrlMenu.actions()
+        # self.graphItem.ctrlMenu.clear()
+        for index in [0, 11, 4, 6, 7, 8, 9, 10, 12]:
+            self.graphItem.ctrlMenu.addAction(actions[index])
 
     def ammend_context_menu(self):
         line_controls = self.line_settings_menu.actions()[0::2]
@@ -619,13 +665,13 @@ class TimePlotGui(QWidget):
         """starts or stops the local FT mode depending on local fourier checkbox
         state
         """
-        if self.menu.local_fourier_checkbox.isChecked():
+        if self.menu.local_fourier.defaultWidget().layout().itemAt(1).widget().isChecked():
             if not self.graphItem.ctrl.fftCheck.isChecked():
                 for dataitem in self.data_table.values():
                     dataitem.start_local_ft_mode()
                     print('%%%%%% started local fourier mode')
             else:
-                self.menu.local_fourier_checkbox.setChecked(False)
+                self.menu.local_fourier.defaultWidget().layout().itemAt(1).widget().setChecked(False)
                 self.local_ft_error()
         else:
             for dataitem in self.data_table.values():
@@ -681,6 +727,23 @@ class TimePlotGui(QWidget):
                                         'Enter New Title:')
         if acccepted:
             self.graphItem.setTitle(title)
+            self.settings['labels']['title_text'] = title
+
+    def change_x_axis_label(self):
+        axis_label, acccepted = QInputDialog.getText(self, 'Change Title',
+                                        'Enter New Title:')
+        if acccepted:
+            self.graphItem.setLabel('bottom', axis_label)
+            self.settings['labels']['x_axis_data_type'] = axis_label
+        dialog = QDialog()
+        dialog.open()
+
+    def change_y_axis_label(self):
+        axis_label, acccepted = QInputDialog.getText(self, 'Change Title',
+                                        'Enter New Title:')
+        if acccepted:
+            self.graphItem.setLabel('left', axis_label)
+            self.settings['labels']['y_axis_data_type'] = axis_label
 
     def _set_central_wid_properties(self):
         """ """
@@ -721,7 +784,6 @@ class TimePlotGui(QWidget):
             self.worker_table.update({idx: worker})
 
     def leaving_fft_mode(self):
-        print('here')
         mode_change_popup = QMessageBox()
         mode_change_popup.setText("You are exiting FFT Transform mode and entering Time Dependence mode." \
             "If you would like to re-enter FFT Transform mode, you may do so from the context menu.")
@@ -1022,6 +1084,15 @@ class TimeState(PlotLabelMachine):
     def switch_state(self, text):
         if text is None or 'fourier' in text:
             return FrequencyState()
+
+class TimeAxisItem(pg.AxisItem):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setLabel(text='Time', units=None)
+        self.enableAutoSIPrefix(False)
+
+    def tickStrings(self, values, scale, spacing):
+        return [datetime.datetime.fromtimestamp(value).strftime("%H:%M") for value in values]
 
 
 # ===========================================================================
