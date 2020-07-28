@@ -191,7 +191,8 @@ class TimePlotGui(QWidget):
         # ===============================
         # Initializes plot by generating the plotWidget, plotItem, and ViewBox objects that are callable
         # ===============================
-        self.graphWidget = pg.PlotWidget()
+        self.graphWidget = pg.PlotWidget(axisItems = \
+            {'bottom': TimeAxisItem(orientation='bottom', t0 = self.t0, relative_time = self.settings['relative_timestamp'])})
         self.graphItem = self.graphWidget.getPlotItem()
         self.viewbox = self.graphItem.getViewBox()
 
@@ -311,8 +312,15 @@ class TimePlotGui(QWidget):
         for entry in time_array:
             print(entry)
             print(time.asctime(time.localtime(entry + self.t0)))
-            test = time.mktime(datetime.datetime.now().timetuple())
-            print(f"now: {test}")
+            test = int(time.mktime(datetime.datetime.now().timetuple()))
+            print(f"now: {test} \n {type(test)}")
+            final = datetime.datetime.fromtimestamp(test).strftime("%H:%M")
+            print(type(datetime.datetime.fromtimestamp(test)))
+            print(f"final: {final}")
+            test_b = time.mktime(time.localtime(entry + self.t0))
+            print(test_b)
+            test_b_final = datetime.datetime.fromtimestamp(int(test_b)).strftime("%H:%M")
+            print(test_b_final)
             traditional_time_array.append(time.asctime(time.localtime(entry + self.t0)))
         # for value in self.data_table.values():
         #     print(value)
@@ -548,9 +556,11 @@ class TimePlotGui(QWidget):
         self.menu.addAction(open_data)
         self.menu.open_data = open_data
         # ===============================
-        # Function Formation: local fourier transform
+        # Submenu revision: local fourier transform
         # ===============================
-        local_fourier = QtGui.QWidgetAction(self.menu)
+        self.transform_menu = self.menu.actions()[0].menu()
+
+        local_fourier = QtGui.QWidgetAction(self.transform_menu)
         local_fourier_widget = QWidget()
         lf_label = QLabel("Local Fourier Mode")
         local_fourier_checkbox = QtGui.QCheckBox(self)
@@ -560,8 +570,15 @@ class TimePlotGui(QWidget):
         lf_layout.addWidget(local_fourier_checkbox)
         local_fourier_widget.setLayout(lf_layout)
         local_fourier.setDefaultWidget(local_fourier_widget)
-        self.menu.addAction(local_fourier)
-        self.menu.local_fourier = local_fourier
+        self.transform_menu.addAction(local_fourier)
+        self.transform_menu.local_fourier = local_fourier
+
+        # transform_menu_actions = self.transform_menu.actions()
+        # print(transform_menu_actions)
+        # for index in range(len(transform_menu_actions)):
+        #     self.transform_menu.removeAction(transform_menu_actions[index])
+        # for index in [1, 0]:
+        #     self.transform_menu.addAction(transform_menu_actions[index])
 
 
         traditional_times = QtGui.QAction("traditional time")
@@ -578,7 +595,7 @@ class TimePlotGui(QWidget):
             self.graphItem.ctrlMenu.removeAction(actions[index])
         # actions = self.graphItem.ctrlMenu.actions()
         # self.graphItem.ctrlMenu.clear()
-        for index in [0, 11, 4, 6, 7, 8, 9, 10, 12]:
+        for index in [0, 4, 6, 7, 8, 9, 10, 11]:
             self.graphItem.ctrlMenu.addAction(actions[index])
 
     def ammend_context_menu(self):
@@ -665,13 +682,13 @@ class TimePlotGui(QWidget):
         """starts or stops the local FT mode depending on local fourier checkbox
         state
         """
-        if self.menu.local_fourier.defaultWidget().layout().itemAt(1).widget().isChecked():
+        if self.transform_menu.local_fourier.defaultWidget().layout().itemAt(1).widget().isChecked():
             if not self.graphItem.ctrl.fftCheck.isChecked():
                 for dataitem in self.data_table.values():
                     dataitem.start_local_ft_mode()
                     print('%%%%%% started local fourier mode')
             else:
-                self.menu.local_fourier.defaultWidget().layout().itemAt(1).widget().setChecked(False)
+                self.transform_menu.local_fourier.defaultWidget().layout().itemAt(1).widget().setChecked(False)
                 self.local_ft_error()
         else:
             for dataitem in self.data_table.values():
@@ -794,7 +811,7 @@ class TimePlotGui(QWidget):
         local_ft_error = QMessageBox()
         local_ft_error.setText("You are already in FFT mode. If you would like a local transform," \
             "please select a region in Time Dependence mode.")
-        local_ft_error.setIcon(QMessageBox.Warning)
+        local_ft_error.setIcon(QMessageBox.Information)
         local_ft_error.exec_()
 
 
@@ -1086,13 +1103,30 @@ class TimeState(PlotLabelMachine):
             return FrequencyState()
 
 class TimeAxisItem(pg.AxisItem):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, t0, relative_time, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.t0 = t0
+        self.relative_time = relative_time
         self.setLabel(text='Time', units=None)
         self.enableAutoSIPrefix(False)
 
     def tickStrings(self, values, scale, spacing):
-        return [datetime.datetime.fromtimestamp(value).strftime("%H:%M") for value in values]
+        if self.logMode:
+            return self.logTickStrings(values, scale, spacing)
+
+        places = max(0, np.ceil(-np.log10(spacing*scale)))
+        strings = []
+        for v in values:
+            vs = v * scale
+            if abs(vs) < .001 or abs(vs) >= 10000:
+                vstr = "%g" % vs
+            else:
+                vstr = ("%%0.%df" % places) % vs
+            strings.append(vstr)
+        if self.relative_time:
+            return strings
+        else:
+            return [datetime.datetime.fromtimestamp(int(time.mktime(time.localtime(value + self.t0)))).strftime("%H:%M:%S") for value in values]
 
 
 # ===========================================================================
@@ -1320,3 +1354,14 @@ if __name__ == "__main__":
     dw3 = DeviceWrapper(dd3)
 
     main([dw1, dw2])
+    # app = QApplication.instance()
+    # if app is None:
+    #     app = QApplication(sys.argv)
+    # else:
+    #     print('QApplication instance already exists {}'.format(str(app)))
+    # window = MainWindow(devicewrapper_lst=[dw1, dw2])
+    # try:
+    #     window.show()
+    #     app.exec_()
+    # except:
+    #     window.closeEvent()
