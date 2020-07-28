@@ -223,7 +223,7 @@ class TimePlotGui(QWidget):
         #for id_nr in range(len(self.settings['line_settings'])):
         id_nr = 0
         while True:
-            data_item = TimePlotDataItem(id_nr=id_nr, absolute_time=self.t0)
+            data_item = TimePlotDataItem(data_fn = self.data_fn, id_nr=id_nr, absolute_time=self.t0)
             if new_data is None:
                 data_item.recall_data(self.data_fn)
             elif new_data is not None:
@@ -286,7 +286,7 @@ class TimePlotGui(QWidget):
         while len(self.devicewrapper) != len(self.data_table):
             if len(self.devicewrapper) > len(self.data_table):
                 id_nr = len(self.data_table)
-                data_item = TimePlotDataItem(id_nr=id_nr, absolute_time=self.t0)
+                data_item = TimePlotDataItem(data_fn = self.data_fn, id_nr=id_nr, absolute_time=self.t0)
                 self.data_table.update(
                     {id_nr: data_item}
                 )
@@ -1150,9 +1150,10 @@ class TimePlotDataItem(JSONFileHandler):
 
     DATA_NAME = 'data_{:d}'
 
-    def __init__(self, id_nr=0, absolute_time=None):
+    def __init__(self, data_fn, id_nr=0, absolute_time=None):
         self.id_nr = id_nr
         self.data_name = self._compose_data_name()
+        self.data_fn = data_fn
         self.pdi = PlotDataItemV2([],[])
         if absolute_time == None:
             self.absolute_time = time.time()
@@ -1175,6 +1176,8 @@ class TimePlotDataItem(JSONFileHandler):
         t = np.append(t, time_val - self.absolute_time)
         y = np.append(y, val)
         self.pdi.setData(t,y)
+        if len(t)%30 == 0:
+            self.store_data(self.data_fn)
 
     def get_data(self):
         """returns the pg.PlotDataItem time and data arrays"""
