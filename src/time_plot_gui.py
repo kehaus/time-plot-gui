@@ -33,7 +33,7 @@ import sys
 import weakref
 from PyQt5.QtWidgets import QApplication, QWidget, QToolTip, QPushButton, QMessageBox, QMainWindow, QHBoxLayout
 from PyQt5.QtWidgets import qApp, QAction, QMenu, QGridLayout, QLabel, QLineEdit, QSizePolicy, QFileDialog
-from PyQt5.QtWidgets import QInputDialog, QColorDialog, QSpinBox, QGraphicsWidget, QComboBox, QDialog
+from PyQt5.QtWidgets import QInputDialog, QColorDialog, QSpinBox, QGraphicsWidget, QComboBox, QDialog, QAbstractSpinBox
 from PyQt5.QtGui import QIcon, QFont, QCursor, QRegion, QPolygon, QWindow, QColor
 from PyQt5 import QtCore, Qt, QtGui
 import pyqtgraph as pg
@@ -191,8 +191,9 @@ class TimePlotGui(QWidget):
         # ===============================
         # Initializes plot by generating the plotWidget, plotItem, and ViewBox objects that are callable
         # ===============================
+        self.axis_item = TimeAxisItem(orientation='bottom', t0 = self.t0, relative_time = self.settings['relative_timestamp'])
         self.graphWidget = pg.PlotWidget(axisItems = \
-            {'bottom': TimeAxisItem(orientation='bottom', t0 = self.t0, relative_time = self.settings['relative_timestamp'])})
+            {'bottom': self.axis_item})
         self.graphItem = self.graphWidget.getPlotItem()
         self.viewbox = self.graphItem.getViewBox()
 
@@ -272,17 +273,13 @@ class TimePlotGui(QWidget):
 
     def resize_line_settings(self):
         if self.started:
-            # print(len(self.devicewrapper))
             self.coerce_same_length(data_length = len(self.devicewrapper))
-            # print(len(self.data_table))
             self.resize_data_table()
-            # print(len(self.data_table))
         else:
             self.coerce_same_length(data_length = len(self.data_table))
         self.set_line_settings()
 
     def resize_data_table(self):
-        # print('resizing data table')
         while len(self.devicewrapper) != len(self.data_table):
             if len(self.devicewrapper) > len(self.data_table):
                 id_nr = len(self.data_table)
@@ -347,6 +344,8 @@ class TimePlotGui(QWidget):
             self.viewbox.setLeftButtonAction(mode = 'pan')
         self.frequency_state = self.settings['frequency_state']
         self.graphItem.ctrl.fftCheck.setChecked(self.frequency_state)
+        self.set_all_autosave(self.settings['do_autosave'])
+        self.set_all_autosave_nr(self.settings['autosave_nr'])
         # ===============================
         # Assign axis labels accordingly
         # ===============================
@@ -448,7 +447,9 @@ class TimePlotGui(QWidget):
             auto_clear_data = self.data_options.automatic_clear_checkbox.isChecked(),
             # frequency_state = False
             frequency_state = self.graphItem.ctrl.fftCheck.isChecked(),
-            labels = self.settings['labels']
+            labels = self.settings['labels'],
+            do_autosave = self.data_options.autosave.defaultWidget().layout().itemAt(0).widget().isChecked(),
+            autosave_nr = self.data_options.autosave.defaultWidget().layout().itemAt(1).widget().value()
         )
 
     def restore_default_settings(self):
@@ -525,12 +526,33 @@ class TimePlotGui(QWidget):
         self.data_options.clear_data = clear_data
 
         automatic_clear = QtGui.QWidgetAction(self.data_options)
-        automatic_clear_checkbox = QtGui.QCheckBox("Automatically Clear Data", self)
+        automatic_clear_checkbox = QtGui.QCheckBox("Clear Old Data on Start", self)
         automatic_clear.setDefaultWidget(automatic_clear_checkbox)
         automatic_clear_checkbox.stateChanged.connect(self.save_data_settings)
         self.data_options.addAction(automatic_clear)
         self.data_options.automatic_clear = automatic_clear
         self.data_options.automatic_clear_checkbox = automatic_clear_checkbox
+
+        autosave = QtGui.QWidgetAction(self.data_options)
+        autosave_widget = QWidget()
+        autosave_layout = QHBoxLayout()
+        autosave_layout.setContentsMargins(0,0,0,0)
+        autosave_checkbox = QtGui.QCheckBox("Automatically Save Data", self)
+        autosave_checkbox.stateChanged.connect(self.set_all_autosave)
+        autosave_checkbox.setChecked(self.settings['do_autosave'])
+        autosave_nr = QSpinBox()
+        autosave_nr.setButtonSymbols(QAbstractSpinBox().NoButtons)
+        autosave_nr.setRange(10, 1000)
+        autosave_nr.setValue(self.settings['autosave_nr'])
+        # autosave_nr.setSingleStep(10)
+        autosave_nr.valueChanged.connect(self.set_all_autosave_nr)
+        autosave_layout.addWidget(autosave_checkbox)
+        autosave_layout.addWidget(autosave_nr)
+        autosave_widget.setLayout(autosave_layout)
+        autosave.setDefaultWidget(autosave_widget)
+        self.data_options.addAction(autosave)
+        self.data_options.autosave = autosave
+
         # ===============================
         # Submenu Formation: Change Labels
         # ===============================
@@ -548,6 +570,14 @@ class TimePlotGui(QWidget):
         change_y_axis_label.triggered.connect(self.change_y_axis_label)
         self.change_labels_menu.addAction(change_y_axis_label)
         self.change_labels_menu.change_y_axis_label = change_y_axis_label
+
+        relative_time = QtGui.QWidgetAction(self.change_labels_menu)
+        relative_time_checkbox = QtGui.QCheckBox("Relative Time Markers", self)
+        relative_time.setDefaultWidget(relative_time_checkbox)
+        relative_time_checkbox.stateChanged.connect(self.change_time_markers)
+        self.change_labels_menu.addAction(relative_time)
+        self.change_labels_menu.relative_time = relative_time
+        self.change_labels_menu.relative_time_checkbox = relative_time_checkbox
         # ===============================
         # Function Formation: Load Past Data
         # ===============================
@@ -559,6 +589,7 @@ class TimePlotGui(QWidget):
         # Submenu revision: local fourier transform
         # ===============================
         self.transform_menu = self.menu.actions()[0].menu()
+        self.transform_menu.actions()[0].defaultWidget().layout().setContentsMargins(10,10,10,0)
 
         local_fourier = QtGui.QWidgetAction(self.transform_menu)
         local_fourier_widget = QWidget()
@@ -566,6 +597,7 @@ class TimePlotGui(QWidget):
         local_fourier_checkbox = QtGui.QCheckBox(self)
         local_fourier_checkbox.stateChanged.connect(self.set_local_ft_mode)
         lf_layout = QHBoxLayout()
+        lf_layout.setContentsMargins(10,0,0,0)
         lf_layout.addWidget(lf_label)
         lf_layout.addWidget(local_fourier_checkbox)
         local_fourier_widget.setLayout(lf_layout)
@@ -581,10 +613,10 @@ class TimePlotGui(QWidget):
         #     self.transform_menu.addAction(transform_menu_actions[index])
 
 
-        traditional_times = QtGui.QAction("traditional time")
-        traditional_times.triggered.connect(self.traditional_times)
-        self.menu.addAction(traditional_times)
-        self.menu.traditional_times = traditional_times
+        # traditional_times = QtGui.QAction("traditional time")
+        # traditional_times.triggered.connect(self.traditional_times)
+        # self.menu.addAction(traditional_times)
+        # self.menu.traditional_times = traditional_times
 
         # ===============================
         # Remove unnecesary default context menu operations
@@ -595,7 +627,7 @@ class TimePlotGui(QWidget):
             self.graphItem.ctrlMenu.removeAction(actions[index])
         # actions = self.graphItem.ctrlMenu.actions()
         # self.graphItem.ctrlMenu.clear()
-        for index in [0, 4, 6, 7, 8, 9, 10, 11]:
+        for index in [0, 4, 6, 7, 8, 9, 10]:
             self.graphItem.ctrlMenu.addAction(actions[index])
 
     def ammend_context_menu(self):
@@ -664,12 +696,10 @@ class TimePlotGui(QWidget):
         data_fname = QFileDialog.getOpenFileName(self, 'Open file', '~/',"JSON files (*.json)")
         if data_fname[0] !='':
             settings_fname = QFileDialog.getOpenFileName(self, 'Open file', '~/',"JSON files (*.json)")
-            # print(settings_fname)
             if settings_fname[0] !='':
                 del self.plot_item_settings
                 self.plot_item_settings = PlotItemSettings(unusal_settings_file = settings_fname[0])
                 self.settings = self.plot_item_settings.settings
-                # print(self.settings)
             if data_fname[0] is not None:
                 self.clear_all_plot_data_items()
                 self._init_data_items(self.devicewrapper, new_data = data_fname[0])
@@ -727,8 +757,19 @@ class TimePlotGui(QWidget):
         if path.exists(self.data_fn):
             os.remove(self.data_fn)
         for data_item in self.data_table.values():
-            data_item.store_data(fn=self.data_fn)
+            data_item.store_data()
         self.graphItem.ctrl.fftCheck.setChecked(frequency_state)
+
+    def change_time_markers(self, relative_time):
+        self.axis_item.relative_time = relative_time
+
+    def set_all_autosave(self, autosave):
+        for data_item in self.data_table.values():
+            data_item.do_autosave = autosave
+
+    def set_all_autosave_nr(self, autosave_nr):
+        for data_item in self.data_table.values():
+            data_item.autosave_nr = autosave_nr
 
     def clear_all_data(self):
         """
@@ -1150,10 +1191,13 @@ class TimePlotDataItem(JSONFileHandler):
 
     DATA_NAME = 'data_{:d}'
 
-    def __init__(self, data_fn, id_nr=0, absolute_time=None):
+    def __init__(self, data_fn, id_nr=0, absolute_time=None, do_autosave=True,
+                autosave_nr=30):
         self.id_nr = id_nr
         self.data_name = self._compose_data_name()
-        self.data_fn = data_fn
+        self.fn = data_fn
+        self.do_autosave = do_autosave
+        self.autosave_nr = autosave_nr
         self.pdi = PlotDataItemV2([],[])
         if absolute_time == None:
             self.absolute_time = time.time()
@@ -1176,8 +1220,9 @@ class TimePlotDataItem(JSONFileHandler):
         t = np.append(t, time_val - self.absolute_time)
         y = np.append(y, val)
         self.pdi.setData(t,y)
-        if len(t)%30 == 0:
-            self.store_data(self.data_fn)
+        if self.do_autosave:
+            if len(t)%self.autosave_nr == 0:
+                self.store_data()
 
     def get_data(self):
         """returns the pg.PlotDataItem time and data arrays"""
@@ -1197,9 +1242,11 @@ class TimePlotDataItem(JSONFileHandler):
     def stop_local_ft_mode(self):
         self.pdi.stop_local_ft_mode()
 
-    def store_data(self, fn):
+    def store_data(self, fn=None):
         """saves data as nested dictionary in json file"""
 
+        if fn is None:
+            fn = self.fn
         # extract data from PlotDataItem object
         t, y = self.get_data()
         t = t.tolist(); y = y.tolist()

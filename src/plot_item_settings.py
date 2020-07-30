@@ -64,7 +64,9 @@ class PlotItemSettings(JSONFileHandler):
                                 'y_axis_data_type': "Potential",
                                 'y_axis_unit':      "Volts",
                                 'y_axis_font_size': 15},
-        'relative_timestamp':   True   
+        'relative_timestamp':   True,
+        'do_autosave':          True,
+        'autosave_nr':          30
         # in plotalpha, the first item is the alpha and the second is whether the value is autodetermined
         # maybe more settings here
         }
