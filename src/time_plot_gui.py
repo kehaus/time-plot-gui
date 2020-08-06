@@ -199,8 +199,7 @@ class TimePlotGui(QWidget):
         self.graphItem = self.graphWidget.getPlotItem()
         #self.graphItem.setAutoVisible(y = True)
         self.viewbox = self.graphItem.getViewBox()
-        self.viewbox.state.update({'x_diff': None,
-                                'y_diff': None,
+        self.viewbox.state.update({'newest_value': [None, None],
                                 'data_added': [False, False]})
         print(f"ViewBox: {self.viewbox.getState()}")
         # self.barrier = PlotDataItemV2([],[])
@@ -948,18 +947,16 @@ class TimePlotGui(QWidget):
         #print(self.viewbox.state['viewRange'][0][1] - self.viewbox.state['viewRange'][0][0])
         self.data_table[id_nr].append_value(val, time_val)
         # print('here2')
-        if self.viewbox.state['autoPan'][0] and self.previous_x_max is not None:
-            print(self.viewbox.state['data_added'])
+        if self.viewbox.state['autoPan'][0] and self.viewbox.state['autoRange'][0]:
             y_data_added = self.viewbox.state['data_added'][1]
-            self.viewbox.state.update({'x_diff': time_val - self.previous_x_max,
+            newest_y = self.viewbox.state['newest_value'][1]
+            self.viewbox.state.update({'newest_value': [time_val - self.t0, newest_y],
                                     'data_added': [True, y_data_added]})
-        if self.viewbox.state['autoPan'][1] and self.previous_y_max is not None:
+        if self.viewbox.state['autoPan'][1] and self.viewbox.state['autoRange'][1]:
             x_data_added = self.viewbox.state['data_added'][0]
-            self.viewbox.state.update({'y_diff': val - self.previous_y_max,
+            newest_x = self.viewbox.state['newest_value'][0]
+            self.viewbox.state.update({'newest_value': [newest_x, val],
                                     'data_added': [x_data_added, True]})
-            self.viewbox.state['data_added'][1] = True
-        self.previous_x_max = time_val
-        self.previous_y_max = val
         # print('here3')
         #     x, y = self.data_table[id_nr].pdi.getData()
         #     x_diff = x[-1] - x[-2]
