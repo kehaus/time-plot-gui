@@ -59,7 +59,7 @@ class WorkerThread(threading.Thread):
 
      """
 
-    SLEEP_TIME = 0.1
+    SLEEP_TIME = 0.001
 
     def __init__(self, q=None):
         super(WorkerThread, self).__init__()
