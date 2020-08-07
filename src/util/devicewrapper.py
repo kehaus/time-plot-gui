@@ -155,12 +155,19 @@ class DummyDevice():
         self.xmax = 1
         self.frequency = 0.1    #s
         self.signal_form = 'sawtooth'
+        self.time0 = time.time()
         
     def _calc_value(self):
         if self.signal_form == 'sawtooth':
             return self._calc_sawtooth()
         elif self.signal_form == 'sin':
             return self._calc_sin()
+        elif self.signal_form == 'xsin':
+            return self._calc_xsin()
+        elif self.signal_form == 'linear':
+            return self._calc_straight_line()
+        elif self.signal_form == 'sinx':
+            return self._calc_sinx()
         else:
             raise DummyDeviceException('signal_form variable not know')
     
@@ -171,6 +178,18 @@ class DummyDevice():
     def _calc_sin(self):
         dx = self.xmax - self.xmin
         return dx * np.sin(time.time()*self.frequency)
+    
+    def _calc_xsin(self):
+        dx = self.xmax - self.xmin
+        return (time.time()-self.time0)*dx * np.sin(time.time()*self.frequency)
+    
+    def _calc_sinx(self):
+        dx = self.xmax - self.xmin
+        return dx * np.sin(time.time()*self.frequency) / (time.time()-self.time0)
+        
+    
+    def _calc_straight_line(self):
+        return time.time()-self.time0
         
     
     def get_value(self, verbose=False):
