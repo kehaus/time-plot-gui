@@ -199,8 +199,8 @@ class TimePlotGui(QWidget):
         self.graphItem = self.graphWidget.getPlotItem()
         #self.graphItem.setAutoVisible(y = True)
         self.viewbox = self.graphItem.getViewBox()
-        self.viewbox.state.update({'newest_value': [None, None],
-                                'data_added': [False, False]})
+        self.viewbox.state.update({'newest_value': None,
+                                'data_added': False})
         print(f"ViewBox: {self.viewbox.getState()}")
         # self.barrier = PlotDataItemV2([],[])
         # self.graphItem.addItem(self.barrier)
@@ -309,6 +309,9 @@ class TimePlotGui(QWidget):
                 self.settings['line_settings'].popitem()
 
     def traditional_times(self):
+        if self.viewbox_menu.actions()[1].menu().actions()[0].defaultWidget().layout().itemAt(10).widget().isChecked():
+            print('it is checked')
+
         traditional_time_array = []
         time_array, y = self.data_table[0].get_data()
         for entry in time_array:
@@ -498,6 +501,13 @@ class TimePlotGui(QWidget):
         # ===============================
         self.menu = self.graphItem.getMenu()
         self.viewbox_menu = self.graphItem.getViewBox().getMenu(True)
+        self.viewbox_menu.leftMenu.actions()[0].setText('Click and Drag')
+        self.viewbox_menu.leftMenu.actions()[1].setText('Select Rectangle')
+        self.y_autopan_check = self.viewbox_menu.actions()[2].menu().actions()[0].defaultWidget().layout().itemAt(10).widget()
+        self.y_autopan_check.stateChanged.connect(self.y_autopan_warning)
+
+
+
         # print(self.menu)
         # print(self.viewbox_menu.leftMenu)
         # ===============================
@@ -892,6 +902,14 @@ class TimePlotGui(QWidget):
         local_ft_error.setIcon(QMessageBox.Information)
         local_ft_error.exec_()
 
+    def y_autopan_warning(self):
+        print('y autopan')
+        y_autopan_warning = QMessageBox()
+        y_autopan_warning.setText("Auopanning functionality for the y axis is not supported.")
+        y_autopan_warning.setIcon(QMessageBox.Information)
+        y_autopan_warning.exec_()
+
+
 
     def start_thread(self):
         if self.start_button_counter == 0:
@@ -947,16 +965,16 @@ class TimePlotGui(QWidget):
         #print(self.viewbox.state['viewRange'][0][1] - self.viewbox.state['viewRange'][0][0])
         self.data_table[id_nr].append_value(val, time_val)
         # print('here2')
+        # if self.viewbox.state['autoPan'][0] and self.viewbox.state['autoRange'][0]:
+        #     y_data_added = self.viewbox.state['data_added'][1]
+        #     newest_y = self.viewbox.state['newest_value'][1]
+        #     self.viewbox.state.update({'newest_value': [time_val - self.t0, newest_y],
+        #                             'data_added': [True, y_data_added]})
         if self.viewbox.state['autoPan'][0] and self.viewbox.state['autoRange'][0]:
-            y_data_added = self.viewbox.state['data_added'][1]
-            newest_y = self.viewbox.state['newest_value'][1]
-            self.viewbox.state.update({'newest_value': [time_val - self.t0, newest_y],
-                                    'data_added': [True, y_data_added]})
-        if self.viewbox.state['autoPan'][1] and self.viewbox.state['autoRange'][1]:
-            x_data_added = self.viewbox.state['data_added'][0]
-            newest_x = self.viewbox.state['newest_value'][0]
-            self.viewbox.state.update({'newest_value': [newest_x, val],
-                                    'data_added': [x_data_added, True]})
+            # x_data_added = self.viewbox.state['data_added'][0]
+            # newest_x = self.viewbox.state['newest_value'][0]
+            self.viewbox.state.update({'newest_value': time_val - self.t0,
+                                    'data_added': True})
         # print('here3')
         #     x, y = self.data_table[id_nr].pdi.getData()
         #     x_diff = x[-1] - x[-2]
@@ -1493,15 +1511,15 @@ if __name__ == "__main__":
     dd3.signal_form = 'sin'
     dw3 = DeviceWrapper(dd3)
 
-    main([dw1, dw2])
-    # app = QApplication.instance()
-    # if app is None:
-    #     app = QApplication(sys.argv)
-    # else:
-    #     print('QApplication instance already exists {}'.format(str(app)))
-    # window = MainWindow(devicewrapper_lst=[dw1, dw2])
-    # try:
-    #     window.show()
-    #     app.exec_()
-    # except:
-    #     window.closeEvent()
+    # main([dw1, dw2])
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication(sys.argv)
+    else:
+        print('QApplication instance already exists {}'.format(str(app)))
+    window = MainWindow(devicewrapper_lst=[dw1, dw2])
+    try:
+        window.show()
+        app.exec_()
+    except:
+        window.closeEvent()
