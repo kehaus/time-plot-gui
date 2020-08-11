@@ -66,12 +66,12 @@ class ViewBoxV2(pg.ViewBox):
               #  print(targetRect)
                 if xr is not None:
                     if self.state['autoPan'][ax]:
-                        if self.state['data_added'][ax]:
-                            x = self.state['newest_value'][ax]
-                            data_added = [0, 0]
-                            data_added[ax] = False
-                            data_added[(ax+1)%2] = self.state['data_added'][(ax+1)%2]
-                            self.state.update({'data_added': data_added})
+                        if self.state['data_added'] and not ax:
+                            x = self.state['newest_value']
+                 #           data_added = [0, 0]
+                 #           data_added[ax] = False
+                 #           data_added[(ax+1)%2] = self.state['data_added'][(ax+1)%2]
+                            self.state.update({'data_added': False})
                         else:
                             x = targetRect[ax][1]
                         width = targetRect[ax][1]-targetRect[ax][0]
