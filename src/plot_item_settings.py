@@ -66,7 +66,9 @@ class PlotItemSettings(JSONFileHandler):
                                 'y_axis_font_size': 15},
         'relative_timestamp':   True,
         'do_autosave':          True,
-        'autosave_nr':          30
+        'autosave_nr':          30,
+        'autoVisibleOnly_x':    False,
+        'autoVisibleOnly_y':    False  
         # in plotalpha, the first item is the alpha and the second is whether the value is autodetermined
         # maybe more settings here
         }
