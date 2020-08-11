@@ -44,6 +44,7 @@ from plot_item_settings import PlotItemSettings, JSONFileHandler
 
 from util.workerthread import WorkerThread,WorkerTaskBase
 from util.devicewrapper import DeviceWrapper, DummyDevice
+from viewboxv2 import ViewBoxV2
 
 
 # ============================================================================
@@ -193,14 +194,20 @@ class TimePlotGui(QWidget):
         # ===============================
         # Initializes plot by generating the plotWidget, plotItem, and ViewBox objects that are callable
         # ===============================
+        # self.viewbox = ViewBoxV2()
+        # self.viewbox = pg.ViewBox(parent = pg.graphicsItems.PlotItem)
+        self.graphItem = pg.PlotItem()
         self.axis_item = TimeAxisItem(orientation='bottom', t0 = self.t0, relative_time = self.settings['relative_timestamp'])
+        # self.graphWidget = pg.PlotWidget(axisItems = \
+        #     {'bottom': self.axis_item}, plotItem = self.graphItem)
         self.graphWidget = pg.PlotWidget(axisItems = \
             {'bottom': self.axis_item})
         self.graphItem = self.graphWidget.getPlotItem()
         #self.graphItem.setAutoVisible(y = True)
+
+        # self.viewbox = ViewBoxV2(parent = self.graphItem.parent)
+        # self.graphItem.vb = self.viewbox
         self.viewbox = self.graphItem.getViewBox()
-        self.viewbox.state.update({'newest_value': None,
-                                'data_added': False})
         print(f"ViewBox: {self.viewbox.getState()}")
         # self.barrier = PlotDataItemV2([],[])
         # self.graphItem.addItem(self.barrier)
@@ -465,7 +472,9 @@ class TimePlotGui(QWidget):
             frequency_state = self.graphItem.ctrl.fftCheck.isChecked(),
             labels = self.settings['labels'],
             do_autosave = self.data_options.autosave.defaultWidget().layout().itemAt(0).widget().isChecked(),
-            autosave_nr = self.data_options.autosave.defaultWidget().layout().itemAt(1).widget().value()
+            autosave_nr = self.data_options.autosave.defaultWidget().layout().itemAt(1).widget().value(),
+            autoVisibleOnly_x = self.autoVisibleOnly_x.isChecked(),
+            autoVisibleOnly_y = self.autoVisibleOnly_y.isChecked(),
         )
 
     def restore_default_settings(self):
@@ -506,7 +515,10 @@ class TimePlotGui(QWidget):
         self.y_autopan_check = self.viewbox_menu.actions()[2].menu().actions()[0].defaultWidget().layout().itemAt(10).widget()
         self.y_autopan_check.stateChanged.connect(self.y_autopan_warning)
 
-
+        self.autoVisibleOnly_x = self.viewbox_menu.actions()[1].menu().actions()[0].defaultWidget().layout().itemAt(9).widget()
+        self.autoVisibleOnly_y = self.viewbox_menu.actions()[2].menu().actions()[0].defaultWidget().layout().itemAt(9).widget()
+        self.autoVisibleOnly_x.setChecked(self.settings['autoVisibleOnly_x'])
+        self.autoVisibleOnly_y.setChecked(self.settings['autoVisibleOnly_y'])
 
         # print(self.menu)
         # print(self.viewbox_menu.leftMenu)
@@ -903,7 +915,6 @@ class TimePlotGui(QWidget):
         local_ft_error.exec_()
 
     def y_autopan_warning(self):
-        print('y autopan')
         y_autopan_warning = QMessageBox()
         y_autopan_warning.setText("Auopanning functionality for the y axis is not supported.")
         y_autopan_warning.setIcon(QMessageBox.Information)
@@ -970,11 +981,11 @@ class TimePlotGui(QWidget):
         #     newest_y = self.viewbox.state['newest_value'][1]
         #     self.viewbox.state.update({'newest_value': [time_val - self.t0, newest_y],
         #                             'data_added': [True, y_data_added]})
-        if self.viewbox.state['autoPan'][0] and self.viewbox.state['autoRange'][0]:
-            # x_data_added = self.viewbox.state['data_added'][0]
-            # newest_x = self.viewbox.state['newest_value'][0]
-            self.viewbox.state.update({'newest_value': time_val - self.t0,
-                                    'data_added': True})
+        # if self.viewbox.state['autoPan'][0] and self.viewbox.state['autoRange'][0]:
+        #     # x_data_added = self.viewbox.state['data_added'][0]
+        #     # newest_x = self.viewbox.state['newest_value'][0]
+        #     self.viewbox.state.update({'newest_value': time_val - self.t0,
+        #                             'data_added': True})
         # print('here3')
         #     x, y = self.data_table[id_nr].pdi.getData()
         #     x_diff = x[-1] - x[-2]
