@@ -62,23 +62,33 @@ class ViewBoxV2(pg.ViewBox):
                 #print(childRange)
                 ## Make corrections to range
                 xr = childRange[ax]
-              #  print(xr)
-              #  print(targetRect)
+                # print(f"ChildRange: {xr}")
+                # print(f"target rect {targetRect}")
                 if xr is not None:
                     if self.state['autoPan'][ax]:
-                        if self.state['data_added'] and not ax:
-                            x = self.state['newest_value']
-                 #           data_added = [0, 0]
-                 #           data_added[ax] = False
-                 #           data_added[(ax+1)%2] = self.state['data_added'][(ax+1)%2]
-                            self.state.update({'data_added': False})
+                        if not ax:
+                            x = xr[1]
+                            width = targetRect[ax][1]-targetRect[ax][0]
+                            childRange[ax] = [x-width, x]
                         else:
-                            x = targetRect[ax][1]
-                        width = targetRect[ax][1]-targetRect[ax][0]
-                        #x = sum(xr) * 0.5
-                        #w2 = (targetRect[ax][1]-targetRect[ax][0]) / 2.
-                        #childRange[ax] = [x-w2, x+w2]
-                        childRange[ax] = [x-width, x]
+                            x = sum(xr) * 0.5
+                            w2 = (targetRect[ax][1]-targetRect[ax][0]) / 2.
+                            childRange[ax] = [x-w2, x+w2]
+                # if xr is not None:
+                #     if self.state['autoPan'][ax]:
+                #         if self.state['data_added'] and not ax:
+                #             x = self.state['newest_value']
+                #  #           data_added = [0, 0]
+                #  #           data_added[ax] = False
+                #  #           data_added[(ax+1)%2] = self.state['data_added'][(ax+1)%2]
+                #             self.state.update({'data_added': False})
+                #         else:
+                #             x = targetRect[ax][1]
+                #         width = targetRect[ax][1]-targetRect[ax][0]
+                #         #x = sum(xr) * 0.5
+                #         #w2 = (targetRect[ax][1]-targetRect[ax][0]) / 2.
+                #         #childRange[ax] = [x-w2, x+w2]
+                #         childRange[ax] = [x-width, x]
                     else:
                         padding = self.suggestPadding(ax)
                         wp = (xr[1] - xr[0]) * padding
