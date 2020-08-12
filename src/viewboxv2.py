@@ -25,7 +25,7 @@ class ViewBoxV2(pg.ViewBox):
         ## This is needed because some items change their size in response
         ## to a view change.
     #    print(self.state['viewRange'] == self.viewRange())
-    #    print('\n updateAutoRange \n')
+        # print('\n updateAutoRange \n')
     #    print(self.state)
         if self._updatingRange:
             return
