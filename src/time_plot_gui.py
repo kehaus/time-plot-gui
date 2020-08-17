@@ -92,11 +92,6 @@ class TimePlotGui(QWidget):
         self.plot_item_settings = PlotItemSettings(number_of_lines = len(devicewrapper_lst), folder_filename = folder_filename)
         self.settings = self.plot_item_settings.settings
         self.data_fn = os.path.join(self.plot_item_settings.folder_filename, self.DEFAULT_DATA_FILENAME)
-        # ===============================
-        # Set up the label machine
-        # ===============================
-        #self.plot_label_machine = PlotLabelMachine()
-        #self.label_state = self.plot_label_machine.state
 
         self._init_ui(window, devicewrapper_lst)
         self._init_multi_worker_thread(devicewrapper_lst)
@@ -111,12 +106,6 @@ class TimePlotGui(QWidget):
         # =====================================================================
         self.central_wid = QWidget(mainwindow)
         self._set_central_wid_properties()
-        # self.mainwindow = mainwindow
-        # self.mainwindow.setCentralWidget(self.central_wid)
-        # if isinstance(self.mainwindow, MainWindow) or isinstance(self.mainwindow, SubWindow):
-        #     self.mainwindow.setCentralWidget(self.central_wid)
-        # else:
-        #     print('else case')
         # =====================================================================
         # control panel - initializes layout item to put widgets
         # =====================================================================
@@ -175,14 +164,6 @@ class TimePlotGui(QWidget):
         self.playBtn.clicked.connect(self.thread_status_changed)
         self.playBtn.clicked.connect(self.start_thread)
         self.squarestopBtn.clicked.connect(self.pause_thread)
-
-        # print(self.graphItem.titleLabel)
-        # # self.graphItem.titleLabel.setAcceptedMouseButtons()
-        # # self.graphItem.titleLabel.clicked.connect(self.change_title)
-        # self.clicked_signal = pg.GraphicsScene.sigMouseClicked
-        # print(self.clicked_signal)
-        # self.clicked_signal.connect(self.change_title)
-        # # self.clicked_signal.connect(self.change_title)
         # ============================================================
         # Assign layout widget to window
         # ============================================================
@@ -208,7 +189,7 @@ class TimePlotGui(QWidget):
         # self.viewbox = ViewBoxV2(parent = self.graphItem.parent)
         # self.graphItem.vb = self.viewbox
         # self.viewbox = self.graphItem.getViewBox()
-        print(f"ViewBox: {self.viewbox.getState()}")
+        # print(f"ViewBox: {self.viewbox.getState()}")
         # self.barrier = PlotDataItemV2([],[])
         # self.graphItem.addItem(self.barrier)
         # ===============================
@@ -315,36 +296,6 @@ class TimePlotGui(QWidget):
             elif data_length < len(self.settings['line_settings']):
                 self.settings['line_settings'].popitem()
 
-    def traditional_times(self):
-        if self.viewbox_menu.actions()[1].menu().actions()[0].defaultWidget().layout().itemAt(10).widget().isChecked():
-            print('it is checked')
-
-        traditional_time_array = []
-        time_array, y = self.data_table[0].get_data()
-        for entry in time_array:
-            print(entry)
-            print(time.asctime(time.localtime(entry + self.t0)))
-            test = int(time.mktime(datetime.datetime.now().timetuple()))
-            print(f"now: {test} \n {type(test)}")
-            final = datetime.datetime.fromtimestamp(test).strftime("%H:%M")
-            print(type(datetime.datetime.fromtimestamp(test)))
-            print(f"final: {final}")
-            test_b = time.mktime(time.localtime(entry + self.t0))
-            print(test_b)
-            test_b_final = datetime.datetime.fromtimestamp(int(test_b)).strftime("%H:%M")
-            print(test_b_final)
-            traditional_time_array.append(time.asctime(time.localtime(entry + self.t0)))
-        # for value in self.data_table.values():
-        #     print(value)
-        #     time_array, y = self.data_table[0].get_data()
-        #     value.set_data(traditional_time_array, y)
-
-    def autopan_testing(self):
-        viewbox = self.graphItem.getViewBox().getState()
-        print(f"Before {viewbox}")
-        self.viewbox.state.update({'test_param': False})
-        viewbox = self.graphItem.getViewBox().getState()
-        print(f"After {viewbox}")
 
     def set_custom_settings(self, label_key = 'potential'):
         # ===============================
@@ -354,7 +305,6 @@ class TimePlotGui(QWidget):
         self.graphItem.showGrid(x = self.settings['xgridlines'], y = self.settings['ygridlines'], \
                                 alpha = self.settings['gridopacity'])
         self.set_line_settings()
-        #self.plotDataItem.setAlpha(alpha = self.settings['plotalpha'][0], auto = self.settings['plotalpha'][1])
         self.viewbox.setAutoPan(x = self.settings['autoPan'])
         self.viewbox.setRange(xRange = self.settings['xlim'], yRange = self.settings['ylim'])
         self.viewbox.enableAutoRange(x = self.settings['xautorange'], y = self.settings['yautorange'])
@@ -413,21 +363,11 @@ class TimePlotGui(QWidget):
         self.graphItem.setLabel('bottom', labels['x_label'], **{'color': '#FFF', 'font-size': x_font_size})
 
     def get_axis_labels(self, key = 'potential'):
-        # sample_labels = {
-        #         'temp':         {'x_label':     "Time (Seconds)",
-        #                         'y_label':      "Temperature (K)"},
-        #         'potential':    {'x_label':     "Time (Seconds)",
-        #                         'y_label':      "Potential (Volts)"},
-        #         'pressure':     {'x_label':     "Time (Seconds)",
-        #                         'y_label':      "Pressure (kPa)"}
-        # }
         labels = {
                 'x_label':  '',
                 'y_label':  '',
                 'title':    ''
         }
-        # labels['x_label'] = sample_labels[key]['x_label']
-        # labels['y_label'] = sample_labels[key]['y_label']
         labels['x_label'] = self.settings['labels']['x_axis_data_type'] + " (" + self.settings['labels']['x_axis_unit'] + ")"
         labels['y_label'] = self.settings['labels']['y_axis_data_type'] + " (" + self.settings['labels']['y_axis_unit'] + ")"
         if self.settings['labels']['title_text'] is None:
@@ -520,8 +460,6 @@ class TimePlotGui(QWidget):
         self.autoVisibleOnly_x.setChecked(self.settings['autoVisibleOnly_x'])
         self.autoVisibleOnly_y.setChecked(self.settings['autoVisibleOnly_y'])
 
-        # print(self.menu)
-        # print(self.viewbox_menu.leftMenu)
         # ===============================
         # Create submenus (in order)
         # ===============================
@@ -631,9 +569,7 @@ class TimePlotGui(QWidget):
         self.transform_menu.actions()[0].defaultWidget().layout().setContentsMargins(10,10,10,0)
 
         self.x_log_check = self.transform_menu.actions()[0].defaultWidget().layout().itemAt(1).widget()
-        # self.x_log_check.stateChanged.connect(self.set_first_log_x)
         self.y_log_check = self.transform_menu.actions()[0].defaultWidget().layout().itemAt(2).widget()
-        # self.y_log_check.stateChanged.connect(self.set_first_log_y)
 
         local_fourier = QtGui.QWidgetAction(self.transform_menu)
         local_fourier_widget = QWidget()
@@ -649,19 +585,6 @@ class TimePlotGui(QWidget):
         self.transform_menu.addAction(local_fourier)
         self.transform_menu.local_fourier = local_fourier
 
-        # transform_menu_actions = self.transform_menu.actions()
-        # print(transform_menu_actions)
-        # for index in range(len(transform_menu_actions)):
-        #     self.transform_menu.removeAction(transform_menu_actions[index])
-        # for index in [1, 0]:
-        #     self.transform_menu.addAction(transform_menu_actions[index])
-
-
-        traditional_times = QtGui.QAction("traditional time")
-        traditional_times.triggered.connect(self.autopan_testing)
-        self.menu.addAction(traditional_times)
-        self.menu.traditional_times = traditional_times
-
         # ===============================
         # Remove unnecesary default context menu operations
         # ===============================
@@ -669,9 +592,7 @@ class TimePlotGui(QWidget):
         #1,2,3,5
         for index in range(len(actions)):
             self.graphItem.ctrlMenu.removeAction(actions[index])
-        # actions = self.graphItem.ctrlMenu.actions()
-        # self.graphItem.ctrlMenu.clear()
-        for index in [0, 4, 6, 7, 8, 9, 10, 11]:
+        for index in [0, 4, 6, 7, 8, 9, 10]:
             self.graphItem.ctrlMenu.addAction(actions[index])
 
     def ammend_context_menu(self):
@@ -717,7 +638,6 @@ class TimePlotGui(QWidget):
             width_layout.addWidget(widthlabel, 2, 0, 1, 1)
             width_layout.addWidget(spinbox, 2, 1, 1, 1)
             width_widget.setLayout(width_layout)
-            # width_widget.setStyleSheet("border-bottom: 1px solid")
 
             spinbox.valueChanged.connect(self.data_table[key].setWidth)
             alphaSlider.valueChanged.connect(self.data_table[key].setAlpha)
@@ -756,7 +676,6 @@ class TimePlotGui(QWidget):
         """starts or stops the local FT mode depending on local fourier checkbox
         state
         """
-        # if self.transform_menu.local_fourier.defaultWidget().layout().itemAt(1).widget().isChecked():
         if local_ft_mode:
             if not self.graphItem.ctrl.fftCheck.isChecked():
                 for dataitem in self.data_table.values():
@@ -822,13 +741,6 @@ class TimePlotGui(QWidget):
         for data_item in self.data_table.values():
             data_item.autosave_nr = autosave_nr
 
-    # def set_first_log_x(self, first_log_x):
-    #     for timeplotdataitem in self.data_table.values():
-    #         timeplotdataitem.pdi.opts['first_log_x'] = first_log_x
-    #
-    # def set_first_log_y(self, first_log_y):
-    #     for timeplotdataitem in self.data_table.values():
-    #         timeplotdataitem.pdi.opts['first_log_y'] = first_log_y
 
     def clear_all_data(self):
         """
@@ -931,20 +843,9 @@ class TimePlotGui(QWidget):
                     is_checked = True
                 self.graphItem.ctrl.fftCheck.setChecked(False)
                 self.clear_all_data()
-            # elif not self.data_options.automatic_clear_checkbox.isChecked() \
-            #             and len(self.data_table[0].get_plot_data_item().getData()[0]) != 0:
-            #     barrier_data_x, barrier_data_y = self.barrier.getData()
-            #     barrier_data_x = np.append(barrier_data_x, self.data_table[0].get_plot_data_item().getData()[0][-1])
-            #     barrier_data_y = np.append(barrier_data_y, self.data_table[0].get_plot_data_item().getData()[1][-1])
-            #     self.barrier.setData(barrier_data_x, barrier_data_y)
-            # print(self.data_table)
-            # for key in self.data_table:
-            #     print(type(key))
-            #     print(self.data_table[key])
             self.start_signal.emit()
             if is_checked:
                 self.leaving_fft_mode()
-            # print(self.data_table)
         else:
             self.restart_thread()
 
@@ -968,43 +869,10 @@ class TimePlotGui(QWidget):
         self.graphItem.ctrl.fftCheck.setChecked(False)
         self.x_log_check.setChecked(False)
         self.y_log_check.setChecked(False)
-        # viewbox = self.graphItem.getViewBox().getState()
-        # print(self.viewbox.state == viewbox)
-        # before_x_min, before_x_max = viewbox['viewRange'][0]
-        # print(f"Old Min {before_x_min} *************** Old Max {before_x_max}")
-        # print('here1')
-        #print(self.viewbox.state['viewRange'][0][1] - self.viewbox.state['viewRange'][0][0])
         self.data_table[id_nr].append_value(val, time_val)
-        # print('here2')
-        # if self.viewbox.state['autoPan'][0] and self.viewbox.state['autoRange'][0]:
-        #     y_data_added = self.viewbox.state['data_added'][1]
-        #     newest_y = self.viewbox.state['newest_value'][1]
-        #     self.viewbox.state.update({'newest_value': [time_val - self.t0, newest_y],
-        #                             'data_added': [True, y_data_added]})
-        # if self.viewbox.state['autoPan'][0] and self.viewbox.state['autoRange'][0]:
-        #     # x_data_added = self.viewbox.state['data_added'][0]
-        #     # newest_x = self.viewbox.state['newest_value'][0]
-        #     self.viewbox.state.update({'newest_value': time_val - self.t0,
-        #                             'data_added': True})
-        # print('here3')
-        #     x, y = self.data_table[id_nr].pdi.getData()
-        #     x_diff = x[-1] - x[-2]
-        #     print(x_diff)
-        #     self.graphItem.setXRange(min = before_x_min + x_diff, max = before_x_max + x_diff)
-        #     print(f"New Min {before_x_min + x_diff} *************** New Max {before_x_max + x_diff}")
-        #     # print(self.graphItem.getViewBox().getState())
-        #     self.graphItem.disableAutoRange()
-        #     # print(self.graphItem.getViewBox().getState())
         self.graphItem.ctrl.fftCheck.setChecked(frequency_state)
         self.x_log_check.setChecked(x_log_check)
         self.y_log_check.setChecked(y_log_check)
-        # if len(self.barrier.getData()[0]) == 1 and id_nr == 0:
-        #     barrier_data_x, barrier_data_y = self.barrier.getData()
-        #     barrier_data_x = np.append(barrier_data_x, time_val - self.t0)
-        #     barrier_data_y = np.append(barrier_data_y, val)
-        #     self.barrier.setData(barrier_data_x, barrier_data_y)
-        #     self.barrier.setPen(pg.mkPen(style=QtCore.Qt.DotLine, width = 10, color = (255,80,10,255)))
-        #self.set_zoom_lines()
 
     # def __del__(self):
     #     print('it worked!?')
@@ -1015,11 +883,9 @@ class TimePlotGui(QWidget):
     def newReading(self, id_nr, val, time_val):
         """ """
         pg.QtGui.QApplication.processEvents()
-        # print(id_nr)
-        # print(self.data_table)
         self.update_datapoint(id_nr, val, time_val)
         time.sleep(self.sampling_latency)
-        # time.sleep(0.01)         # necessary to avoid worker to freeze
+        # necessary to avoid worker to freeze
         self.cond_table[id_nr].wakeAll()     # wake worker thread up
         return
 
@@ -1073,8 +939,6 @@ class PlotDataItemV2(pg.PlotDataItem):
 
         self.opts.update({
             'fftLocal':     False
-            # 'first_log_x':  False,
-            # 'first_log_y':  False
         })
 
     def setLogMode(self, xMode, yMode):
@@ -1088,12 +952,10 @@ class PlotDataItemV2(pg.PlotDataItem):
         self.informViewBoundsChanged()
 
     def getData(self):
-        # print('getting data')
         if self.xData is None:
             return (None, None)
 
         if self.xDisp is None:
-            # print(self.xData)
             x = self.xData
             y = self.yData
 
@@ -1108,15 +970,9 @@ class PlotDataItemV2(pg.PlotDataItem):
                     y=y[1:]
 
             if self.opts['logMode'][0]:
-                # and self.opts['first_log_x']:
-                # print(x)
                 x = np.log10(x)
-                # self.opts['first_log_x'] = False
-                # print(x)
             if self.opts['logMode'][1]:
-                # and self.opts['first_log_y']:
                 y = np.log10(y)
-                # self.opts['first_log_y'] = False
 
             ds = self.opts['downsample']
             if not isinstance(ds, int):
@@ -1169,7 +1025,6 @@ class PlotDataItemV2(pg.PlotDataItem):
 
             self.xDisp = x
             self.yDisp = y
-            # print(self.xData)
         return self.xDisp, self.yDisp
 
     def _get_data_in_local_ft_boundaries(self, x, y):
@@ -1178,8 +1033,8 @@ class PlotDataItemV2(pg.PlotDataItem):
         if not hasattr(self, '_local_ft_xmin') or not hasattr(self, '_local_ft_xmax'):
             self.start_local_ft_mode()
         xmin, xmax = self._local_ft_xmin, self._local_ft_xmax
-        print('************* xmin: ', xmin)
-        print('************* xmin: ', xmax)
+        # print('************* xmin: ', xmin)
+        # print('************* xmin: ', xmax)
 
         # truncate x and y
         idx_lst = (xmin<x) & (x<xmax)
@@ -1204,23 +1059,6 @@ class PlotDataItemV2(pg.PlotDataItem):
     def stop_local_ft_mode(self):
         self.opts['fftLocal'] = False
 
-    def _fourierTransform(self, x, y):
-        """Perform fourier transform. If x values are not sampled uniformly,
-        then use np.interp to resample before taking fft.
-        """
-        #self.plot_label_machine.switch_event('fourier')
-        dx = np.diff(x)
-        uniform = not np.any(np.abs(dx-dx[0]) > (abs(dx[0]) / 1000.))
-        if not uniform:
-            x2 = np.linspace(x[0], x[-1], len(x))
-            y = np.interp(x2, x, y)
-            x = x2
-        f = np.fft.fft(y) / len(y)
-        y = abs(f[1:int(len(f)/2)])
-        dt = x[-1] - x[0]
-        x = np.linspace(0, 0.5*len(x)/dt, len(y))
-        return x, y
-
     def get_color(self):
         return self.opts['pen'].color().getRgb()
 
@@ -1236,31 +1074,6 @@ class PlotDataItemV2(pg.PlotDataItem):
             self.opts['pen'].setColor(color_dialog.currentColor())
         self.updateItems()
 
-class PlotLabelMachine():
-    """ """
-
-    def __init__(self, time_state = True):
-        if time_state:
-            self.state = TimeState()
-        else:
-            self.state = FrequencyState()
-
-    def switch_event(self, text = None):
-        return self.state.switch_state(text)
-
-class FrequencyState(PlotLabelMachine):
-    """ """
-
-    def switch_state(self, text):
-        if text is None or 'time' in text:
-            return TimeState()
-
-class TimeState(PlotLabelMachine):
-    """ """
-
-    def switch_state(self, text):
-        if text is None or 'fourier' in text:
-            return FrequencyState()
 
 class TimeAxisItem(pg.AxisItem):
     def __init__(self, t0, relative_time, *args, **kwargs):
@@ -1408,38 +1221,19 @@ class TimePlotDataItem(JSONFileHandler):
 
     def setWidth(self, value):
         self.pdi.update_width(value)
-        # self.pdi.setPen(pg.mkPen(width = value/255))
 
     def open_color_dialog(self):
-        # self.restorable_color = self.pdi.get_color()
         self.restorable_color = self.pdi.opts['pen'].color()
         self.color_dialog = QtGui.QColorDialog()
         self.color_dialog.currentColorChanged.connect(self.set_color)
         self.color_dialog.rejected.connect(self.cancel_color_dialog)
         self.color_dialog.open()
-        # self.pdi.setPen(pg.mkPen(color = color_dialog.getRgb()))
-        # print(self.pdi.opts['pen'])
-        #self.pdi.update_color(self.color_dialog)
-        # print(self.pdi.opts['pen'])
-        # self.pdi.setPen(self.pdi.opts['pen'])
 
     def set_color(self):
         self.pdi.update_color(self.color_dialog)
-    #     self.pdi.opts['pen'].setColor(color_dialog.currentColor())
-    #     self.pdi.setPen(self.pdi.opts['pen'])
 
     def cancel_color_dialog(self):
         self.pdi.update_color(self.restorable_color)
-
-# class TimePlotDataTable(JSONFileHandler):
-#     """ """
-
-#     DEFAULT_DATA_FILENAME = 'data.json'
-
-#     def __init__(self, data_fn=None):
-
-#         if data_fn == None:
-#             self.fn = TimePlotDataTable.DEFUALT_DATA_FILENAME
 
 # ===========================================================================
 #
@@ -1499,8 +1293,6 @@ def main(devicewrapper_lst):
         app.exec_()
     except:
         window.closeEvent()
-    # window.show()
-    # app.exec_()
 
 
 # ===========================================================================
