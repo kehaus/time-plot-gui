@@ -175,23 +175,19 @@ class TimePlotGui(QWidget):
         # ===============================
         # Initializes plot by generating the plotWidget, plotItem, and ViewBox objects that are callable
         # ===============================
-        self.viewbox = ViewBoxV2()
+        try:
+            self.viewbox = ViewBoxV2()
         # self.viewbox = pg.ViewBox(parent = pg.graphicsItems.PlotItem)
-        self.graphItem = pg.PlotItem(viewBox = self.viewbox)
-        self.axis_item = TimeAxisItem(orientation='bottom', t0 = self.t0, relative_time = self.settings['relative_timestamp'])
-        self.graphWidget = pg.PlotWidget(axisItems = \
-            {'bottom': self.axis_item}, plotItem = self.graphItem)
-        # self.graphWidget = pg.PlotWidget(axisItems = \
-        #     {'bottom': self.axis_item})
-        # self.graphItem = self.graphWidget.getPlotItem()
-        #self.graphItem.setAutoVisible(y = True)
-
-        # self.viewbox = ViewBoxV2(parent = self.graphItem.parent)
-        # self.graphItem.vb = self.viewbox
-        # self.viewbox = self.graphItem.getViewBox()
-        # print(f"ViewBox: {self.viewbox.getState()}")
-        # self.barrier = PlotDataItemV2([],[])
-        # self.graphItem.addItem(self.barrier)
+            self.graphItem = pg.PlotItem(viewBox = self.viewbox)
+            self.axis_item = TimeAxisItem(orientation='bottom', t0 = self.t0, relative_time = self.settings['relative_timestamp'])
+            self.graphWidget = pg.PlotWidget(axisItems = \
+                {'bottom': self.axis_item}, plotItem = self.graphItem)
+        except:
+            print("ERROR with custom viewbox class. 'Except' case run instead.")
+            self.graphWidget = pg.PlotWidget(axisItems = \
+                {'bottom': self.axis_item})
+            self.graphItem = self.graphWidget.getPlotItem()
+            self.viewbox = self.graphItem.getViewBox()
         # ===============================
         # Enable Automatic Axis Label Updates
         # ===============================
