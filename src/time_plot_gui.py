@@ -45,6 +45,7 @@ from plot_item_settings import PlotItemSettings, JSONFileHandler
 from util.workerthread import WorkerThread,WorkerTaskBase
 from util.devicewrapper import DeviceWrapper, DummyDevice
 from viewboxv2 import ViewBoxV2
+from context_menu import ContextMenu
 
 
 # ============================================================================
@@ -200,7 +201,10 @@ class TimePlotGui(QWidget):
         # ===============================
         # Customize the context menu
         # ===============================
-        self._modify_context_menu()
+        menu = self.graphItem.getMenu()
+        viewbox_menu = self.graphItem.getViewBox().getMenu(True)
+        self.context_menu = ContextMenu(menu, viewbox_menu, self)
+        # self._modify_context_menu()
         # ===============================
         # customize plot settings with stored values
         # ===============================
@@ -258,7 +262,7 @@ class TimePlotGui(QWidget):
     def thread_status_changed(self):
         self.started = not self.started
         self.resize_line_settings()
-        self.add_line_settings_menu()
+        self.context_menu.add_line_settings_menu(self.data_table)
 
     def resize_line_settings(self):
         if self.started:
@@ -431,173 +435,173 @@ class TimePlotGui(QWidget):
         # ===============================
         # Implement the settings
         # ===============================
-        self.ammend_context_menu()
+        self.context_menu.ammend_context_menu()
         self.set_custom_settings()
 
     def clear_line_settings(self):
         self.settings['line_settings'] = self.plot_item_settings.DEFAULT_SETTINGS['line_settings']
         self.set_line_settings()
-        self.ammend_context_menu()
+        self.context_menu.ammend_context_menu()
 
-    def _modify_context_menu(self):
-        self.resize_line_settings()
-        # ===============================
-        # Get the context menu as a callable object
-        # ===============================
-        self.menu = self.graphItem.getMenu()
-        self.viewbox_menu = self.graphItem.getViewBox().getMenu(True)
-        self.viewbox_menu.leftMenu.actions()[0].setText('Click and Drag')
-        self.viewbox_menu.leftMenu.actions()[1].setText('Select Rectangle')
-        self.y_autopan_check = self.viewbox_menu.actions()[2].menu().actions()[0].defaultWidget().layout().itemAt(10).widget()
-        self.y_autopan_check.stateChanged.connect(self.y_autopan_warning)
+    # def _modify_context_menu(self):
+    #     self.resize_line_settings()
+    #     # ===============================
+    #     # Get the context menu as a callable object
+    #     # ===============================
+    #     self.menu = self.graphItem.getMenu()
+    #     self.viewbox_menu = self.graphItem.getViewBox().getMenu(True)
+    #     self.viewbox_menu.leftMenu.actions()[0].setText('Click and Drag')
+    #     self.viewbox_menu.leftMenu.actions()[1].setText('Select Rectangle')
+    #     self.y_autopan_check = self.viewbox_menu.actions()[2].menu().actions()[0].defaultWidget().layout().itemAt(10).widget()
+    #     self.y_autopan_check.stateChanged.connect(self.y_autopan_warning)
+    #
+    #     self.autoVisibleOnly_x = self.viewbox_menu.actions()[1].menu().actions()[0].defaultWidget().layout().itemAt(9).widget()
+    #     self.autoVisibleOnly_y = self.viewbox_menu.actions()[2].menu().actions()[0].defaultWidget().layout().itemAt(9).widget()
+    #     self.autoVisibleOnly_x.setChecked(self.settings['autoVisibleOnly_x'])
+    #     self.autoVisibleOnly_y.setChecked(self.settings['autoVisibleOnly_y'])
+    #
+    #     # ===============================
+    #     # Create submenus (in order)
+    #     # ===============================
+    #     self.line_settings_menu = self.menu.addMenu("Line Settings")
+    #     self.visualization_settings = self.menu.addMenu("Visualization Settings")
+    #     self.data_options = self.menu.addMenu("Data Options")
+    #     self.change_labels_menu = self.menu.addMenu("Change Labels")
+    #     # ===============================
+    #     # Submenu Formation: line_settings
+    #     # ===============================
+    #     self.add_line_settings_menu()
+    #     # ===============================
+    #     # Submenu Formation: visualization_settings
+    #     # ===============================
+    #     restore_default = QtGui.QAction("Restore Default Plot Settings", self.visualization_settings)
+    #     restore_default.triggered.connect(self.restore_default_settings)
+    #     self.visualization_settings.addAction(restore_default)
+    #     self.visualization_settings.restore_default = restore_default
+    #
+    #     restore_saved = QtGui.QAction("Restore Saved Plot Settings", self.visualization_settings)
+    #     restore_saved.triggered.connect(self.set_custom_settings)
+    #     self.visualization_settings.addAction(restore_saved)
+    #     self.visualization_settings.restore_saved = restore_saved
+    #
+    #     save_settings = QtGui.QAction("Save Current Plot Settings", self.visualization_settings)
+    #     save_settings.triggered.connect(self.save_current_settings)
+    #     self.visualization_settings.addAction(save_settings)
+    #     self.visualization_settings.save_settings = save_settings
+    #
+    #     clear_line_settings = QtGui.QAction("Clear Line Settings", self.visualization_settings)
+    #     clear_line_settings.triggered.connect(self.clear_line_settings)
+    #     self.visualization_settings.addAction(clear_line_settings)
+    #     self.visualization_settings.clear_line_settings = clear_line_settings
+    #     # ===============================
+    #     # Submenu Formation: Data Options
+    #     # ===============================
+    #     clear_data = QtGui.QAction("Clear Data", self.data_options)
+    #     clear_data.triggered.connect(self.clear_all_data)
+    #     self.data_options.addAction(clear_data)
+    #     self.data_options.clear_data = clear_data
+    #
+    #     automatic_clear = QtGui.QWidgetAction(self.data_options)
+    #     automatic_clear_checkbox = QtGui.QCheckBox("Clear Old Data on Start", self)
+    #     automatic_clear.setDefaultWidget(automatic_clear_checkbox)
+    #     automatic_clear_checkbox.stateChanged.connect(self.save_data_settings)
+    #     self.data_options.addAction(automatic_clear)
+    #     self.data_options.automatic_clear = automatic_clear
+    #     self.data_options.automatic_clear_checkbox = automatic_clear_checkbox
+    #
+    #     autosave = QtGui.QWidgetAction(self.data_options)
+    #     autosave_widget = QWidget()
+    #     autosave_layout = QHBoxLayout()
+    #     autosave_layout.setContentsMargins(0,0,0,0)
+    #     autosave_checkbox = QtGui.QCheckBox("Automatically Save Data", self)
+    #     autosave_checkbox.stateChanged.connect(self.set_all_autosave)
+    #     autosave_checkbox.setChecked(self.settings['do_autosave'])
+    #     autosave_nr = QSpinBox()
+    #     autosave_nr.setButtonSymbols(QAbstractSpinBox().NoButtons)
+    #     autosave_nr.setRange(10, 1000)
+    #     autosave_nr.setValue(self.settings['autosave_nr'])
+    #     # autosave_nr.setSingleStep(10)
+    #     autosave_nr.valueChanged.connect(self.set_all_autosave_nr)
+    #     autosave_layout.addWidget(autosave_checkbox)
+    #     autosave_layout.addWidget(autosave_nr)
+    #     autosave_widget.setLayout(autosave_layout)
+    #     autosave.setDefaultWidget(autosave_widget)
+    #     self.data_options.addAction(autosave)
+    #     self.data_options.autosave = autosave
+    #
+    #     # ===============================
+    #     # Submenu Formation: Change Labels
+    #     # ===============================
+    #     change_title = QtGui.QAction("Change Plot Title", self.change_labels_menu)
+    #     change_title.triggered.connect(self.change_title)
+    #     self.change_labels_menu.addAction(change_title)
+    #     self.change_labels_menu.change_title = change_title
+    #
+    #     change_x_axis_label = QtGui.QAction("Change X Axis Label", self.change_labels_menu)
+    #     change_x_axis_label.triggered.connect(self.change_x_axis_label)
+    #     self.change_labels_menu.addAction(change_x_axis_label)
+    #     self.change_labels_menu.change_x_axis_label = change_x_axis_label
+    #
+    #     change_y_axis_label = QtGui.QAction("Change Y Axis Label", self.change_labels_menu)
+    #     change_y_axis_label.triggered.connect(self.change_y_axis_label)
+    #     self.change_labels_menu.addAction(change_y_axis_label)
+    #     self.change_labels_menu.change_y_axis_label = change_y_axis_label
+    #
+    #     relative_time = QtGui.QWidgetAction(self.change_labels_menu)
+    #     relative_time_checkbox = QtGui.QCheckBox("Relative Time Markers", self)
+    #     relative_time.setDefaultWidget(relative_time_checkbox)
+    #     relative_time_checkbox.setChecked(self.settings['relative_timestamp'])
+    #     relative_time_checkbox.stateChanged.connect(self.change_time_markers)
+    #     self.change_labels_menu.addAction(relative_time)
+    #     self.change_labels_menu.relative_time = relative_time
+    #     self.change_labels_menu.relative_time_checkbox = relative_time_checkbox
+    #     # ===============================
+    #     # Function Formation: Load Past Data
+    #     # ===============================
+    #     open_data = QtGui.QAction("Load Stored Data")
+    #     open_data.triggered.connect(self.open_finder)
+    #     self.menu.addAction(open_data)
+    #     self.menu.open_data = open_data
+    #     # ===============================
+    #     # Submenu revision: local fourier transform
+    #     # ===============================
+    #     self.transform_menu = self.menu.actions()[0].menu()
+    #     self.transform_menu.actions()[0].defaultWidget().layout().setContentsMargins(10,10,10,0)
+    #
+    #     self.x_log_check = self.transform_menu.actions()[0].defaultWidget().layout().itemAt(1).widget()
+    #     self.y_log_check = self.transform_menu.actions()[0].defaultWidget().layout().itemAt(2).widget()
+    #
+    #     local_fourier = QtGui.QWidgetAction(self.transform_menu)
+    #     local_fourier_widget = QWidget()
+    #     lf_label = QLabel("Local Fourier Mode")
+    #     local_fourier_checkbox = QtGui.QCheckBox(self)
+    #     local_fourier_checkbox.stateChanged.connect(self.set_local_ft_mode)
+    #     lf_layout = QHBoxLayout()
+    #     lf_layout.setContentsMargins(10,0,0,0)
+    #     lf_layout.addWidget(lf_label)
+    #     lf_layout.addWidget(local_fourier_checkbox)
+    #     local_fourier_widget.setLayout(lf_layout)
+    #     local_fourier.setDefaultWidget(local_fourier_widget)
+    #     self.transform_menu.addAction(local_fourier)
+    #     self.transform_menu.local_fourier = local_fourier
+    #
+    #     # ===============================
+    #     # Remove unnecesary default context menu operations
+    #     # ===============================
+    #     actions = self.graphItem.ctrlMenu.actions()
+    #     #1,2,3,5
+    #     for index in range(len(actions)):
+    #         self.graphItem.ctrlMenu.removeAction(actions[index])
+    #     for index in [0, 4, 6, 7, 8, 9, 10]:
+    #         self.graphItem.ctrlMenu.addAction(actions[index])
 
-        self.autoVisibleOnly_x = self.viewbox_menu.actions()[1].menu().actions()[0].defaultWidget().layout().itemAt(9).widget()
-        self.autoVisibleOnly_y = self.viewbox_menu.actions()[2].menu().actions()[0].defaultWidget().layout().itemAt(9).widget()
-        self.autoVisibleOnly_x.setChecked(self.settings['autoVisibleOnly_x'])
-        self.autoVisibleOnly_y.setChecked(self.settings['autoVisibleOnly_y'])
-
-        # ===============================
-        # Create submenus (in order)
-        # ===============================
-        self.line_settings_menu = self.menu.addMenu("Line Settings")
-        self.visualization_settings = self.menu.addMenu("Visualization Settings")
-        self.data_options = self.menu.addMenu("Data Options")
-        self.change_labels_menu = self.menu.addMenu("Change Labels")
-        # ===============================
-        # Submenu Formation: line_settings
-        # ===============================
-        self.add_line_settings_menu()
-        # ===============================
-        # Submenu Formation: visualization_settings
-        # ===============================
-        restore_default = QtGui.QAction("Restore Default Plot Settings", self.visualization_settings)
-        restore_default.triggered.connect(self.restore_default_settings)
-        self.visualization_settings.addAction(restore_default)
-        self.visualization_settings.restore_default = restore_default
-
-        restore_saved = QtGui.QAction("Restore Saved Plot Settings", self.visualization_settings)
-        restore_saved.triggered.connect(self.set_custom_settings)
-        self.visualization_settings.addAction(restore_saved)
-        self.visualization_settings.restore_saved = restore_saved
-
-        save_settings = QtGui.QAction("Save Current Plot Settings", self.visualization_settings)
-        save_settings.triggered.connect(self.save_current_settings)
-        self.visualization_settings.addAction(save_settings)
-        self.visualization_settings.save_settings = save_settings
-
-        clear_line_settings = QtGui.QAction("Clear Line Settings", self.visualization_settings)
-        clear_line_settings.triggered.connect(self.clear_line_settings)
-        self.visualization_settings.addAction(clear_line_settings)
-        self.visualization_settings.clear_line_settings = clear_line_settings
-        # ===============================
-        # Submenu Formation: Data Options
-        # ===============================
-        clear_data = QtGui.QAction("Clear Data", self.data_options)
-        clear_data.triggered.connect(self.clear_all_data)
-        self.data_options.addAction(clear_data)
-        self.data_options.clear_data = clear_data
-
-        automatic_clear = QtGui.QWidgetAction(self.data_options)
-        automatic_clear_checkbox = QtGui.QCheckBox("Clear Old Data on Start", self)
-        automatic_clear.setDefaultWidget(automatic_clear_checkbox)
-        automatic_clear_checkbox.stateChanged.connect(self.save_data_settings)
-        self.data_options.addAction(automatic_clear)
-        self.data_options.automatic_clear = automatic_clear
-        self.data_options.automatic_clear_checkbox = automatic_clear_checkbox
-
-        autosave = QtGui.QWidgetAction(self.data_options)
-        autosave_widget = QWidget()
-        autosave_layout = QHBoxLayout()
-        autosave_layout.setContentsMargins(0,0,0,0)
-        autosave_checkbox = QtGui.QCheckBox("Automatically Save Data", self)
-        autosave_checkbox.stateChanged.connect(self.set_all_autosave)
-        autosave_checkbox.setChecked(self.settings['do_autosave'])
-        autosave_nr = QSpinBox()
-        autosave_nr.setButtonSymbols(QAbstractSpinBox().NoButtons)
-        autosave_nr.setRange(10, 1000)
-        autosave_nr.setValue(self.settings['autosave_nr'])
-        # autosave_nr.setSingleStep(10)
-        autosave_nr.valueChanged.connect(self.set_all_autosave_nr)
-        autosave_layout.addWidget(autosave_checkbox)
-        autosave_layout.addWidget(autosave_nr)
-        autosave_widget.setLayout(autosave_layout)
-        autosave.setDefaultWidget(autosave_widget)
-        self.data_options.addAction(autosave)
-        self.data_options.autosave = autosave
-
-        # ===============================
-        # Submenu Formation: Change Labels
-        # ===============================
-        change_title = QtGui.QAction("Change Plot Title", self.change_labels_menu)
-        change_title.triggered.connect(self.change_title)
-        self.change_labels_menu.addAction(change_title)
-        self.change_labels_menu.change_title = change_title
-
-        change_x_axis_label = QtGui.QAction("Change X Axis Label", self.change_labels_menu)
-        change_x_axis_label.triggered.connect(self.change_x_axis_label)
-        self.change_labels_menu.addAction(change_x_axis_label)
-        self.change_labels_menu.change_x_axis_label = change_x_axis_label
-
-        change_y_axis_label = QtGui.QAction("Change Y Axis Label", self.change_labels_menu)
-        change_y_axis_label.triggered.connect(self.change_y_axis_label)
-        self.change_labels_menu.addAction(change_y_axis_label)
-        self.change_labels_menu.change_y_axis_label = change_y_axis_label
-
-        relative_time = QtGui.QWidgetAction(self.change_labels_menu)
-        relative_time_checkbox = QtGui.QCheckBox("Relative Time Markers", self)
-        relative_time.setDefaultWidget(relative_time_checkbox)
-        relative_time_checkbox.setChecked(self.settings['relative_timestamp'])
-        relative_time_checkbox.stateChanged.connect(self.change_time_markers)
-        self.change_labels_menu.addAction(relative_time)
-        self.change_labels_menu.relative_time = relative_time
-        self.change_labels_menu.relative_time_checkbox = relative_time_checkbox
-        # ===============================
-        # Function Formation: Load Past Data
-        # ===============================
-        open_data = QtGui.QAction("Load Stored Data")
-        open_data.triggered.connect(self.open_finder)
-        self.menu.addAction(open_data)
-        self.menu.open_data = open_data
-        # ===============================
-        # Submenu revision: local fourier transform
-        # ===============================
-        self.transform_menu = self.menu.actions()[0].menu()
-        self.transform_menu.actions()[0].defaultWidget().layout().setContentsMargins(10,10,10,0)
-
-        self.x_log_check = self.transform_menu.actions()[0].defaultWidget().layout().itemAt(1).widget()
-        self.y_log_check = self.transform_menu.actions()[0].defaultWidget().layout().itemAt(2).widget()
-
-        local_fourier = QtGui.QWidgetAction(self.transform_menu)
-        local_fourier_widget = QWidget()
-        lf_label = QLabel("Local Fourier Mode")
-        local_fourier_checkbox = QtGui.QCheckBox(self)
-        local_fourier_checkbox.stateChanged.connect(self.set_local_ft_mode)
-        lf_layout = QHBoxLayout()
-        lf_layout.setContentsMargins(10,0,0,0)
-        lf_layout.addWidget(lf_label)
-        lf_layout.addWidget(local_fourier_checkbox)
-        local_fourier_widget.setLayout(lf_layout)
-        local_fourier.setDefaultWidget(local_fourier_widget)
-        self.transform_menu.addAction(local_fourier)
-        self.transform_menu.local_fourier = local_fourier
-
-        # ===============================
-        # Remove unnecesary default context menu operations
-        # ===============================
-        actions = self.graphItem.ctrlMenu.actions()
-        #1,2,3,5
-        for index in range(len(actions)):
-            self.graphItem.ctrlMenu.removeAction(actions[index])
-        for index in [0, 4, 6, 7, 8, 9, 10]:
-            self.graphItem.ctrlMenu.addAction(actions[index])
-
-    def ammend_context_menu(self):
-        line_controls = self.line_settings_menu.actions()[0::2]
-        key = 0
-        for line in line_controls:
-            line.defaultWidget().layout().itemAt(2).widget().setValue(255*self.settings['line_settings'][str(key)]['line_alpha'])
-            line.defaultWidget().layout().itemAt(4).widget().setValue(self.settings['line_settings'][str(key)]['line_width'])
-            key += 1
+    # def ammend_context_menu(self):
+    #     line_controls = self.line_settings_menu.actions()[0::2]
+    #     key = 0
+    #     for line in line_controls:
+    #         line.defaultWidget().layout().itemAt(2).widget().setValue(255*self.settings['line_settings'][str(key)]['line_alpha'])
+    #         line.defaultWidget().layout().itemAt(4).widget().setValue(self.settings['line_settings'][str(key)]['line_width'])
+    #         key += 1
 
     def add_line_settings_menu(self):
         # ===============================
@@ -664,7 +668,7 @@ class TimePlotGui(QWidget):
                 self.clear_all_plot_data_items()
                 self._init_data_items(self.devicewrapper, new_data = data_fname[0])
                 self.resize_line_settings()
-                self.add_line_settings_menu()
+                self.context_menu.add_line_settings_menu(self.data_table)
                 self.set_custom_settings()
                 # self.ammend_context_menu()
 
