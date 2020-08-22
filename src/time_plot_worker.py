@@ -19,9 +19,13 @@ import time
 import numpy as np
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
 
-from util.workerthread import WorkerThread,WorkerTaskBase
-from util.devicewrapper import DeviceWrapper, DummyDevice
-
+try:
+    from .util.workerthread import WorkerThread,WorkerTaskBase
+    from .util.devicewrapper import DeviceWrapper, DummyDevice
+except SystemError:
+    from util.workerthread import WorkerThread,WorkerTaskBase
+    from util.devicewrapper import DeviceWrapper, DummyDevice
+    
 
 
 

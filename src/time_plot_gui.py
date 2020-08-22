@@ -39,13 +39,20 @@ from PyQt5 import QtCore, Qt, QtGui
 import pyqtgraph as pg
 
 
-from time_plot_worker import TimePlotWorker
-from plot_item_settings import PlotItemSettings, JSONFileHandler
+try:
+    from .time_plot_worker import TimePlotWorker
+    from .plot_item_settings import PlotItemSettings, JSONFileHandler
 
-from util.workerthread import WorkerThread,WorkerTaskBase
-from util.devicewrapper import DeviceWrapper, DummyDevice
-from viewboxv2 import ViewBoxV2
+    from .util.workerthread import WorkerThread,WorkerTaskBase
+    from .util.devicewrapper import DeviceWrapper, DummyDevice
+    from .viewboxv2 import ViewBoxV2
+except SystemError:
+    from time_plot_worker import TimePlotWorker
+    from plot_item_settings import PlotItemSettings, JSONFileHandler
 
+    from util.workerthread import WorkerThread,WorkerTaskBase
+    from util.devicewrapper import DeviceWrapper, DummyDevice
+    from viewboxv2 import ViewBoxV2    
 
 # ============================================================================
 # Excpetion class
