@@ -6,7 +6,6 @@ given device object
 
 
 TODO:
-    * implement multi line functionality
     * figure out way to send command to dummy device instead of just gathering data
     * check how to interface the U6
 
@@ -78,7 +77,7 @@ class TimePlotGui(QWidget):
     restart_signal = QtCore.pyqtSignal()
     DEFAULT_DATA_FILENAME = 'stored_data.json'
 
-    def __init__(self, parent=None, window=None, devicewrapper_lst=None, folder_filename = None, sampling_latency = .01):
+    def __init__(self, parent=None, window=None, devicewrapper_lst=None, folder_filename = None, sampling_latency = .001):
         """ """
         super(TimePlotGui, self).__init__(parent=parent)
 
