@@ -927,13 +927,13 @@ class TimePlotGui(QWidget):
 # ===========================================================================
 #
 # ===========================================================================
-class MainWindow(QMainWindow):
+class TimePlotMainWindow(QMainWindow):
     """ """
     # xpos on screen, ypos on screen, width, height
     DEFAULT_GEOMETRY = [400, 400, 1000, 500]
 
     def __init__(self, devicewrapper_lst=None):
-        super(MainWindow, self).__init__()
+        super(TimePlotMainWindow, self).__init__()
         self._init_ui(devicewrapper_lst=devicewrapper_lst)
 
     def _init_ui(self, window_geometry=None, devicewrapper_lst=None):
@@ -956,8 +956,8 @@ class MainWindow(QMainWindow):
     def setGeometry(self, *args, **kwargs):
         """ """
         if len(args) == 0 and len(kwargs) == 0:
-            args = MainWindow.DEFAULT_GEOMETRY
-        super(MainWindow, self).setGeometry(*args, **kwargs)
+            args = TimePlotMainWindow.DEFAULT_GEOMETRY
+        super(TimePlotMainWindow, self).setGeometry(*args, **kwargs)
 
     def closeEvent(self, event):
         """ """
@@ -969,49 +969,22 @@ class MainWindow(QMainWindow):
 # ===========================================================================
 # main function
 # ===========================================================================
-def main(devicewrapper_lst):
-    """ """
-    app = QApplication.instance()
-    if app is None:
-        app = QApplication(sys.argv)
-    else:
-        print('QApplication instance already exists {}'.format(str(app)))
-    window = MainWindow(devicewrapper_lst=devicewrapper_lst)
-    try:
-        window.show()
-        app.exec_()
-    except:
-        window.closeEvent()
+# def main(devicewrapper_lst):
+#     """ """
+#     app = QApplication.instance()
+#     if app is None:
+#         app = QApplication(sys.argv)
+#     else:
+#         print('QApplication instance already exists {}'.format(str(app)))
+#     window = MainWindow(devicewrapper_lst=devicewrapper_lst)
+#     try:
+#         window.show()
+#         app.exec_()
+#     except:
+#         window.closeEvent()
 
 
 # ===========================================================================
 # run main
 # ===========================================================================
 
-if __name__ == "__main__":
-    dd1 = DummyDevice()
-    dd1.frequency = 1
-    dd1.signal_form = 'sin'
-    dw1 = DeviceWrapper(dd1)
-
-    dd2 = DummyDevice()
-    dd2.frequency = 0.6
-    dw2 = DeviceWrapper(dd2)
-
-    dd3 = DummyDevice()
-    dd3.frequency = 1.3
-    dd3.signal_form = 'sin'
-    dw3 = DeviceWrapper(dd3)
-
-    # main([dw1, dw2])
-    app = QApplication.instance()
-    if app is None:
-        app = QApplication(sys.argv)
-    else:
-        print('QApplication instance already exists {}'.format(str(app)))
-    window = MainWindow(devicewrapper_lst=[dw1, dw2])
-    try:
-        window.show()
-        app.exec_()
-    except:
-        window.closeEvent()

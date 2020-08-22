@@ -1,47 +1,43 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Sun Mar  8 23:42:27 2020
+DeviceWrapper is used to handle value retrieval calls. 
 
+DeviceWrapper creates a thread in which calls to the wrapped device are cued to
+handle hardware calls from different objects as it is the case in gui 
+applications
 
-TODO:
 
 """
 
-
-
+import queue
 import os
 import threading
-import queue
 import time
 
 import numpy as np
 
+try:
+    from .workerthread import WorkerThread, WorkerTaskBase
+    from .dummydevice import DummyDevice
+except SystemError:
+    from workerthread import WorkerThread, WorkerTaskBase
+    from dummydevice import DummyDevice
+    
 
-from .workerthread import WorkerThread, WorkerTaskBase
 
 
-
-# ===========================================================================
-# Exception class
-# ===========================================================================        
 class DeviceWrapperException(Exception):
     pass
 
 
-# ===========================================================================
-# DeviceWrapper class
-# ===========================================================================        
-
 class DeviceWrapper():
     """Wrapper class for device object
-    
     
     Class provides framework to directly call device functions and attributes
     while device is part of a worker thread in the background.
     
-    
-    Example:
+    Example::
         >>> d = SomeDevice()
         >>> d.some_function()
         5
@@ -117,92 +113,6 @@ class DeviceWrapper():
         """
         self.rtn = return_args
         self.wait_for_callback = False
-
-
-
-
-
-
-# ===========================================================================
-# Dummy classes
-# ===========================================================================        
-
-class C():
-    """Dummy class, counts either up or down when count is called """
-    
-    def __init__(self):
-        self.i = 0
-        self.count_direction = 1
-    
-    def count(self):
-        self.i += 1 * self.count_direction
-        print('i: ', self.i)
-        
-    def get_count(self):
-        return self.i
-        
-    def reverse(self):
-        self.count_direction *= -1
-
-class DummyDeviceException(Exception):
-    pass
-
-class DummyDevice():
-    """Dummy class returns sawtooth signal"""
-    
-    def __init__(self):
-        self.xmin = -1
-        self.xmax = 1
-        self.frequency = 0.1    #s
-        self.signal_form = 'sawtooth'
-        self.time0 = time.time()
-        
-    def _calc_value(self):
-        if self.signal_form == 'sawtooth':
-            return self._calc_sawtooth()
-        elif self.signal_form == 'sin':
-            return self._calc_sin()
-        elif self.signal_form == 'xsin':
-            return self._calc_xsin()
-        elif self.signal_form == 'linear':
-            return self._calc_straight_line()
-        elif self.signal_form == 'sinx':
-            return self._calc_sinx()
-        else:
-            raise DummyDeviceException('signal_form variable not know')
-    
-    def _calc_sawtooth(self):
-        dx = self.xmax - self.xmin
-        return  self.xmin + (time.time()*self.frequency % dx)
-    
-    def _calc_sin(self):
-        dx = self.xmax - self.xmin
-        return dx * np.sin(time.time()*self.frequency)
-    
-    def _calc_xsin(self):
-        dx = self.xmax - self.xmin
-        return (time.time()-self.time0)*dx * np.sin(time.time()*self.frequency)
-    
-    def _calc_sinx(self):
-        dx = self.xmax - self.xmin
-        return dx * np.sin(time.time()*self.frequency) / (time.time()-self.time0)
-        
-    
-    def _calc_straight_line(self):
-        return time.time()-self.time0
-        
-    
-    def get_value(self, verbose=False):
-        val = self._calc_value()
-        if verbose is True: print(val)
-        return val
-    
-    def set_frequency(self, f):
-        self.frequency = f
-        
-    def get_frequency(self):
-        return self.frequency
-        
 
 
 # ===========================================================================
