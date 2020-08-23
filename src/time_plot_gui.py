@@ -350,27 +350,49 @@ class TimePlotGui(QWidget):
         self.frequency_state = self.graphItem.ctrl.fftCheck.isChecked()
         self.update_plot_labels()
 
-    def set_frequency_labels(self, key = 'potential'):
+    def set_frequency_labels(self):
+        """sets title, xlabel, and ylabel settings in PlotItem object if 
+        TimePlotGui is in FFT mode
+        
+        """
         labels = self.get_axis_labels()
-        title = 'Fourier Transform of ' + labels['title']
-        title_font_size = str(self.settings['labels']['title_font_size']) + 'pt'
-        x_font_size = str(self.settings['labels']['x_axis_font_size']) + 'pt'
-        y_font_size = str(self.settings['labels']['y_axis_font_size']) + 'pt'
-        self.graphItem.setTitle(title, **{'color': '#FFF', 'size': title_font_size})
-        self.graphItem.setLabel('left', 'Amplitude', **{'color': '#FFF', 'font-size': y_font_size})
-        self.graphItem.setLabel('bottom', 'Frequency',  **{'color': '#FFF', 'font-size': x_font_size})
+        labels.update({
+            'title':    'Fourier Transform of ' + labels['title'],
+            'x_label':  'Frequency [Hz]',
+            'y_label':  'Amplitude'
+        })
+        self._set_labels(**labels)
 
-    def set_time_labels(self, key = 'potential'):
+    def set_time_labels(self):
+        """sets title, xlabel, and ylabel settings in PlotItem object if 
+        TimePlotGui is not in FFT mode
+        
+        """
         labels = self.get_axis_labels()
-        title_font_size = str(self.settings['labels']['title_font_size']) + 'pt'
-        x_font_size = str(self.settings['labels']['x_axis_font_size']) + 'pt'
-        y_font_size = str(self.settings['labels']['y_axis_font_size']) + 'pt'
-        self.graphItem.setTitle(labels['title'], **{'color': '#FFF', 'size': title_font_size})
-        self.graphItem.setLabel('left', labels['y_label'], **{'color': '#FFF', 'font-size': y_font_size})
-        self.graphItem.setLabel('bottom', labels['x_label'], **{'color': '#FFF', 'font-size': x_font_size})
+        self._set_labels(**labels)
+
+
+    def _set_labels(self, title, title_font_size, title_font_color, x_label, 
+                    x_font_size, x_font_color, y_label, y_font_size, 
+                    y_font_color):
+        """sets title, xlabel, and ylabel settings in PlotItem object"""
+        self.graphItem.setTitle(
+            title, 
+            color=title_font_color, 
+            size=title_font_size
+        )
+        self.graphItem.setLabel(
+            'left', y_label, 
+            **{'color':y_font_color, 'font-size': y_font_size}
+        )
+        self.graphItem.setLabel(
+            'bottom', x_label,  
+            **{'color': x_font_color, 'font-size': x_font_size}
+        )
+        return        
 
     def get_axis_labels(self):
-        """returns dictionary with formated xlabel, ylabel, and title string
+        """returns dictionary with formated xlabel, ylabel, and title settings
         
         Formating of the displayed xlabel, ylabel, and title strings is defined
         in this function. The *axis_data_type* and *axis_unit* stored in the 
@@ -378,6 +400,8 @@ class TimePlotGui(QWidget):
         
         """
         tmp = self.settings['labels'].copy()
+        
+        # concatenate label strings
         labels = {
             'x_label':  '{} [{}]'.format(
                                         tmp['x_axis_data_type'], 
@@ -389,6 +413,21 @@ class TimePlotGui(QWidget):
                                         ),
             'title':    tmp['title_text']
         }
+        
+        # reformat font_size values
+        labels.update({
+            'x_font_size':          str(tmp['x_axis_font_size']) + 'pt',
+            'y_font_size':          str(tmp['y_axis_font_size']) + 'pt',
+            'title_font_size':      str(tmp['title_font_size']) + 'pt'
+        })
+
+        # extract color values        
+        labels.update({
+            'x_font_color':          tmp['x_axis_font_color'],
+            'y_font_color':          tmp['y_axis_font_color'],
+            'title_font_color':      tmp['title_font_color']
+        })
+        
         return labels
 
     def save_current_settings(self):
