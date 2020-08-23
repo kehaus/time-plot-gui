@@ -304,7 +304,7 @@ class TimePlotGui(QWidget):
                 self.settings['line_settings'].popitem()
 
 
-    def set_custom_settings(self, label_key = 'potential'):
+    def set_custom_settings(self):
         # ===============================
         # Set all of the parameters accoringing to the settings parameters
         # ===============================
