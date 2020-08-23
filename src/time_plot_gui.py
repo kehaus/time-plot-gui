@@ -925,7 +925,7 @@ class TimePlotGui(QWidget):
 
 
 # ===========================================================================
-#
+# MainWindow
 # ===========================================================================
 class TimePlotMainWindow(QMainWindow):
     """ """
@@ -952,7 +952,6 @@ class TimePlotMainWindow(QMainWindow):
         self.layout.addWidget(self.time_plot_ui.central_wid, 0, 0, 1, 1)
         self.test_widget.setLayout(self.layout)
 
-
     def setGeometry(self, *args, **kwargs):
         """ """
         if len(args) == 0 and len(kwargs) == 0:
@@ -966,25 +965,4 @@ class TimePlotMainWindow(QMainWindow):
 #        event.accept
 
 
-# ===========================================================================
-# main function
-# ===========================================================================
-# def main(devicewrapper_lst):
-#     """ """
-#     app = QApplication.instance()
-#     if app is None:
-#         app = QApplication(sys.argv)
-#     else:
-#         print('QApplication instance already exists {}'.format(str(app)))
-#     window = MainWindow(devicewrapper_lst=devicewrapper_lst)
-#     try:
-#         window.show()
-#         app.exec_()
-#     except:
-#         window.closeEvent()
-
-
-# ===========================================================================
-# run main
-# ===========================================================================
 
