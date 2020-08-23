@@ -305,30 +305,67 @@ class TimePlotGui(QWidget):
 
 
     def set_custom_settings(self):
-        # ===============================
-        # Set all of the parameters accoringing to the settings parameters
-        # ===============================
-        self.graphItem.setLogMode(x = self.settings['xscalelog'], y = self.settings['yscalelog'])
-        self.graphItem.showGrid(x = self.settings['xgridlines'], y = self.settings['ygridlines'], \
-                                alpha = self.settings['gridopacity'])
+        """change PlotItem settings with values from settings dictionary
+        """
+        
+        # Log mode
+        self.graphItem.setLogMode(
+            x = self.settings['xscalelog'], 
+            y = self.settings['yscalelog']
+        )
+        
+        # grid lines
+        self.graphItem.showGrid(
+            x = self.settings['xgridlines'], 
+            y = self.settings['ygridlines'], 
+            alpha = self.settings['gridopacity']
+        )
+        
+        # line settings
         self.set_line_settings()
+        
+        # autpan
         self.viewbox.setAutoPan(x = self.settings['autoPan'])
-        self.viewbox.setRange(xRange = self.settings['xlim'], yRange = self.settings['ylim'])
-        self.viewbox.enableAutoRange(x = self.settings['xautorange'], y = self.settings['yautorange'])
-        self.data_options.automatic_clear_checkbox.setChecked(self.settings['auto_clear_data'])
-        self.viewbox.setMouseEnabled(x = self.settings['x_zoom'], y = self.settings['y_zoom'])
+        
+        # axis limits
+        self.viewbox.setRange(
+            xRange = self.settings['xlim'], 
+            yRange = self.settings['ylim']
+        )
+        
+        # autorange
+        self.viewbox.enableAutoRange(
+            x = self.settings['xautorange'], 
+            y = self.settings['yautorange']
+        )
+        
+        # auto_clear
+        self.data_options.automatic_clear_checkbox.setChecked(
+            self.settings['auto_clear_data']
+        )
+        
+        # zoom
+        self.viewbox.setMouseEnabled(
+            x = self.settings['x_zoom'], 
+            y = self.settings['y_zoom']
+        )
+        
+        # mouse mode
         if self.settings['mouseMode'] == 1:
             self.viewbox.setLeftButtonAction(mode = 'rect')
         else:
             self.viewbox.setLeftButtonAction(mode = 'pan')
+            
+        # frequency state
         self.frequency_state = self.settings['frequency_state']
         self.graphItem.ctrl.fftCheck.setChecked(self.frequency_state)
+        
+        # autosave
         self.set_all_autosave(self.settings['do_autosave'])
         self.set_all_autosave_nr(self.settings['autosave_nr'])
+        
+        # time stamp
         self.change_time_markers(self.settings['relative_timestamp'])
-        # ===============================
-        # Assign axis labels accordingly
-        # ===============================
         self.update_plot_labels()
 
     def set_line_settings(self):
