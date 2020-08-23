@@ -305,7 +305,7 @@ class TimePlotGui(QWidget):
 
 
     def set_custom_settings(self):
-        """change PlotItem settings with values from settings dictionary
+        """updates PlotItem settings with values from settings dictionary
         """
         
         # Log mode
@@ -369,12 +369,22 @@ class TimePlotGui(QWidget):
         self.update_plot_labels()
 
     def set_line_settings(self):
-        for key in self.data_table:
-            time_data_item = self.data_table[key]
+        """updates PlotDataItem settings with values from settings dictionary
+        """
+        for line_nr, time_data_item in self.data_table.items():
             data_item = time_data_item.get_plot_data_item()
-            data_item.setAlpha(alpha = self.settings['line_settings'][str(key)]['line_alpha'], auto = False)
-            data_item.setPen(pg.mkPen(width = self.settings['line_settings'][str(key)]['line_width'], \
-                            color = self.settings['line_settings'][str(key)]['line_color']))
+            line_setting = self.settings['line_settings'][str(line_nr)]
+            
+            data_item.setAlpha(
+                alpha = line_setting['line_alpha'], 
+                auto = False
+            )
+            data_item.setPen(
+                pg.mkPen(
+                    width = line_setting['line_width'],
+                    color = line_setting['line_color']
+                )
+            )
             data_item.setFftMode(self.settings['frequency_state'])
 
     def update_plot_labels(self):
