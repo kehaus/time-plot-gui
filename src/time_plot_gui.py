@@ -776,16 +776,26 @@ class TimePlotGui(QWidget):
 
     def open_finder(self):
         self.started = False
-        data_fname = QFileDialog.getOpenFileName(self, 'Open file', '~/',"JSON files (*.json)")
-        if data_fname[0] !='':
-            settings_fname = QFileDialog.getOpenFileName(self, 'Open file', '~/',"JSON files (*.json)")
-            if settings_fname[0] !='':
+        data_fname, file_info = QFileDialog.getOpenFileName(
+            self, 
+            'Select data file', 
+            '~/',"JSON files (*.json)"
+        )
+        if data_fname != '':
+            settings_fname, file_info = QFileDialog.getOpenFileName(
+                self, 
+                'Select settings file', 
+                '~/',"JSON files (*.json)"
+            )
+            if settings_fname !='':
                 del self.plot_item_settings
-                self.plot_item_settings = PlotItemSettings(unusal_settings_file = settings_fname[0])
+                self.plot_item_settings = PlotItemSettings(
+                    unusal_settings_file = settings_fname
+                )
                 self.settings = self.plot_item_settings.settings
-            if data_fname[0] is not None:
+            if data_fname is not None:
                 self.clear_all_plot_data_items()
-                self._init_data_items(self.devicewrapper, new_data = data_fname[0])
+                self._init_data_items(self.devicewrapper, new_data = data_fname)
                 self.resize_line_settings()
                 self.add_line_settings_menu()
                 self.set_custom_settings()
@@ -799,14 +809,14 @@ class TimePlotGui(QWidget):
             if not self.graphItem.ctrl.fftCheck.isChecked():
                 for dataitem in self.data_table.values():
                     dataitem.start_local_ft_mode()
-                    print('%%%%%% started local fourier mode')
+                    # print('%%%%%% started local fourier mode')
             else:
                 self.transform_menu.local_fourier.defaultWidget().layout().itemAt(1).widget().setChecked(False)
                 self.local_ft_error()
         else:
             for dataitem in self.data_table.values():
                 dataitem.stop_local_ft_mode()
-                print('%%%%%% stopped local fourier mode')
+                # print('%%%%%% stopped local fourier mode')
         return
 
     def clear_all_plot_data_items(self):
@@ -1022,14 +1032,22 @@ class TimePlotGui(QWidget):
         self.stop_signal.emit()
 
     def update_datapoint(self, id_nr, val, time_val):
-        """updates TimePlotDataItem object with corresponding to id_nr"""
+        """updates TimePlotDataItem object with corresponding id_nr"""
+        
+        # save current state
         frequency_state = self.frequency_state
         x_log_check = self.x_log_check.isChecked()
         y_log_check = self.y_log_check.isChecked()
+        
+        # disable FFT, x log, and y log state
         self.graphItem.ctrl.fftCheck.setChecked(False)
         self.x_log_check.setChecked(False)
         self.y_log_check.setChecked(False)
+        
+        # update value
         self.data_table[id_nr].append_value(val, time_val)
+        
+        # reinstate FFT, x log, and y log state
         self.graphItem.ctrl.fftCheck.setChecked(frequency_state)
         self.x_log_check.setChecked(x_log_check)
         self.y_log_check.setChecked(y_log_check)
