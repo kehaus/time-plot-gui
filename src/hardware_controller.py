@@ -7,7 +7,7 @@ settings
 
 
 TODO:
-    * included detaile description on how to design the PrimaryWindow
+    * included detaile description on how to design the HardwareController
 
 """
 __version__ = "1.0.0"

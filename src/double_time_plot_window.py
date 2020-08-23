@@ -1,3 +1,15 @@
+"""
+This example script shows a minimal example for creating a gui object 
+containing two TimePlotGui objects.
+
+
+TODO:
+    * included detaile description on how to design the DoubleTimePlotWindow
+
+"""
+__version__ = "1.0.0"
+
+
 import os
 from os import path
 import ctypes as ct
@@ -16,23 +28,25 @@ from PyQt5.QtGui import QIcon, QFont, QCursor, QRegion, QPolygon, QWindow
 from PyQt5 import QtCore, Qt, QtGui
 import pyqtgraph as pg
 
-from time_plot_gui import TimePlotGui, MainWindow
-from util.devicewrapper import DeviceWrapper, DummyDevice
+from time_plot_gui import TimePlotGui
+from util.devicewrapper import DeviceWrapper
+from util.dummydevice import DummyDevice
 
 
-class PrimaryWindow(QMainWindow):
+class DoubleTimePlotWindow(QMainWindow):
     """ """
     # xpos on screen, ypos on screen, width, height
     DEFAULT_GEOMETRY = [400, 200, 1000, 500]
 
-    def __init__(self, devicewrapper_lst1 = None, devicewrapper_lst2 = None):
-        super(PrimaryWindow, self).__init__()
-        self._init_ui(devicewrapper_lst1 = devicewrapper_lst1, devicewrapper_lst2 = devicewrapper_lst2)
+    def __init__(self, devicewrapper_lst1, devicewrapper_lst2):
+        super(DoubleTimePlotWindow, self).__init__()
+        self._init_ui(devicewrapper_lst1, devicewrapper_lst2)
 
-    def _init_ui(self, window_geometry=None, devicewrapper_lst1=None, devicewrapper_lst2 = None):
+    def _init_ui(self, devicewrapper_lst1, devicewrapper_lst2):
         self.setGeometry()
         self.setWindowTitle('time-plot')
         self.setStyleSheet("background-color: black;")
+        
         # ===============================
         # Create TimePlotGui objects
         # ===============================
@@ -48,45 +62,46 @@ class PrimaryWindow(QMainWindow):
             devicewrapper_lst=devicewrapper_lst2,
             folder_filename = "gui2"
         )
-        self.test_widget = QWidget()
-        self.layout = QGridLayout()
-        self.setCentralWidget(self.test_widget)
 
         # ===============================
-        # This is where you would add additional widgets or reorganize the layout of the widgets
+        # Customize UI
+        #    This part sets up the control panel for communicating with the
+        #    connected hardware
         # ===============================
+        self.wdget = QWidget()
+        self.layout = QGridLayout()
+        self.setCentralWidget(self.wdget)
+        
         self.layout.addWidget(self.time_plot_ui1.central_wid, 0, 0, 1, 1)
         self.layout.addWidget(self.time_plot_ui2.central_wid, 0, 1, 1, 1)
-        # ===============================
-        # ===============================
-
-        self.test_widget.setLayout(self.layout)
-
+        
+        self.wdget.setLayout(self.layout)
+    
 
     def setGeometry(self, *args, **kwargs):
         """ """
         if len(args) == 0 and len(kwargs) == 0:
             print('here')
-            args = PrimaryWindow.DEFAULT_GEOMETRY
-        super(PrimaryWindow, self).setGeometry(*args, **kwargs)
+            args = DoubleTimePlotWindow.DEFAULT_GEOMETRY
+        super(DoubleTimePlotWindow, self).setGeometry(*args, **kwargs)
+
 
     def closeEvent(self, event):
         """ """
-        print('event')
         # ===============================
-        # close all the TimePlotGui objects. To avoid repeated popups, set auto_accept to True in all but one object
-        # (You can set all auto_accept arguments to True but it is not recommended so you dont close the gui accidentally)
+        # close all the TimePlotGui objects. To avoid repeated popups, set 
+        # auto_accept to True in all but one object (You can set all 
+        # auto_accept arguments to True but it is not recommended so you dont 
+        # close the gui accidentally)
         # ===============================
         close_accepted = self.time_plot_ui1.closeEvent(event)
         if close_accepted:
             self.time_plot_ui2.closeEvent(event, auto_accept = True)
-#        event.accept
 
-    def create_subwindow(self, width, height):
-        self.subwindow = SubWindow()
-        self.subwindow.create_window(width, height)
-        self.subwindow.show()
 
+# ============================================================================
+# main function
+# ============================================================================
 def main(devicewrapper_lst1, devicewrapper_lst2):
     """ """
     app = QApplication.instance()
@@ -94,7 +109,7 @@ def main(devicewrapper_lst1, devicewrapper_lst2):
         app = QApplication(sys.argv)
     else:
         print('QApplication instance already exists {}'.format(str(app)))
-    window = PrimaryWindow(
+    window = DoubleTimePlotWindow(
         devicewrapper_lst1=devicewrapper_lst1,
         devicewrapper_lst2=devicewrapper_lst2
     )
@@ -104,22 +119,33 @@ def main(devicewrapper_lst1, devicewrapper_lst2):
     except:
         window.closeEvent()
 
+    
+# ============================================================================
+# main routine
+# ============================================================================
 if __name__ == "__main__":
-    dd1 = DummyDevice()
-    dd1.frequency = 1
-    dd1.signal_form = 'sin'
+    # ===============================
+    # initilazed hardware wrapper (mocked)
+    # ===============================
+    dd1 = DummyDevice(
+        signal_form='sin',
+        frequency=1
+    )
     dw1 = DeviceWrapper(dd1)
 
-    dd2 = DummyDevice()
-    dd2.frequency = 0.6
+    dd2 = DummyDevice(
+        frequency=0.6
+    )
     dw2 = DeviceWrapper(dd2)
+    
 
-    dd3 = DummyDevice()
-    dd3.frequency = 1.3
-    dd3.signal_form = 'sin'
+    dd3 = DummyDevice(
+        signal_form='sin',
+        frequency=1.3
+    )
     dw3 = DeviceWrapper(dd3)
-
-# ===============================
-# Specify devicewrapper_lst for each TimePlotGui object
-# ===============================
+    # ===============================
+    # initialized UI
+    # ===============================
     main([dw1], [dw2, dw3])
+
