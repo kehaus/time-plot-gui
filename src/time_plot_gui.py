@@ -952,28 +952,49 @@ class TimePlotGui(QWidget):
             self.worker_table.update({idx: worker})
 
     def leaving_fft_mode(self):
+        
+        msg = """
+        You are exiting FFT Transform mode and entering Time Dependence 
+        mode. If you would like to re-enter FFT Transform mode, you may 
+        do so from the context menu.
+        """
         mode_change_popup = QMessageBox()
-        mode_change_popup.setText("You are exiting FFT Transform mode and entering Time Dependence mode." \
-            "If you would like to re-enter FFT Transform mode, you may do so from the context menu.")
+        mode_change_popup.setText(msg)
         mode_change_popup.setIcon(QMessageBox.Information)
         mode_change_popup.exec_()
 
     def local_ft_error(self):
+        
+        msg = """
+        You are already in FFT mode. If you would like a local transform,
+        please select a region in Time Dependence mode.
+        """
         local_ft_error = QMessageBox()
-        local_ft_error.setText("You are already in FFT mode. If you would like a local transform," \
-            "please select a region in Time Dependence mode.")
+        local_ft_error.setText(msg)
         local_ft_error.setIcon(QMessageBox.Information)
         local_ft_error.exec_()
 
     def y_autopan_warning(self):
+        
+        msg = """
+        Auopanning functionality for the y axis is not supported.
+        """
         y_autopan_warning = QMessageBox()
-        y_autopan_warning.setText("Auopanning functionality for the y axis is not supported.")
+        y_autopan_warning.setText(msg)
         y_autopan_warning.setIcon(QMessageBox.Information)
         y_autopan_warning.exec_()
 
 
 
     def start_thread(self):
+        """start data acquisition in worker thread
+        
+        if clauses handle the following causes: previous data are removed if
+        autoclear button is checked. FFT mode is switched off and warning 
+        QMessage is emitted if previous data is removed.
+
+
+        """ 
         if self.start_button_counter == 0:
             self.start_button_counter += 1
             is_checked = False
@@ -1012,10 +1033,6 @@ class TimePlotGui(QWidget):
         self.graphItem.ctrl.fftCheck.setChecked(frequency_state)
         self.x_log_check.setChecked(x_log_check)
         self.y_log_check.setChecked(y_log_check)
-
-    # def __del__(self):
-    #     print('it worked!?')
-    #     #super(self, TimePlotGui).__del__()
 
 
     @QtCore.pyqtSlot(int, float, float)
