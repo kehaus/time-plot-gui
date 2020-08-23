@@ -77,7 +77,7 @@ class TimePlotGui(QWidget):
     restart_signal = QtCore.pyqtSignal()
     DEFAULT_DATA_FILENAME = 'stored_data.json'
 
-    def __init__(self, parent=None, window=None, devicewrapper_lst=None, folder_filename = None, sampling_latency = .001):
+    def __init__(self, parent=None, window=None, devicewrapper_lst=None, folder_filename = None, sampling_latency = .005):
         """ """
         super(TimePlotGui, self).__init__(parent=parent)
 
@@ -351,7 +351,7 @@ class TimePlotGui(QWidget):
         self.update_plot_labels()
 
     def set_frequency_labels(self, key = 'potential'):
-        labels = self.get_axis_labels(key)
+        labels = self.get_axis_labels()
         title = 'Fourier Transform of ' + labels['title']
         title_font_size = str(self.settings['labels']['title_font_size']) + 'pt'
         x_font_size = str(self.settings['labels']['x_axis_font_size']) + 'pt'
@@ -361,7 +361,7 @@ class TimePlotGui(QWidget):
         self.graphItem.setLabel('bottom', 'Frequency',  **{'color': '#FFF', 'font-size': x_font_size})
 
     def set_time_labels(self, key = 'potential'):
-        labels = self.get_axis_labels(key)
+        labels = self.get_axis_labels()
         title_font_size = str(self.settings['labels']['title_font_size']) + 'pt'
         x_font_size = str(self.settings['labels']['x_axis_font_size']) + 'pt'
         y_font_size = str(self.settings['labels']['y_axis_font_size']) + 'pt'
@@ -369,22 +369,26 @@ class TimePlotGui(QWidget):
         self.graphItem.setLabel('left', labels['y_label'], **{'color': '#FFF', 'font-size': y_font_size})
         self.graphItem.setLabel('bottom', labels['x_label'], **{'color': '#FFF', 'font-size': x_font_size})
 
-    def get_axis_labels(self, key = 'potential'):
+    def get_axis_labels(self):
+        """returns dictionary with formated xlabel, ylabel, and title string
+        
+        Formating of the displayed xlabel, ylabel, and title strings is defined
+        in this function. The *axis_data_type* and *axis_unit* stored in the 
+        settings dictionary are used to construct the x and ylabel strings
+        
+        """
+        tmp = self.settings['labels'].copy()
         labels = {
-                'x_label':  '',
-                'y_label':  '',
-                'title':    ''
+            'x_label':  '{} [{}]'.format(
+                                        tmp['x_axis_data_type'], 
+                                        tmp['x_axis_unit']
+                                        ),
+            'y_label':  '{} [{}]'.format(
+                                        tmp['y_axis_data_type'], 
+                                        tmp['y_axis_unit']
+                                        ),
+            'title':    tmp['title_text']
         }
-        labels['x_label'] = self.settings['labels']['x_axis_data_type'] + " (" + self.settings['labels']['x_axis_unit'] + ")"
-        labels['y_label'] = self.settings['labels']['y_axis_data_type'] + " (" + self.settings['labels']['y_axis_unit'] + ")"
-        if self.settings['labels']['title_text'] is None:
-            labels['title'] = labels['x_label'] + ' 0ver ' + labels['y_label']
-        else:
-            labels['title'] = self.settings['labels']['title_text']
-        if self.settings['xscalelog']:
-            labels['x_label'] += '\n(Log Scale)'
-        if self.settings['yscalelog']:
-            labels['y_label'] += '\n(Log Scale)'
         return labels
 
     def save_current_settings(self):
