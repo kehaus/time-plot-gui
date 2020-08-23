@@ -35,7 +35,7 @@ from util.dummydevice import DummyDevice
 
 class DoubleTimePlotWindow(QMainWindow):
     """ """
-    # xpos on screen, ypos on screen, width, height
+    
     DEFAULT_GEOMETRY = [400, 200, 1000, 500]
 
     def __init__(self, devicewrapper_lst1, devicewrapper_lst2):
@@ -65,8 +65,7 @@ class DoubleTimePlotWindow(QMainWindow):
 
         # ===============================
         # Customize UI
-        #    This part sets up the control panel for communicating with the
-        #    connected hardware
+        #    This part sets up the control panel with the two TimePlotGui QWidgets
         # ===============================
         self.wdget = QWidget()
         self.layout = QGridLayout()
