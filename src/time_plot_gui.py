@@ -324,7 +324,7 @@ class TimePlotGui(QWidget):
         # line settings
         self.set_line_settings()
         
-        # autpan
+        # autopan
         self.viewbox.setAutoPan(x = self.settings['autoPan'])
         
         # axis limits
@@ -366,6 +366,8 @@ class TimePlotGui(QWidget):
         
         # time stamp
         self.change_time_markers(self.settings['relative_timestamp'])
+        
+        # labels
         self.update_plot_labels()
 
     def set_line_settings(self):
@@ -478,41 +480,51 @@ class TimePlotGui(QWidget):
         return labels
 
     def save_current_settings(self):
-        # ===============================
-        # Get Viewbox so both viewbox and PlotItem (self.graphItem) parameters are accessible
-        # ===============================
-        viewboxstate = self.viewbox.getState()
-        # ===============================
-        # Save setting: Line settings
-        # ===============================
+        """updates settings dictionary from settings in PloIem and saves then 
+        to JSON file
+        """
         self.save_line_settings()
-        # ===============================
-        # Save setting: All other settings
-        # ===============================
-        self.plot_item_settings.save_settings(
-            autoPan = viewboxstate['autoPan'][0],
-            xscalelog = self.graphItem.ctrl.logXCheck.isChecked(),
-            yscalelog = self.graphItem.ctrl.logYCheck.isChecked(),
-            xlim = viewboxstate['targetRange'][0],
-            ylim = viewboxstate['targetRange'][1],
-            xautorange = viewboxstate['autoRange'][0],
-            yautorange = viewboxstate['autoRange'][1],
-            xgridlines = self.graphItem.ctrl.xGridCheck.isChecked(),
-            ygridlines = self.graphItem.ctrl.yGridCheck.isChecked(),
-            gridopacity = self.graphItem.ctrl.gridAlphaSlider.value()/255,
-            plotalpha = self.graphItem.alphaState(),
-            mouseMode = viewboxstate['mouseMode'],
-            x_zoom = viewboxstate['mouseEnabled'][0],
-            y_zoom = viewboxstate['mouseEnabled'][0],
-            auto_clear_data = self.data_options.automatic_clear_checkbox.isChecked(),
-            # frequency_state = False
-            frequency_state = self.graphItem.ctrl.fftCheck.isChecked(),
-            labels = self.settings['labels'],
-            do_autosave = self.data_options.autosave.defaultWidget().layout().itemAt(0).widget().isChecked(),
-            autosave_nr = self.data_options.autosave.defaultWidget().layout().itemAt(1).widget().value(),
-            autoVisibleOnly_x = self.autoVisibleOnly_x.isChecked(),
-            autoVisibleOnly_y = self.autoVisibleOnly_y.isChecked(),
-        )
+        viewboxstate = self.viewbox.getState()
+        settings = {
+          # log mode
+            'xscalelog':        self.graphItem.ctrl.logXCheck.isChecked(),
+            'yscalelog':        self.graphItem.ctrl.logYCheck.isChecked(),
+          # grid lines
+            'xgridlines':       self.graphItem.ctrl.xGridCheck.isChecked(),
+            'ygridlines':       self.graphItem.ctrl.yGridCheck.isChecked(),
+            'gridopacity':      self.graphItem.ctrl.gridAlphaSlider.value()/255,
+          # autopan
+            'autoPan':          viewboxstate['autoPan'][0],
+          # axis limits
+            'xlim':             viewboxstate['targetRange'][0],
+            'ylim':             viewboxstate['targetRange'][1],
+          # autorange
+            'xautorange':       viewboxstate['autoRange'][0],
+            'yautorange':       viewboxstate['autoRange'][1],
+          # auto clear
+            'auto_clear_data':  self.data_options.automatic_clear_checkbox.isChecked(),
+          # zoom
+            'x_zoom':           viewboxstate['mouseEnabled'][0],
+            'y_zoom':           viewboxstate['mouseEnabled'][1],
+          # mouse mode
+            'mouseMode':        viewboxstate['mouseMode'],
+          # frequency
+            'frequency_state':  self.graphItem.ctrl.fftCheck.isChecked(),
+          # autosave
+            'do_autosave':      self.data_options.autosave.defaultWidget().layout().itemAt(0).widget().isChecked(),
+            'autosave_nr':      self.data_options.autosave.defaultWidget().layout().itemAt(1).widget().value(),
+          # time stamp
+            
+          # labels
+            'labels':           self.settings['labels'],
+          # auto visible only
+            'autoVisibleOnly_x': self.autoVisibleOnly_x.isChecked(),
+            'autoVisibleOnly_y': self.autoVisibleOnly_y.isChecked(),
+        # alpha
+            'plotalpha':        self.graphItem.alphaState(),
+            
+        }
+        self.plot_item_settings.save_settings(**settings)
 
     def restore_default_settings(self):
         temp_line_settings = self.settings['line_settings']
