@@ -451,15 +451,25 @@ class TimePlotGui(QWidget):
         tmp = self.settings['labels'].copy()
         
         # concatenate label strings
+        if tmp['x_axis_unit'] == '':
+            x_label = tmp['x_axis_data_type']
+        else:
+            x_label = '{} [{}]'.format(
+                tmp['x_axis_data_type'], 
+                tmp['x_axis_unit']
+            )
+            
+        if tmp['y_axis_unit'] == '':
+            y_label = tmp['y_axis_data_type']
+        else:
+            y_label = '{} [{}]'.format(
+                tmp['y_axis_data_type'], 
+                tmp['y_axis_unit']
+            )
+        
         labels = {
-            'x_label':  '{} [{}]'.format(
-                                        tmp['x_axis_data_type'], 
-                                        tmp['x_axis_unit']
-                                        ),
-            'y_label':  '{} [{}]'.format(
-                                        tmp['y_axis_data_type'], 
-                                        tmp['y_axis_unit']
-                                        ),
+            'x_label':  x_label,
+            'y_label':  y_label,
             'title':    tmp['title_text']
         }
         
@@ -874,27 +884,34 @@ class TimePlotGui(QWidget):
             data_item.reset_absolute_time(absolute_time=self.t0)
 
     def change_title(self):
-        title, acccepted = QInputDialog.getText(self, 'Change Title',
-                                        'Enter New Title:')
+        title, acccepted = QInputDialog.getText(
+            self, 
+            'Change title',
+            'Enter new title:'
+        )
         if acccepted:
-            self.graphItem.setTitle(title)
             self.settings['labels']['title_text'] = title
+            self.update_plot_labels()
 
     def change_x_axis_label(self):
-        axis_label, acccepted = QInputDialog.getText(self, 'Change Title',
-                                        'Enter New Title:')
+        axis_label, acccepted = QInputDialog.getText(
+            self, 
+            'Change x axis label',
+            'Enter new label:'
+        )
         if acccepted:
-            self.graphItem.setLabel('bottom', axis_label)
             self.settings['labels']['x_axis_data_type'] = axis_label
-        dialog = QDialog()
-        dialog.open()
+            self.update_plot_labels()
 
     def change_y_axis_label(self):
-        axis_label, acccepted = QInputDialog.getText(self, 'Change Title',
-                                        'Enter New Title:')
+        axis_label, acccepted = QInputDialog.getText(
+            self, 
+            'Change y axis label',
+            'Enter new label:'
+        )
         if acccepted:
-            self.graphItem.setLabel('left', axis_label)
             self.settings['labels']['y_axis_data_type'] = axis_label
+            self.update_plot_labels()
 
     def _set_central_wid_properties(self):
         """ """
