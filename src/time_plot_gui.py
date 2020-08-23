@@ -805,8 +805,9 @@ class TimePlotGui(QWidget):
             self.graphItem.removeItem(data_item)
 
     def save_data_settings(self):
-        self.plot_item_settings.save_settings( \
-            auto_clear_data = self.data_options.automatic_clear_checkbox.isChecked())
+        self.plot_item_settings.save_settings(
+            auto_clear_data = self.data_options.automatic_clear_checkbox.isChecked()
+        )
 
     def save_line_settings(self):
         line_controls = self.line_settings_menu.actions()[0::2]
@@ -821,20 +822,31 @@ class TimePlotGui(QWidget):
         self.plot_item_settings.save_settings(line_settings = self.settings['line_settings'])
 
     def store_all_data(self):
+        """store all data objects 
+        
+        Function stores data of every data_item by calling its store_data(). 
+        To avoid problems when importing data the next time this function 
+        temporarily disables FFT, x log, and y log mode.
+        
         """
-        **inehrits store_current_data function to adjust for multi-line-plotting**
-
-        """
+        
+        # save current state
         frequency_state = self.frequency_state
         x_log_check = self.x_log_check.isChecked()
         y_log_check = self.y_log_check.isChecked()
+        
+        # disable FFT, x log, and y log mode
         self.graphItem.ctrl.fftCheck.setChecked(False)
         self.x_log_check.setChecked(False)
         self.y_log_check.setChecked(False)
+        
+        # sava data
         if path.exists(self.data_fn):
             os.remove(self.data_fn)
         for data_item in self.data_table.values():
             data_item.store_data()
+        
+        # restore FFT,x log, and y log states
         self.graphItem.ctrl.fftCheck.setChecked(frequency_state)
         self.x_log_check.setChecked(x_log_check)
         self.y_log_check.setChecked(y_log_check)
@@ -852,8 +864,9 @@ class TimePlotGui(QWidget):
 
 
     def clear_all_data(self):
-        """
-        **inherits clear_current_data function to adjust for multi-line-plotting**
+        """clears data in all data items bby calling the corresponding clear()
+        function
+        
         """
         self.reset_absolute_time_stamp()
         for data_item in self.data_table.values():
