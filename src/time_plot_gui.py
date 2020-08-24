@@ -219,12 +219,17 @@ class TimePlotGui(QWidget):
 
 
     def _init_data_items(self, devicewrapper_lst, new_data = None):
+        """ """
+        
         self.data_table = {}
-        #for id_nr, dw in enumerate(devicewrapper_lst):
-        #for id_nr in range(len(self.settings['line_settings'])):
+        
         id_nr = 0
         while True:
-            data_item = TimePlotDataItem(data_fn = self.data_fn, id_nr=id_nr, absolute_time=self.t0)
+            data_item = TimePlotDataItem(
+                data_fn = self.data_fn, 
+                id_nr=id_nr, 
+                absolute_time=self.t0
+            )
             if new_data is None:
                 data_item.recall_data(self.data_fn)
             elif new_data is not None:

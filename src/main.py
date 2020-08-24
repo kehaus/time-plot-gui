@@ -25,7 +25,7 @@ except SystemError:
 # Create DummyDevice to mock connected hardware
 # ============================================================================
 dd1 = DummyDevice(
-    signal_form='random', xmin=0, xmax=500,
+    signal_form='random', xmin=0, xmax=2,
     frequency=5
 )
 dw1 = DeviceWrapper(dd1)
@@ -50,7 +50,7 @@ if app is None:
     app = QApplication(sys.argv)
 else:
     print('QApplication instance already exists {}'.format(str(app)))
-window = TimePlotMainWindow(devicewrapper_lst=dw1)
+window = TimePlotMainWindow(devicewrapper_lst=[dw1, dw2])
 try:
     window.show()
     app.exec_()
