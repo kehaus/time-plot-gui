@@ -20,7 +20,7 @@ import pyqtgraph as pg
 
 try:
     from .plot_item_settings import PlotItemSettings, JSONFileHandler
-except SystemError:
+except:
     from plot_item_settings import PlotItemSettings, JSONFileHandler
 
 
