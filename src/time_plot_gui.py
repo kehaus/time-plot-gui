@@ -308,7 +308,7 @@ class TimePlotGui(QWidget):
         self.viewbox.setAutoPan(x = self.settings['autoPan'])
         self.viewbox.setRange(xRange = self.settings['xlim'], yRange = self.settings['ylim'])
         self.viewbox.enableAutoRange(x = self.settings['xautorange'], y = self.settings['yautorange'])
-        self.data_options.automatic_clear_checkbox.setChecked(self.settings['auto_clear_data'])
+        self.context_menu.data_options.automatic_clear_checkbox.setChecked(self.settings['auto_clear_data'])
         self.viewbox.setMouseEnabled(x = self.settings['x_zoom'], y = self.settings['y_zoom'])
         if self.settings['mouseMode'] == 1:
             self.viewbox.setLeftButtonAction(mode = 'rect')
@@ -407,14 +407,14 @@ class TimePlotGui(QWidget):
             mouseMode = viewboxstate['mouseMode'],
             x_zoom = viewboxstate['mouseEnabled'][0],
             y_zoom = viewboxstate['mouseEnabled'][0],
-            auto_clear_data = self.data_options.automatic_clear_checkbox.isChecked(),
+            auto_clear_data = self.context_menu.data_options.automatic_clear_checkbox.isChecked(),
             # frequency_state = False
             frequency_state = self.graphItem.ctrl.fftCheck.isChecked(),
             labels = self.settings['labels'],
-            do_autosave = self.data_options.autosave.defaultWidget().layout().itemAt(0).widget().isChecked(),
-            autosave_nr = self.data_options.autosave.defaultWidget().layout().itemAt(1).widget().value(),
-            autoVisibleOnly_x = self.autoVisibleOnly_x.isChecked(),
-            autoVisibleOnly_y = self.autoVisibleOnly_y.isChecked(),
+            do_autosave = self.context_menu.data_options.autosave.defaultWidget().layout().itemAt(0).widget().isChecked(),
+            autosave_nr = self.context_menu.data_options.autosave.defaultWidget().layout().itemAt(1).widget().value(),
+            autoVisibleOnly_x = self.context_menu.autoVisibleOnly_x.isChecked(),
+            autoVisibleOnly_y = self.context_menu.autoVisibleOnly_y.isChecked(),
         )
 
     def restore_default_settings(self):
@@ -697,10 +697,10 @@ class TimePlotGui(QWidget):
 
     def save_data_settings(self):
         self.plot_item_settings.save_settings( \
-            auto_clear_data = self.data_options.automatic_clear_checkbox.isChecked())
+            auto_clear_data = self.context_menu.data_options.automatic_clear_checkbox.isChecked())
 
     def save_line_settings(self):
-        line_controls = self.line_settings_menu.actions()[0::2]
+        line_controls = self.context_menu.line_settings_menu.actions()[0::2]
         number = 0
         for line in line_controls:
             self.settings['line_settings'][str(number)]['line_alpha'] = line.defaultWidget().layout().itemAt(2).widget().value()/255
@@ -717,18 +717,18 @@ class TimePlotGui(QWidget):
 
         """
         frequency_state = self.frequency_state
-        x_log_check = self.x_log_check.isChecked()
-        y_log_check = self.y_log_check.isChecked()
+        x_log_check = self.context_menu.x_log_check.isChecked()
+        y_log_check = self.context_menu.y_log_check.isChecked()
         self.graphItem.ctrl.fftCheck.setChecked(False)
-        self.x_log_check.setChecked(False)
-        self.y_log_check.setChecked(False)
+        self.context_menu.x_log_check.setChecked(False)
+        self.context_menu.y_log_check.setChecked(False)
         if path.exists(self.data_fn):
             os.remove(self.data_fn)
         for data_item in self.data_table.values():
             data_item.store_data()
         self.graphItem.ctrl.fftCheck.setChecked(frequency_state)
-        self.x_log_check.setChecked(x_log_check)
-        self.y_log_check.setChecked(y_log_check)
+        self.context_menu.x_log_check.setChecked(x_log_check)
+        self.context_menu.y_log_check.setChecked(y_log_check)
 
     def change_time_markers(self, relative_time):
         self.axis_item.relative_time = relative_time
@@ -838,7 +838,7 @@ class TimePlotGui(QWidget):
         if self.start_button_counter == 0:
             self.start_button_counter += 1
             is_checked = False
-            if self.data_options.automatic_clear_checkbox.isChecked():
+            if self.context_menu.data_options.automatic_clear_checkbox.isChecked():
                 if self.graphItem.ctrl.fftCheck.isChecked():
                     is_checked = True
                 self.graphItem.ctrl.fftCheck.setChecked(False)
@@ -864,15 +864,15 @@ class TimePlotGui(QWidget):
     def update_datapoint(self, id_nr, val, time_val):
         """updates TimePlotDataItem object with corresponding to id_nr"""
         frequency_state = self.frequency_state
-        x_log_check = self.x_log_check.isChecked()
-        y_log_check = self.y_log_check.isChecked()
+        x_log_check = self.context_menu.x_log_check.isChecked()
+        y_log_check = self.context_menu.y_log_check.isChecked()
         self.graphItem.ctrl.fftCheck.setChecked(False)
-        self.x_log_check.setChecked(False)
-        self.y_log_check.setChecked(False)
+        self.context_menu.x_log_check.setChecked(False)
+        self.context_menu.y_log_check.setChecked(False)
         self.data_table[id_nr].append_value(val, time_val)
         self.graphItem.ctrl.fftCheck.setChecked(frequency_state)
-        self.x_log_check.setChecked(x_log_check)
-        self.y_log_check.setChecked(y_log_check)
+        self.context_menu.x_log_check.setChecked(x_log_check)
+        self.context_menu.y_log_check.setChecked(y_log_check)
 
     # def __del__(self):
     #     print('it worked!?')
