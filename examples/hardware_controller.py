@@ -30,10 +30,8 @@ from PyQt5.QtGui import QIcon, QFont, QCursor, QRegion, QPolygon, QWindow
 from PyQt5 import QtCore, Qt, QtGui
 import pyqtgraph as pg
 
-from time_plot_gui import TimePlotGui
-from util.devicewrapper import DeviceWrapper
-from util.dummydevice import DummyDevice
 
+from TimePlotGui import TimePlotGui, DeviceWrapper, DummyDevice
 
 class HardwareController(QMainWindow):
     """ """
