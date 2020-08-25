@@ -47,13 +47,13 @@ try:
     from .viewboxv2 import ViewBoxV2
     from .time_plot_data_item import TimePlotDataItem
     from .time_axis_item import TimeAxisItem
-except SystemError:
+except:
     from time_plot_worker import TimePlotWorker
     from plot_item_settings import PlotItemSettings, JSONFileHandler
 
     from util.workerthread import WorkerThread,WorkerTaskBase
     from util.devicewrapper import DeviceWrapper, DummyDevice
-    from viewboxv2 import ViewBoxV2    
+    from viewboxv2 import ViewBoxV2
     from time_plot_data_item import TimePlotDataItem
     from time_axis_item import TimeAxisItem
 
@@ -312,66 +312,66 @@ class TimePlotGui(QWidget):
     def set_custom_settings(self):
         """updates PlotItem settings with values from settings dictionary
         """
-        
+
         # Log mode
         self.graphItem.setLogMode(
-            x = self.settings['xscalelog'], 
+            x = self.settings['xscalelog'],
             y = self.settings['yscalelog']
         )
-        
+
         # grid lines
         self.graphItem.showGrid(
-            x = self.settings['xgridlines'], 
-            y = self.settings['ygridlines'], 
+            x = self.settings['xgridlines'],
+            y = self.settings['ygridlines'],
             alpha = self.settings['gridopacity']
         )
-        
+
         # line settings
         self.set_line_settings()
-        
+
         # autopan
         self.viewbox.setAutoPan(x = self.settings['autoPan'])
-        
+
         # axis limits
         self.viewbox.setRange(
-            xRange = self.settings['xlim'], 
+            xRange = self.settings['xlim'],
             yRange = self.settings['ylim']
         )
-        
+
         # autorange
         self.viewbox.enableAutoRange(
-            x = self.settings['xautorange'], 
+            x = self.settings['xautorange'],
             y = self.settings['yautorange']
         )
-        
+
         # auto_clear
         self.data_options.automatic_clear_checkbox.setChecked(
             self.settings['auto_clear_data']
         )
-        
+
         # zoom
         self.viewbox.setMouseEnabled(
-            x = self.settings['x_zoom'], 
+            x = self.settings['x_zoom'],
             y = self.settings['y_zoom']
         )
-        
+
         # mouse mode
         if self.settings['mouseMode'] == 1:
             self.viewbox.setLeftButtonAction(mode = 'rect')
         else:
             self.viewbox.setLeftButtonAction(mode = 'pan')
-            
+
         # frequency state
         self.frequency_state = self.settings['frequency_state']
         self.graphItem.ctrl.fftCheck.setChecked(self.frequency_state)
-        
+
         # autosave
         self.set_all_autosave(self.settings['do_autosave'])
         self.set_all_autosave_nr(self.settings['autosave_nr'])
-        
+
         # time stamp
         self.change_time_markers(self.settings['relative_timestamp'])
-        
+
         # labels
         self.update_plot_labels()
 
@@ -381,9 +381,9 @@ class TimePlotGui(QWidget):
         for line_nr, time_data_item in self.data_table.items():
             data_item = time_data_item.get_plot_data_item()
             line_setting = self.settings['line_settings'][str(line_nr)]
-            
+
             data_item.setAlpha(
-                alpha = line_setting['line_alpha'], 
+                alpha = line_setting['line_alpha'],
                 auto = False
             )
             data_item.setPen(
@@ -405,9 +405,9 @@ class TimePlotGui(QWidget):
         self.update_plot_labels()
 
     def set_frequency_labels(self):
-        """sets title, xlabel, and ylabel settings in PlotItem object if 
+        """sets title, xlabel, and ylabel settings in PlotItem object if
         TimePlotGui is in FFT mode
-        
+
         """
         labels = self.get_axis_labels()
         labels.update({
@@ -418,66 +418,66 @@ class TimePlotGui(QWidget):
         self._set_labels(**labels)
 
     def set_time_labels(self):
-        """sets title, xlabel, and ylabel settings in PlotItem object if 
+        """sets title, xlabel, and ylabel settings in PlotItem object if
         TimePlotGui is not in FFT mode
-        
+
         """
         labels = self.get_axis_labels()
         self._set_labels(**labels)
 
 
-    def _set_labels(self, title, title_font_size, title_font_color, x_label, 
-                    x_font_size, x_font_color, y_label, y_font_size, 
+    def _set_labels(self, title, title_font_size, title_font_color, x_label,
+                    x_font_size, x_font_color, y_label, y_font_size,
                     y_font_color):
         """sets title, xlabel, and ylabel settings in PlotItem object"""
         self.graphItem.setTitle(
-            title, 
-            color=title_font_color, 
+            title,
+            color=title_font_color,
             size=title_font_size
         )
         self.graphItem.setLabel(
-            'left', y_label, 
+            'left', y_label,
             **{'color':y_font_color, 'font-size': y_font_size}
         )
         self.graphItem.setLabel(
-            'bottom', x_label,  
+            'bottom', x_label,
             **{'color': x_font_color, 'font-size': x_font_size}
         )
-        return        
+        return
 
     def get_axis_labels(self):
         """returns dictionary with formated xlabel, ylabel, and title settings
-        
+
         Formating of the displayed xlabel, ylabel, and title strings is defined
-        in this function. The *axis_data_type* and *axis_unit* stored in the 
+        in this function. The *axis_data_type* and *axis_unit* stored in the
         settings dictionary are used to construct the x and ylabel strings
-        
+
         """
         tmp = self.settings['labels'].copy()
-        
+
         # concatenate label strings
         if tmp['x_axis_unit'] == '':
             x_label = tmp['x_axis_data_type']
         else:
             x_label = '{} [{}]'.format(
-                tmp['x_axis_data_type'], 
+                tmp['x_axis_data_type'],
                 tmp['x_axis_unit']
             )
-            
+
         if tmp['y_axis_unit'] == '':
             y_label = tmp['y_axis_data_type']
         else:
             y_label = '{} [{}]'.format(
-                tmp['y_axis_data_type'], 
+                tmp['y_axis_data_type'],
                 tmp['y_axis_unit']
             )
-        
+
         labels = {
             'x_label':  x_label,
             'y_label':  y_label,
             'title':    tmp['title_text']
         }
-        
+
         # reformat font_size values
         labels.update({
             'x_font_size':          str(tmp['x_axis_font_size']) + 'pt',
@@ -485,17 +485,17 @@ class TimePlotGui(QWidget):
             'title_font_size':      str(tmp['title_font_size']) + 'pt'
         })
 
-        # extract color values        
+        # extract color values
         labels.update({
             'x_font_color':          tmp['x_axis_font_color'],
             'y_font_color':          tmp['y_axis_font_color'],
             'title_font_color':      tmp['title_font_color']
         })
-        
+
         return labels
 
     def save_current_settings(self):
-        """updates settings dictionary from settings in PloIem and saves then 
+        """updates settings dictionary from settings in PloIem and saves then
         to JSON file
         """
         self.save_line_settings()
@@ -529,7 +529,7 @@ class TimePlotGui(QWidget):
             'do_autosave':      self.data_options.autosave.defaultWidget().layout().itemAt(0).widget().isChecked(),
             'autosave_nr':      self.data_options.autosave.defaultWidget().layout().itemAt(1).widget().value(),
           # time stamp
-            
+
           # labels
             'labels':           self.settings['labels'],
           # auto visible only
@@ -537,7 +537,7 @@ class TimePlotGui(QWidget):
             'autoVisibleOnly_y': self.autoVisibleOnly_y.isChecked(),
         # alpha
             'plotalpha':        self.graphItem.alphaState(),
-            
+
         }
         self.plot_item_settings.save_settings(**settings)
 
@@ -782,14 +782,14 @@ class TimePlotGui(QWidget):
     def open_finder(self):
         self.started = False
         data_fname, file_info = QFileDialog.getOpenFileName(
-            self, 
-            'Select data file', 
+            self,
+            'Select data file',
             '~/',"JSON files (*.json)"
         )
         if data_fname != '':
             settings_fname, file_info = QFileDialog.getOpenFileName(
-                self, 
-                'Select settings file', 
+                self,
+                'Select settings file',
                 '~/',"JSON files (*.json)"
             )
             if settings_fname !='':
@@ -847,30 +847,30 @@ class TimePlotGui(QWidget):
         self.plot_item_settings.save_settings(line_settings = self.settings['line_settings'])
 
     def store_all_data(self):
-        """store all data objects 
-        
-        Function stores data of every data_item by calling its store_data(). 
-        To avoid problems when importing data the next time this function 
+        """store all data objects
+
+        Function stores data of every data_item by calling its store_data().
+        To avoid problems when importing data the next time this function
         temporarily disables FFT, x log, and y log mode.
-        
+
         """
-        
+
         # save current state
         frequency_state = self.frequency_state
         x_log_check = self.x_log_check.isChecked()
         y_log_check = self.y_log_check.isChecked()
-        
+
         # disable FFT, x log, and y log mode
         self.graphItem.ctrl.fftCheck.setChecked(False)
         self.x_log_check.setChecked(False)
         self.y_log_check.setChecked(False)
-        
+
         # sava data
         if path.exists(self.data_fn):
             os.remove(self.data_fn)
         for data_item in self.data_table.values():
             data_item.store_data()
-        
+
         # restore FFT,x log, and y log states
         self.graphItem.ctrl.fftCheck.setChecked(frequency_state)
         self.x_log_check.setChecked(x_log_check)
@@ -891,7 +891,7 @@ class TimePlotGui(QWidget):
     def clear_all_data(self):
         """clears data in all data items bby calling the corresponding clear()
         function
-        
+
         """
         self.reset_absolute_time_stamp()
         for data_item in self.data_table.values():
@@ -900,7 +900,7 @@ class TimePlotGui(QWidget):
 
     def change_title(self):
         title, acccepted = QInputDialog.getText(
-            self, 
+            self,
             'Change title',
             'Enter new title:'
         )
@@ -910,7 +910,7 @@ class TimePlotGui(QWidget):
 
     def change_x_axis_label(self):
         axis_label, acccepted = QInputDialog.getText(
-            self, 
+            self,
             'Change x axis label',
             'Enter new label:'
         )
@@ -920,7 +920,7 @@ class TimePlotGui(QWidget):
 
     def change_y_axis_label(self):
         axis_label, acccepted = QInputDialog.getText(
-            self, 
+            self,
             'Change y axis label',
             'Enter new label:'
         )
@@ -967,10 +967,10 @@ class TimePlotGui(QWidget):
             self.worker_table.update({idx: worker})
 
     def leaving_fft_mode(self):
-        
+
         msg = """
-        You are exiting FFT Transform mode and entering Time Dependence 
-        mode. If you would like to re-enter FFT Transform mode, you may 
+        You are exiting FFT Transform mode and entering Time Dependence
+        mode. If you would like to re-enter FFT Transform mode, you may
         do so from the context menu.
         """
         mode_change_popup = QMessageBox()
@@ -979,7 +979,7 @@ class TimePlotGui(QWidget):
         mode_change_popup.exec_()
 
     def local_ft_error(self):
-        
+
         msg = """
         You are already in FFT mode. If you would like a local transform,
         please select a region in Time Dependence mode.
@@ -990,7 +990,7 @@ class TimePlotGui(QWidget):
         local_ft_error.exec_()
 
     def y_autopan_warning(self):
-        
+
         msg = """
         Auopanning functionality for the y axis is not supported.
         """
@@ -1003,13 +1003,13 @@ class TimePlotGui(QWidget):
 
     def start_thread(self):
         """start data acquisition in worker thread
-        
+
         if clauses handle the following causes: previous data are removed if
-        autoclear button is checked. FFT mode is switched off and warning 
+        autoclear button is checked. FFT mode is switched off and warning
         QMessage is emitted if previous data is removed.
 
 
-        """ 
+        """
         if self.start_button_counter == 0:
             self.start_button_counter += 1
             is_checked = False
@@ -1038,20 +1038,20 @@ class TimePlotGui(QWidget):
 
     def update_datapoint(self, id_nr, val, time_val):
         """updates TimePlotDataItem object with corresponding id_nr"""
-        
+
         # save current state
         frequency_state = self.frequency_state
         x_log_check = self.x_log_check.isChecked()
         y_log_check = self.y_log_check.isChecked()
-        
+
         # disable FFT, x log, and y log state
         self.graphItem.ctrl.fftCheck.setChecked(False)
         self.x_log_check.setChecked(False)
         self.y_log_check.setChecked(False)
-        
+
         # update value
         self.data_table[id_nr].append_value(val, time_val)
-        
+
         # reinstate FFT, x log, and y log state
         self.graphItem.ctrl.fftCheck.setChecked(frequency_state)
         self.x_log_check.setChecked(x_log_check)
@@ -1135,6 +1135,3 @@ class TimePlotMainWindow(QMainWindow):
         print('event')
         self.time_plot_ui.closeEvent(event)
 #        event.accept
-
-
-

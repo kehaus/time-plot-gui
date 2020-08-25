@@ -22,10 +22,10 @@ from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
 try:
     from .util.workerthread import WorkerThread,WorkerTaskBase
     from .util.devicewrapper import DeviceWrapper, DummyDevice
-except SystemError:
+except:
     from util.workerthread import WorkerThread,WorkerTaskBase
     from util.devicewrapper import DeviceWrapper, DummyDevice
-    
+
 
 
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Minimal working example to run TimePlotGui widget as MainWindow application 
-conncted to a DummyDevice class. The DummyDevice class mocks the hardware. 
+Minimal working example to run TimePlotGui widget as MainWindow application
+conncted to a DummyDevice class. The DummyDevice class mocks the hardware.
 
 
 """
@@ -15,7 +15,7 @@ try:
     from .time_plot_gui import TimePlotMainWindow
     from .util.devicewrapper import DeviceWrapper
     from .util.dummydevice import DummyDevice
-except SystemError:
+except:
     from time_plot_gui import TimePlotMainWindow
     from util.devicewrapper import DeviceWrapper
     from util.dummydevice import DummyDevice
@@ -56,7 +56,3 @@ try:
     app.exec_()
 except:
     window.closeEvent()
-    
- 
-    
-
