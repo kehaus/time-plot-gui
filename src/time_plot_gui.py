@@ -482,17 +482,24 @@ class TimePlotGui(QWidget):
                 self._remove_data_item(id_nr)
             len_data_table = len(self.data_table)
 
-
-    # def coerce_same_length_(self, data_length):
-    #     while data_length != len(self.settings['line_settings']):
-    #         if data_length > len(self.settings['line_settings']):
-    #             self.settings['line_settings'][str(len(self.settings['line_settings']))] = \
-    #                         self.plot_item_settings.get_default_line_settings()
-    #                         # self.plot_item_settings.default_line_settings
-    #         elif data_length < len(self.settings['line_settings']):
-    #             self.settings['line_settings'].popitem()
-
     def coerce_same_length(self, data_length):
+        """changes number of line settings until it matches data_length.
+        
+        This function is required to adjust number of line settings to actual 
+        data present. Here the data_length variable is supposed to provide the 
+        information on how many data items are present in TimePlotGui. This
+        can either be the number of devices connected for data acquisition or 
+        the number of data items in the data table.
+        
+        Parameter
+        ---------
+        data_length : int
+            lenght of data objects present in  TimePlotGui class. This can be 
+            either number of devices connected or number of data_items in 
+            data_table
+        
+        
+        """
         n_lines = self.plot_item_settings.get_nr_lines()
         while data_length != n_lines:
             if data_length > n_lines:
