@@ -244,10 +244,6 @@ class TimePlotGui(QWidget):
         # initlialize data lines
         # ===============================
         self._init_data_items(dev_lst)
-        
-        print("%%%%%%%%%%%% data_table: ")
-        print(self.data_table)
-        print("")
         self._align_time_stamps()
         # ===============================
         # Customize the context menu
@@ -259,9 +255,19 @@ class TimePlotGui(QWidget):
         self.set_custom_settings()
 
 
-    def _init_data_items(self, devices, new_data = None):
-        """initialize data items  """
+    def _init_data_items(self, dev_lst, new_data = None):
+        """initialize data items 
         
+        data items are initialized from scratch or loaded from file
+        
+        Parameter
+        ---------
+        dev_lst : lst
+            lst of DeviceWrapper object used to collect data
+        new_data :  **??**
+            **??**
+            
+        """
         self.data_table = {}
         
         id_nr = 0
