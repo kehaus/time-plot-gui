@@ -278,24 +278,15 @@ class TimePlotGui(QWidget):
         
         id_nr = 0
         while True:
-            # data_item = TimePlotDataItem(
-            #     data_fn = self.data_fn, 
-            #     id_nr=id_nr, 
-            #     absolute_time=self.t0
-            # )
             data_item = self._create_data_item(id_nr)
             if new_data is None:
                 data_item.recall_data(self.data_fn)
-                
             else:
                 data_item.recall_data(new_data)
-            # if len(data_item.get_plot_data_item().xData) == 0:
+
             if len(data_item.get_time_data()) == 0:
                 break
-            # self.data_table.update(
-            #     {id_nr: data_item}
-            # )
-            # self.graphItem.addItem(data_item.get_plot_data_item())
+
             self._add_data_item(id_nr, data_item)
             id_nr += 1
             
@@ -391,14 +382,6 @@ class TimePlotGui(QWidget):
             {id_nr: data_item}
         )
         self.graphItem.addItem(data_item.get_plot_data_item())
-    
-    def _remove_data_item_(self, id_nr):
-        timeplotdataitem = self.data_table[id_nr]
-        self.graphItem.removeItem(
-            self.data_table[id_nr].get_plot_data_item()
-        )
-        del timeplotdataitem
-        self.data_table.pop(id_nr)
 
     def _remove_data_item(self, id_nr):
         """add data_item to data_table and to plot item
@@ -498,7 +481,6 @@ class TimePlotGui(QWidget):
             either number of devices connected or number of data_items in 
             data_table
         
-        
         """
         n_lines = self.plot_item_settings.get_nr_lines()
         while data_length != n_lines:
@@ -507,7 +489,6 @@ class TimePlotGui(QWidget):
             else:
                 self.plot_item_settings.remove_line()
             n_lines = self.plot_item_settings.get_nr_lines()
-
 
 
     def set_custom_settings(self):
@@ -765,7 +746,7 @@ class TimePlotGui(QWidget):
 
     def clear_line_settings(self):
         # self.settings['line_settings'] = self.plot_item_settings.DEFAULT_SETTINGS['line_settings']
-        self.clear_all_line_settings()
+        self.plot_item_settings.clear_all_line_settings()
         self.set_line_settings()
         self.context_menu.ammend_context_menu()
 
