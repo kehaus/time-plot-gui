@@ -116,13 +116,22 @@ class TimePlotGui(QWidget):
         # setup gui and worker thread
         # ===============================
         self._init_settings(folder_filename)
-        self._init_ui(window, devices)
+        self._init_ui(window, self.dev_lst)
         self._init_multi_worker_thread(devices)
 
 
-    def _init_ui(self, mainwindow, devices):
+    def _init_ui(self, mainwindow, dev_lst):
         """
-        Creates and Loads the widgets in the GUI
+        Creates the ui layout and initializes all the necessary QWidget components
+        
+        Parameter
+        ---------
+        mainwindow : QMainWindow, QWidget
+            QWidget which will be used as central_widget for TimePlotGui
+        dev_lst : lst
+            lst of DeviceWrapper object used to collect data
+            
+            
         """
         # =====================================================================
         # Creates and configures central widget for window
@@ -134,24 +143,34 @@ class TimePlotGui(QWidget):
         # =====================================================================
         self.graphics_layout = QGridLayout()
         # =====================================================================
-        # control buttons - Non-plot widgets (stop/start buttons and spacers) created
+        # control buttons - Non-plot widgets (stop/start buttons and spacers)
         # =====================================================================
         self.playBtn = QPushButton()
         self.playBtn.setFixedSize(QSize(30, 30))
-        self.playBtn.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed))
-        points = [QPoint(0, 0), QPoint(0, self.playBtn.height()), QPoint(self.playBtn.width(), self.playBtn.height()/2)]
+        self.playBtn.setSizePolicy(
+            QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        )
+        points = [
+            QPoint(0, 0), 
+            QPoint(0, self.playBtn.height()), 
+            QPoint(self.playBtn.width(), self.playBtn.height()/2)
+        ]
         self.playBtn.setMask(QRegion(QPolygon(points)))
         self.playBtn.setStyleSheet("background-color: rgb(120,120,120);")
 
-        self.squarestopBtn = QPushButton()
-        self.squarestopBtn.setFixedSize(QSize(110, 30))
-        self.squarestopBtn.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed))
-        points = [QPoint((self.squarestopBtn.width()+50)/2, 0), \
-                QPoint((self.squarestopBtn.width()+50)/2, self.squarestopBtn.height()), \
-                QPoint(self.squarestopBtn.width(), self.squarestopBtn.height()), \
-                QPoint(self.squarestopBtn.width(), 0)]
-        self.squarestopBtn.setMask(QRegion(QPolygon(points)))
-        self.squarestopBtn.setStyleSheet("background-color: rgb(120,120,120);")
+        self.stopBtn = QPushButton()
+        self.stopBtn.setFixedSize(QSize(110, 30))
+        self.stopBtn.setSizePolicy(
+            QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        )
+        points = [
+            QPoint((self.stopBtn.width()+50)/2, 0),
+            QPoint((self.stopBtn.width()+50)/2, self.stopBtn.height()),
+            QPoint(self.stopBtn.width(), self.stopBtn.height()),
+            QPoint(self.stopBtn.width(), 0)
+        ]
+        self.stopBtn.setMask(QRegion(QPolygon(points)))
+        self.stopBtn.setStyleSheet("background-color: rgb(120,120,120);")
 
         self.blankWidget = QWidget()
         self.blankWidget.setFixedSize(QSize(500, 30))
@@ -161,7 +180,7 @@ class TimePlotGui(QWidget):
         # =====================================================================
         # Initialize the plot
         # =====================================================================
-        self._init_plot(devices)
+        self._init_plot(dev_lst)
         # =====================================================================
         # Add Widgets to layout, including the Plot itself. Note that the order
         # in which these are added matters because several widgets overlap.
@@ -169,24 +188,16 @@ class TimePlotGui(QWidget):
         self.graphics_layout.addWidget(self.blankWidget, 0, 2)
         self.graphics_layout.addWidget(self.blankWidget2, 0, 1)
         self.graphics_layout.addWidget(self.graphWidget, 0, 0, 5, 4)
-        self.graphics_layout.addWidget(self.squarestopBtn, 0, 0)
+        self.graphics_layout.addWidget(self.stopBtn, 0, 0)
         self.graphics_layout.addWidget(self.playBtn, 0, 0)
 
-        # self.pauseBtn = QPushButton()
-        # self.restartBtn = QPushButton()
-        # self.pauseBtn.setStyleSheet("background-color: rgb(120,120,120);")
-        # self.restartBtn.setStyleSheet("background-color: rgb(120,120,120);")
-        # self.graphics_layout.addWidget(self.pauseBtn, 0, 6, 1, 1)
-        # self.pauseBtn.clicked.connect(self.pause_thread)
-        # self.graphics_layout.addWidget(self.restartBtn, 1, 6, 1, 1)
-        # self.restartBtn.clicked.connect(self.restart_thread)
         # =====================================================================
         # control buttons - connections
         # =====================================================================
         self.playBtn.clicked.connect(self.save_line_settings)
         self.playBtn.clicked.connect(self.thread_status_changed)
         self.playBtn.clicked.connect(self.start_thread)
-        self.squarestopBtn.clicked.connect(self.pause_thread)
+        self.stopBtn.clicked.connect(self.pause_thread)
         # ============================================================
         # Assign layout widget to window
         # ============================================================
