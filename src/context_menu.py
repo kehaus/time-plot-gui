@@ -8,8 +8,14 @@ from PyQt5.QtWidgets import QInputDialog, QColorDialog, QSpinBox, QGraphicsWidge
 from PyQt5.QtGui import QIcon, QFont, QCursor, QRegion, QPolygon, QWindow, QColor
 from PyQt5 import QtCore, Qt, QtGui
 
-class ContextMenu():
-    """"""
+class TimePlotContextMenu():
+    """
+    TimePlotContextMenu class customizes the pyqtgraph context menu
+    
+    TimePlotContextMenu adds functionality to load and save plot settings and 
+    data; to customize the line plot settings; and to perform a local FFT
+    
+    """
     def __init__(self, menu, viewbox_menu, tpg):
         self.tpg = tpg
         self.menu = menu

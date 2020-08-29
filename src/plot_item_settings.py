@@ -166,7 +166,7 @@ class PlotItemSettings(JSONFileHandler):
         return {}
 
         
-    def get_default_settings(self, n_lines):
+    def get_default_settings(self, n_lines=None):
         """returns default settings dictionary
         
         Since number of lines is not know before initialization the complete
@@ -186,6 +186,9 @@ class PlotItemSettings(JSONFileHandler):
             
         
         """
+        if n_lines is None:
+            n_lines = self.n_lines
+        
         settings = PlotItemSettings.DEFAULT_SETTINGS.copy()
         line_setting = self.get_default_line_settings()
         all_line_settings = {
@@ -206,6 +209,31 @@ class PlotItemSettings(JSONFileHandler):
             
         """
         return PlotItemSettings.DEFAULT_LINE_SETTINGS.copy()
+    
+    def clear_all_line_settings(self):
+        """restores default line settings for all line setting entries"""
+        for key in self.line_settings.keys():
+            self.line_settings[key] = self.get_default_line_settings()
+
+    def add_line(self):
+        """add line to line_settings dictionary"""
+        nr = len(self.line_settings)
+        self.line_settings.update(
+            {str(nr): self.get_default_line_settings()}
+        )
+        self._update_n_lines()
+    
+    def remove_line(self):
+        """remove line from line settings dictionary"""
+        self.line_settings.popitem()
+        self._update_n_lines()
+        
+    def _update_n_lines(self):
+        self.n_lines = len(self.settings['line_settings'])
+        
+    def get_nr_lines(self):
+        """ returns number of lines"""
+        return self.n_lines
 
     # ====
     # update, load, and save settings from/ to JSON file

@@ -48,7 +48,7 @@ try:
     from .viewboxv2 import ViewBoxV2
     from .time_plot_data_item import TimePlotDataItem
     from .time_axis_item import TimeAxisItem
-    from .context_menu import ContextMenu
+    from .context_menu import TimePlotContextMenu
 except:
     from time_plot_worker import TimePlotWorker
     from plot_item_settings import PlotItemSettings, JSONFileHandler
@@ -58,7 +58,7 @@ except:
     from viewboxv2 import ViewBoxV2
     from time_plot_data_item import TimePlotDataItem
     from time_axis_item import TimeAxisItem
-    from context_menu import ContextMenu
+    from context_menu import TimePlotContextMenu
 
 
 # ============================================================================
@@ -246,14 +246,14 @@ class TimePlotGui(QWidget):
         # ===============================
         # initlialize data lines
         # ===============================
-        self._init_data_items(dev_lst)
+        self._init_data_table(dev_lst)
         self._align_time_stamps()
         # ===============================
         # Customize the context menu
         # ===============================
         menu = self.graphItem.getMenu()
         viewbox_menu = self.graphItem.getViewBox().getMenu(True)
-        self.context_menu = ContextMenu(menu, viewbox_menu, self)
+        self.context_menu = TimePlotContextMenu(menu, viewbox_menu, self)
         # self._modify_context_menu()
         # ===============================
         # customize plot settings with stored values
@@ -261,8 +261,8 @@ class TimePlotGui(QWidget):
         self.set_custom_settings()
 
 
-    def _init_data_items(self, dev_lst, new_data = None):
-        """initialize data items 
+    def _init_data_table(self, dev_lst, new_data = None):
+        """initialize data table by populating it with data items
         
         data items are initialized from scratch or loaded from file
         
@@ -278,23 +278,25 @@ class TimePlotGui(QWidget):
         
         id_nr = 0
         while True:
-            data_item = TimePlotDataItem(
-                data_fn = self.data_fn, 
-                id_nr=id_nr, 
-                absolute_time=self.t0
-            )
+            # data_item = TimePlotDataItem(
+            #     data_fn = self.data_fn, 
+            #     id_nr=id_nr, 
+            #     absolute_time=self.t0
+            # )
+            data_item = self._create_data_item(id_nr)
             if new_data is None:
                 data_item.recall_data(self.data_fn)
                 
             else:
                 data_item.recall_data(new_data)
-            if len(data_item.get_plot_data_item().xData) == 0:
-            # if len(data_item.get_time_data()) == 0:
+            # if len(data_item.get_plot_data_item().xData) == 0:
+            if len(data_item.get_time_data()) == 0:
                 break
-            self.data_table.update(
-                {id_nr: data_item}
-            )
-            self.graphItem.addItem(data_item.get_plot_data_item())
+            # self.data_table.update(
+            #     {id_nr: data_item}
+            # )
+            # self.graphItem.addItem(data_item.get_plot_data_item())
+            self._add_data_item(id_nr, data_item)
             id_nr += 1
             
     def _init_settings(self, folder_filename):
@@ -358,6 +360,60 @@ class TimePlotGui(QWidget):
         else:
             raise TimePlotGuiException(err_msg)
 
+    def _create_data_item(self, id_nr):
+        """returns a data item
+        
+        Parameter
+        ---------
+        id_nr : 
+            reference number of data item.
+            
+        """
+        data_item = TimePlotDataItem(
+            data_fn = self.data_fn, 
+            id_nr=id_nr, 
+            absolute_time=self.t0
+        )
+        return data_item
+
+    def _add_data_item(self, id_nr, data_item):
+        """add data_item to data_table and to plot item
+        
+        Parameter
+        ---------
+        id_nr : int
+            number is used as id reference in data_table
+        data_item : TimePlotDataItem object
+            represents one data line in the plot
+            
+        """
+        self.data_table.update(
+            {id_nr: data_item}
+        )
+        self.graphItem.addItem(data_item.get_plot_data_item())
+    
+    def _remove_data_item_(self, id_nr):
+        timeplotdataitem = self.data_table[id_nr]
+        self.graphItem.removeItem(
+            self.data_table[id_nr].get_plot_data_item()
+        )
+        del timeplotdataitem
+        self.data_table.pop(id_nr)
+
+    def _remove_data_item(self, id_nr):
+        """add data_item to data_table and to plot item
+        
+        Parameter
+        ---------
+        id_nr : int
+            number is used as id reference in data_table
+            
+        """
+        self.graphItem.removeItem(
+            self.data_table[id_nr].get_plot_data_item()
+        )
+        self.data_table.pop(id_nr)
+
 
     def _create_absolute_time_stamp(self):
         self.t0 = time.time()
@@ -390,9 +446,16 @@ class TimePlotGui(QWidget):
     def thread_status_changed(self):
         self.started = not self.started
         self.resize_line_settings()
-        self.context_menu.add_line_settings_menu(self.data_table)
+        self.context_menu._add_line_settings_menu()
 
     def resize_line_settings(self):
+        """resizes line settings to make number of data object present
+        
+        If thread is started the number of data objects corresponds to number 
+        of devices concted. If thread does not run, number of data objects
+        is given by length of data_table
+        
+        """
         if self.started:
             self.coerce_same_length(data_length = len(self.dev_lst))
             self.resize_data_table()
@@ -401,29 +464,43 @@ class TimePlotGui(QWidget):
         self.set_line_settings()
 
     def resize_data_table(self):
-        while len(self.dev_lst) != len(self.data_table):
-            if len(self.dev_lst) > len(self.data_table):
-                id_nr = len(self.data_table)
-                data_item = TimePlotDataItem(data_fn = self.data_fn, id_nr=id_nr, absolute_time=self.t0)
-                self.data_table.update(
-                    {id_nr: data_item}
-                )
-                self.graphItem.addItem(data_item.get_plot_data_item())
-            elif len(self.dev_lst) < len(self.data_table):
-                timeplotdataitem = self.data_table[max(self.data_table.keys())]
-                self.graphItem.removeItem(self.data_table[max(self.data_table.keys())].get_plot_data_item())
-                del timeplotdataitem
-                self.data_table.popitem()
+        """resizes data table to make number of data object match with devices
+        connected
+        
+        Function adds or removes data_items from data table as long as number 
+        of data items does not match to number of devices connceted to 
+        TimePlotGui
+        
+        """
+        len_data_table = len(self.data_table)
+        while self.dev_num != len_data_table:
+            if self.dev_num > len_data_table:
+                id_nr = len_data_table
+                data_item = self._create_data_item(id_nr)
+                self._add_data_item(id_nr, data_item)
+            else:
+                self._remove_data_item(id_nr)
+            len_data_table = len(self.data_table)
 
+
+    # def coerce_same_length_(self, data_length):
+    #     while data_length != len(self.settings['line_settings']):
+    #         if data_length > len(self.settings['line_settings']):
+    #             self.settings['line_settings'][str(len(self.settings['line_settings']))] = \
+    #                         self.plot_item_settings.get_default_line_settings()
+    #                         # self.plot_item_settings.default_line_settings
+    #         elif data_length < len(self.settings['line_settings']):
+    #             self.settings['line_settings'].popitem()
 
     def coerce_same_length(self, data_length):
-        while data_length != len(self.settings['line_settings']):
-            if data_length > len(self.settings['line_settings']):
-                self.settings['line_settings'][str(len(self.settings['line_settings']))] = \
-                            self.plot_item_settings.get_default_line_settings()
-                            # self.plot_item_settings.default_line_settings
-            elif data_length < len(self.settings['line_settings']):
-                self.settings['line_settings'].popitem()
+        n_lines = self.plot_item_settings.get_nr_lines()
+        while data_length != n_lines:
+            if data_length > n_lines:
+                self.plot_item_settings.add_line()
+            else:
+                self.plot_item_settings.remove_line()
+            n_lines = self.plot_item_settings.get_nr_lines()
+
 
 
     def set_custom_settings(self):
@@ -669,8 +746,8 @@ class TimePlotGui(QWidget):
         # Delete PlotItemSettings instance and create new one
         # ===============================
         del self.plot_item_settings
-        self.plot_item_settings = PlotItemSettings(number_of_lines = len(self.dev_lst))
-        self.settings = self.plot_item_settings.DEFAULT_SETTINGS
+        self.plot_item_settings = PlotItemSettings(number_of_lines=self.dev_num)
+        self.settings = self.plot_item_settings.get_default_settings()
         self.settings['line_settings'] = temp_line_settings
         self.resize_line_settings()
         # ===============================
@@ -680,7 +757,8 @@ class TimePlotGui(QWidget):
         self.set_custom_settings()
 
     def clear_line_settings(self):
-        self.settings['line_settings'] = self.plot_item_settings.DEFAULT_SETTINGS['line_settings']
+        # self.settings['line_settings'] = self.plot_item_settings.DEFAULT_SETTINGS['line_settings']
+        self.clear_all_line_settings()
         self.set_line_settings()
         self.context_menu.ammend_context_menu()
 
@@ -742,13 +820,15 @@ class TimePlotGui(QWidget):
         data_fname, file_info = QFileDialog.getOpenFileName(
             self,
             'Select data file',
-            '~/',"JSON files (*.json)"
+            '~/',
+            "JSON files (*.json)"
         )
         if data_fname != '':
             settings_fname, file_info = QFileDialog.getOpenFileName(
                 self,
                 'Select settings file',
-                '~/',"JSON files (*.json)"
+                '~/',
+                "JSON files (*.json)"
             )
             if settings_fname !='':
                 del self.plot_item_settings
@@ -758,9 +838,9 @@ class TimePlotGui(QWidget):
                 self.settings = self.plot_item_settings.settings
             if data_fname is not None:
                 self.clear_all_plot_data_items()
-                self._init_data_items(self.dev_lst, new_data = data_fname)
+                self._init_data_table(self.dev_lst, new_data = data_fname)
                 self.resize_line_settings()
-                self.context_menu.add_line_settings_menu(self.data_table)
+                self.context_menu._add_line_settings_menu(self.data_table)
                 self.set_custom_settings()
                 # self.ammend_context_menu()
 
