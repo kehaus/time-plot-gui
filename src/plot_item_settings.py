@@ -41,7 +41,9 @@ class PlotItemSettings(JSONFileHandler):
     Container to load, access, and save plot settings 
     
     Loads plot settings from json file or generate default settings if no valid
-    path to a json file is provided on initialization
+    path to a json file is provided on initialization.
+    All keys in in the settings dictionary can also be accessed directly as 
+    object attributes 
 
     
     Parameter
@@ -53,6 +55,16 @@ class PlotItemSettings(JSONFileHandler):
     unusual_settings_file : str
         settings filename
         
+    
+    Attribute
+    ---------
+    folder_filename : str
+        path to settings file
+    settings_filename : str
+        filename of the saved JSON file
+    settings : dict
+        contains all plot settings. 
+    
     
     Settings description
     --------------------
@@ -198,6 +210,23 @@ class PlotItemSettings(JSONFileHandler):
             line_settings = all_line_settings
         )
         return settings
+    
+    def restore_default_settings(self, keep_line_settings=False):
+        """restores default settings from DEFAULT_SETTINGS dictionary
+        
+        Parameter
+        ---------
+        keep_line_settings : bool
+            flag indicates if default line_settings should be restored as well
+            
+        """
+        
+        if keep_line_settings:
+            tmp_line_settings = self.line_settings.copy()
+        self.settings = self.get_default_settings()
+
+        if keep_line_settings:
+            self.line_settings.update(tmp_line_settings)
     
     def get_default_line_settings(self):
         """returns default line settings dictionary

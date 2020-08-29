@@ -724,25 +724,25 @@ class TimePlotGui(QWidget):
         self.plot_item_settings.save_settings(**settings)
 
     def restore_default_settings(self):
-        temp_line_settings = self.settings['line_settings']
-        # ===============================
-        # Delete stored file settings
-        # ===============================
+        """restores default plot settings and deletes the settings file
+        
+        This function deletes the settings file and restores the default plot 
+        settings from the DEFAULT_SETTINGS dictionary specified in the 
+        PlotItemSettings class. The line settings are not restored.
+        After restoring the default settings the context menu and the plot item
+        are updated 
+        
+        """        
         if path.exists(self.plot_item_settings.settings_filename):
             os.remove(self.plot_item_settings.settings_filename)
-        # ===============================
-        # Delete PlotItemSettings instance and create new one
-        # ===============================
-        del self.plot_item_settings
-        self.plot_item_settings = PlotItemSettings(number_of_lines=self.dev_num)
-        self.settings = self.plot_item_settings.get_default_settings()
-        self.settings['line_settings'] = temp_line_settings
+        
+        self.plot_item_settings.restore_default_settings(
+            keep_line_settings=True
+        )
         self.resize_line_settings()
-        # ===============================
-        # Implement the settings
-        # ===============================
+
         self.context_menu.ammend_context_menu()
-        self.set_custom_settings()
+        self.set_custom_settings()        
 
     def clear_line_settings(self):
         # self.settings['line_settings'] = self.plot_item_settings.DEFAULT_SETTINGS['line_settings']
