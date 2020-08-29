@@ -28,7 +28,15 @@ from PyQt5.QtGui import QIcon, QFont, QCursor, QRegion, QPolygon, QWindow
 from PyQt5 import QtCore, Qt, QtGui
 import pyqtgraph as pg
 
-from TimePlotGui import TimePlotGui, DeviceWrapper, DummyDevice
+
+test_mode = True
+if not test_mode:
+    from TimePlotGui import TimePlotGui, DeviceWrapper, DummyDevice
+else:
+    module_path = os.path.dirname(os.getcwd())
+    if module_path not in sys.path:
+        sys.path.append(module_path)
+    from src import TimePlotGui, DeviceWrapper, DummyDevice
 
 
 class DoubleTimePlotWindow(QMainWindow):
@@ -36,11 +44,11 @@ class DoubleTimePlotWindow(QMainWindow):
     
     DEFAULT_GEOMETRY = [400, 200, 1000, 500]
 
-    def __init__(self, devicewrapper_lst1, devicewrapper_lst2):
+    def __init__(self, devices1, devices2):
         super(DoubleTimePlotWindow, self).__init__()
-        self._init_ui(devicewrapper_lst1, devicewrapper_lst2)
+        self._init_ui(devices1, devices2)
 
-    def _init_ui(self, devicewrapper_lst1, devicewrapper_lst2):
+    def _init_ui(self, devices1, devices2):
         self.setGeometry()
         self.setWindowTitle('time-plot')
         self.setStyleSheet("background-color: black;")
@@ -51,13 +59,13 @@ class DoubleTimePlotWindow(QMainWindow):
         self.time_plot_ui1 = TimePlotGui(
             parent=None,
             window=self,
-            devicewrapper_lst=devicewrapper_lst1,
+            devices=devices1,
             folder_filename = "gui1"
         )
         self.time_plot_ui2 = TimePlotGui(
             parent=None,
             window=self,
-            devicewrapper_lst=devicewrapper_lst2,
+            devices=devices2,
             folder_filename = "gui2"
         )
 
@@ -99,7 +107,7 @@ class DoubleTimePlotWindow(QMainWindow):
 # ============================================================================
 # main function
 # ============================================================================
-def main(devicewrapper_lst1, devicewrapper_lst2):
+def main(devices1, devices2):
     """ """
     app = QApplication.instance()
     if app is None:
@@ -107,8 +115,8 @@ def main(devicewrapper_lst1, devicewrapper_lst2):
     else:
         print('QApplication instance already exists {}'.format(str(app)))
     window = DoubleTimePlotWindow(
-        devicewrapper_lst1=devicewrapper_lst1,
-        devicewrapper_lst2=devicewrapper_lst2
+        devices1=devices1,
+        devices2=devices2
     )
     try:
         window.show()

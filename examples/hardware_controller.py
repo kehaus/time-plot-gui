@@ -30,18 +30,25 @@ from PyQt5.QtGui import QIcon, QFont, QCursor, QRegion, QPolygon, QWindow
 from PyQt5 import QtCore, Qt, QtGui
 import pyqtgraph as pg
 
+test_mode = True
+if not test_mode:
+    from TimePlotGui import TimePlotGui, DeviceWrapper, DummyDevice
+else:
+    module_path = os.path.dirname(os.getcwd())
+    if module_path not in sys.path:
+        sys.path.append(module_path)
+    from src import TimePlotGui, DeviceWrapper, DummyDevice
 
-from TimePlotGui import TimePlotGui, DeviceWrapper, DummyDevice
 
 class HardwareController(QMainWindow):
     """ """
     DEFAULT_GEOMETRY = [400, 200, 1000, 500]
 
-    def __init__(self, devicewrapper_lst):
+    def __init__(self, devices):
         super(HardwareController, self).__init__()
-        self._init_ui(devicewrapper_lst = devicewrapper_lst)
+        self._init_ui(devices = devices)
 
-    def _init_ui(self, devicewrapper_lst=None):
+    def _init_ui(self, devices=None):
         self.setGeometry()
         self.setWindowTitle('time-plot')
         self.setStyleSheet("background-color: black;")
@@ -49,11 +56,11 @@ class HardwareController(QMainWindow):
         # ===============================
         # Create TimePlotGui object
         # ===============================
-        self.devicewrapper_lst = devicewrapper_lst
+        self.devices = devices
         self.time_plot_ui = TimePlotGui(
             parent=None,
             window=self,
-            devicewrapper_lst=devicewrapper_lst,
+            devices=devices,
             folder_filename = "gui",
             sampling_latency = .01
         )
@@ -68,7 +75,7 @@ class HardwareController(QMainWindow):
         self.setCentralWidget(self.wdget)
 
         self.layout.addWidget(self.time_plot_ui.central_wid, 0, 0, 6, 6)
-        for idx, dw in enumerate(devicewrapper_lst):
+        for idx, dw in enumerate(devices):
             freq_inpt = QtGui.QInputDialog()
             freq_inpt.setStyleSheet("color: white")
             freq_inpt.setInputMode(0)
@@ -104,7 +111,7 @@ class HardwareController(QMainWindow):
 # ============================================================================
 # main function
 # ============================================================================
-def main(devicewrapper_lst):
+def main(devices):
     """ """
     app = QApplication.instance()
     if app is None:
@@ -112,7 +119,7 @@ def main(devicewrapper_lst):
     else:
         print('QApplication instance already exists {}'.format(str(app)))
     window = HardwareController(
-        devicewrapper_lst=devicewrapper_lst
+        devices=devices
     )
     try:
         window.show()

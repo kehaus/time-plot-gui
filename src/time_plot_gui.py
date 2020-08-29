@@ -70,6 +70,25 @@ class TimePlotGuiException(Exception):
 # ============================================================================
 
 class TimePlotGui(QWidget):
+    """ 
+    QWidget collects and displays data in line plot item in real time
+    
+    
+    Parameters
+    ----------
+    parent : QWidget
+        PyQt handle to introduce inheritance dependence
+    window : QWidget, QMainWindow
+        specifies QWidget in which TimePlotgui will be placed
+    devices : lst, DeviceWrapper object
+        DeviceWrapper objects handle hardware communication 
+    folder_filename : str
+        directory where  plot settings and plot data will be stored
+    sampling_latency : float
+        time delay between two sample acquistion
+    
+    
+    """
 
     start_signal = QtCore.pyqtSignal()
     stop_signal = QtCore.pyqtSignal()
@@ -77,15 +96,12 @@ class TimePlotGui(QWidget):
     restart_signal = QtCore.pyqtSignal()
     DEFAULT_DATA_FILENAME = 'stored_data.json'
 
-    def __init__(self, parent=None, window=None, devicewrapper_lst=None, folder_filename = None, sampling_latency = .005):
-        """ """
+    def __init__(self, parent=None, window=None, devices=None, 
+                 folder_filename = None, sampling_latency = .005):
         super(TimePlotGui, self).__init__(parent=parent)
-
         self._create_absolute_time_stamp()
-
-        if type(devicewrapper_lst) == DeviceWrapper:
-            devicewrapper_lst = [devicewrapper_lst]
-        self.devicewrapper = devicewrapper_lst
+        self.dev_lst = self._check_devices_type(devices)
+        
         # ===============================
         # Allow for coercion of data and settings to the same number of lines
         # ===============================
@@ -100,15 +116,15 @@ class TimePlotGui(QWidget):
         # ===============================
         # Get the settings object
         # ===============================
-        self.plot_item_settings = PlotItemSettings(number_of_lines = len(devicewrapper_lst), folder_filename = folder_filename)
+        self.plot_item_settings = PlotItemSettings(number_of_lines = len(devices), folder_filename = folder_filename)
         self.settings = self.plot_item_settings.settings
         self.data_fn = os.path.join(self.plot_item_settings.folder_filename, self.DEFAULT_DATA_FILENAME)
 
-        self._init_ui(window, devicewrapper_lst)
-        self._init_multi_worker_thread(devicewrapper_lst)
+        self._init_ui(window, devices)
+        self._init_multi_worker_thread(devices)
 
 
-    def _init_ui(self, mainwindow, devicewrapper_lst):
+    def _init_ui(self, mainwindow, devices):
         """
         Creates and Loads the widgets in the GUI
         """
@@ -149,7 +165,7 @@ class TimePlotGui(QWidget):
         # =====================================================================
         # Initialize the plot
         # =====================================================================
-        self._init_plot(devicewrapper_lst)
+        self._init_plot(devices)
         # =====================================================================
         # Add Widgets to layout, including the Plot itself. Note that the order
         # in which these are added matters because several widgets overlap.
@@ -181,7 +197,7 @@ class TimePlotGui(QWidget):
         self.central_wid.setLayout(self.graphics_layout)
 
 
-    def _init_plot(self, devicewrapper_lst):
+    def _init_plot(self, devices):
         """ """
         # ===============================
         # Initializes plot by generating the plotWidget, plotItem, and ViewBox objects that are callable
@@ -206,7 +222,7 @@ class TimePlotGui(QWidget):
         # ===============================
         # initlialize data lines
         # ===============================
-        self._init_data_items(devicewrapper_lst)
+        self._init_data_items(devices)
         self._align_time_stamps()
         # ===============================
         # Customize the context menu
@@ -218,7 +234,7 @@ class TimePlotGui(QWidget):
         self.set_custom_settings()
 
 
-    def _init_data_items(self, devicewrapper_lst, new_data = None):
+    def _init_data_items(self, devices, new_data = None):
         """ """
         
         self.data_table = {}
@@ -241,6 +257,42 @@ class TimePlotGui(QWidget):
             )
             self.graphItem.addItem(data_item.get_plot_data_item())
             id_nr += 1
+
+    def _check_devices_type(self, devices):
+        """checks devices and reformats if necessary
+        
+        Function is used to allow TimePlotGui initialization with either one 
+        devicewrapper object or a list of devicewrapper objects. Function 
+        returns a list of device wrappres
+        
+        Parameters
+        ----------
+        devices : DeviceWrapper object or list of DeviceWrapper objects
+            DeviceWrapper object handle hardware communication
+            
+        Returns
+        -------
+        lst
+            list of DeviceWrapper object
+        
+        Raises
+        ------
+        TimePlotGuiException
+            if devices contains variables which are not of type DeviceWrapper
+        
+        """
+        err_msg = """
+        Given devices are not of type DeviceWrapper. 
+        Make sure that elemnts in devices are DeviceWrapper and initialize 
+        TimePlotGui again.
+        """
+        
+        if type(devices) is DeviceWrapper:
+            return [devices]
+        if all([type(d) is DeviceWrapper for d in devices]):
+            return devices
+        else:
+            raise TimePlotGuiException(err_msg)
 
 
     def _create_absolute_time_stamp(self):
@@ -278,22 +330,22 @@ class TimePlotGui(QWidget):
 
     def resize_line_settings(self):
         if self.started:
-            self.coerce_same_length(data_length = len(self.devicewrapper))
+            self.coerce_same_length(data_length = len(self.dev_lst))
             self.resize_data_table()
         else:
             self.coerce_same_length(data_length = len(self.data_table))
         self.set_line_settings()
 
     def resize_data_table(self):
-        while len(self.devicewrapper) != len(self.data_table):
-            if len(self.devicewrapper) > len(self.data_table):
+        while len(self.dev_lst) != len(self.data_table):
+            if len(self.dev_lst) > len(self.data_table):
                 id_nr = len(self.data_table)
                 data_item = TimePlotDataItem(data_fn = self.data_fn, id_nr=id_nr, absolute_time=self.t0)
                 self.data_table.update(
                     {id_nr: data_item}
                 )
                 self.graphItem.addItem(data_item.get_plot_data_item())
-            elif len(self.devicewrapper) < len(self.data_table):
+            elif len(self.dev_lst) < len(self.data_table):
                 timeplotdataitem = self.data_table[max(self.data_table.keys())]
                 self.graphItem.removeItem(self.data_table[max(self.data_table.keys())].get_plot_data_item())
                 del timeplotdataitem
@@ -552,7 +604,7 @@ class TimePlotGui(QWidget):
         # Delete PlotItemSettings instance and create new one
         # ===============================
         del self.plot_item_settings
-        self.plot_item_settings = PlotItemSettings(number_of_lines = len(self.devicewrapper))
+        self.plot_item_settings = PlotItemSettings(number_of_lines = len(self.dev_lst))
         self.settings = self.plot_item_settings.DEFAULT_SETTINGS
         self.settings['line_settings'] = temp_line_settings
         self.resize_line_settings()
@@ -800,7 +852,7 @@ class TimePlotGui(QWidget):
                 self.settings = self.plot_item_settings.settings
             if data_fname is not None:
                 self.clear_all_plot_data_items()
-                self._init_data_items(self.devicewrapper, new_data = data_fname)
+                self._init_data_items(self.dev_lst, new_data = data_fname)
                 self.resize_line_settings()
                 self.add_line_settings_menu()
                 self.set_custom_settings()
@@ -936,20 +988,20 @@ class TimePlotGui(QWidget):
         self.central_wid.setPalette(p)
 
 
-    def _init_multi_worker_thread(self, devicewrapper_lst):
-        """initializes a worker thread for every devicewrapper"""
+    def _init_multi_worker_thread(self, devices):
+        """initializes a worker thread for every devicewrapper in devices"""
 
         # set up QWaitCondition
         self.mutex_table = {
-            idx: QMutex() for idx in range(len(devicewrapper_lst))
+            idx: QMutex() for idx in range(len(devices))
         }
         self.cond_table = {
-            idx: QWaitCondition() for idx in range(len(devicewrapper_lst))
+            idx: QWaitCondition() for idx in range(len(devices))
         }
 
         # set up the measurement engine
         self.worker_table = {}
-        for idx, devicewrapper in enumerate(devicewrapper_lst):
+        for idx, devicewrapper in enumerate(devices):
             worker = TimePlotWorker(
                 devicewrapper,
                 self.mutex_table[idx],
@@ -1104,18 +1156,18 @@ class TimePlotMainWindow(QMainWindow):
     # xpos on screen, ypos on screen, width, height
     DEFAULT_GEOMETRY = [400, 400, 1000, 500]
 
-    def __init__(self, devicewrapper_lst=None):
+    def __init__(self, devices=None):
         super(TimePlotMainWindow, self).__init__()
-        self._init_ui(devicewrapper_lst=devicewrapper_lst)
+        self._init_ui(devices=devices)
 
-    def _init_ui(self, window_geometry=None, devicewrapper_lst=None):
+    def _init_ui(self, window_geometry=None, devices=None):
         self.setGeometry()
         self.setWindowTitle('time-plot')
         self.setStyleSheet("background-color: black;")
         self.time_plot_ui = TimePlotGui(
             parent=None,
             window=self,
-            devicewrapper_lst=devicewrapper_lst,
+            devices=devices,
             folder_filename = None
         )
         self.test_widget = QWidget()

@@ -50,7 +50,7 @@ if app is None:
     app = QApplication(sys.argv)
 else:
     print('QApplication instance already exists {}'.format(str(app)))
-window = TimePlotMainWindow(devicewrapper_lst=[dw1, dw2])
+window = TimePlotMainWindow(devices=[dw1, dw2])
 try:
     window.show()
     app.exec_()
