@@ -89,18 +89,21 @@ class TimePlotGui(QWidget):
     
     
     """
+    
+    DEFAULT_DATA_FILENAME = 'stored_data.json'
 
     start_signal = QtCore.pyqtSignal()
     stop_signal = QtCore.pyqtSignal()
     pause_signal = QtCore.pyqtSignal()
     restart_signal = QtCore.pyqtSignal()
-    DEFAULT_DATA_FILENAME = 'stored_data.json'
 
     def __init__(self, parent=None, window=None, devices=None, 
                  folder_filename = None, sampling_latency = .005):
         super(TimePlotGui, self).__init__(parent=parent)
         self._create_absolute_time_stamp()
         self.dev_lst = self._check_devices_type(devices)
+        self.dev_num = len(self.dev_lst)
+        self.sampling_latency = sampling_latency
         
         # ===============================
         # Allow for coercion of data and settings to the same number of lines
@@ -110,16 +113,9 @@ class TimePlotGui(QWidget):
         self.previous_x_max = None
         self.previous_y_max = None
         # ===============================
-        # Allow customization of delay between samples
+        # setup gui and worker thread
         # ===============================
-        self.sampling_latency = sampling_latency
-        # ===============================
-        # Get the settings object
-        # ===============================
-        self.plot_item_settings = PlotItemSettings(number_of_lines = len(devices), folder_filename = folder_filename)
-        self.settings = self.plot_item_settings.settings
-        self.data_fn = os.path.join(self.plot_item_settings.folder_filename, self.DEFAULT_DATA_FILENAME)
-
+        self._init_settings(folder_filename)
         self._init_ui(window, devices)
         self._init_multi_worker_thread(devices)
 
@@ -257,6 +253,31 @@ class TimePlotGui(QWidget):
             )
             self.graphItem.addItem(data_item.get_plot_data_item())
             id_nr += 1
+            
+    def _init_settings(self, folder_filename):
+        """initializes plot settings
+        
+        Settings are initialized by loading from file or from default values. 
+        To initialize the plot settingsa PlotItemSettings object is created.
+        
+        Parameters
+        ----------
+        folder_filename : str
+            path to settings filename
+            
+        
+        """
+        self.plot_item_settings = PlotItemSettings(
+            number_of_lines=self.dev_num, 
+            folder_filename=folder_filename
+        )
+        self.settings = self.plot_item_settings.settings
+        self.data_fn = os.path.join(
+            self.plot_item_settings.folder_filename, 
+            self.DEFAULT_DATA_FILENAME
+        )
+        return
+        
 
     def _check_devices_type(self, devices):
         """checks devices and reformats if necessary
