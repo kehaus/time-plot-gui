@@ -1,0 +1,5 @@
+recursive-include TimePlotGui *.py *.ui *.m README.* *.txt
+recursive-include doc *.rst *.py *.svg *.png
+recursive-include doc/build/html *
+include doc/Makefile doc/make.bat README.md LICENSE.txt CHANGELOG
+global-exclude *.pyc
