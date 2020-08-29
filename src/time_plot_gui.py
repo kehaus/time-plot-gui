@@ -204,22 +204,36 @@ class TimePlotGui(QWidget):
         self.central_wid.setLayout(self.graphics_layout)
 
 
-    def _init_plot(self, devices):
-        """ """
-        # ===============================
-        # Initializes plot by generating the plotWidget, plotItem, and ViewBox objects that are callable
-        # ===============================
+    def _init_plot(self, dev_lst):
+        """Initializes plot item by customizing corresponding Widgets
+        
+        This function initializes the plot item by customizing the pyqtgraph
+        objects like *PlotWidget*, *PlotItem*, and *ViewBox*.
+        
+        Parameter
+        ---------
+        dev_lst : lst
+            lst of DeviceWrapper object used to collect data
+        
+        """
+
         try:
             self.viewbox = ViewBoxV2()
-        # self.viewbox = pg.ViewBox(parent = pg.graphicsItems.PlotItem)
             self.graphItem = pg.PlotItem(viewBox = self.viewbox)
-            self.axis_item = TimeAxisItem(orientation='bottom', t0 = self.t0, relative_time = self.settings['relative_timestamp'])
-            self.graphWidget = pg.PlotWidget(axisItems = \
-                {'bottom': self.axis_item}, plotItem = self.graphItem)
+            self.axis_item = TimeAxisItem(
+                orientation='bottom', 
+                t0 = self.t0, 
+                relative_time = self.settings['relative_timestamp']
+            )
+            self.graphWidget = pg.PlotWidget(
+                axisItems={'bottom': self.axis_item}, 
+                plotItem=self.graphItem
+            )
         except:
             print("ERROR with custom viewbox class. 'Except' case run instead.")
-            self.graphWidget = pg.PlotWidget(axisItems = \
-                {'bottom': self.axis_item})
+            self.graphWidget = pg.PlotWidget(
+                axisItems={'bottom': self.axis_item}
+            )
             self.graphItem = self.graphWidget.getPlotItem()
             self.viewbox = self.graphItem.getViewBox()
         # ===============================
@@ -229,7 +243,11 @@ class TimePlotGui(QWidget):
         # ===============================
         # initlialize data lines
         # ===============================
-        self._init_data_items(devices)
+        self._init_data_items(dev_lst)
+        
+        print("%%%%%%%%%%%% data_table: ")
+        print(self.data_table)
+        print("")
         self._align_time_stamps()
         # ===============================
         # Customize the context menu
@@ -242,7 +260,7 @@ class TimePlotGui(QWidget):
 
 
     def _init_data_items(self, devices, new_data = None):
-        """ """
+        """initialize data items  """
         
         self.data_table = {}
         
@@ -255,9 +273,11 @@ class TimePlotGui(QWidget):
             )
             if new_data is None:
                 data_item.recall_data(self.data_fn)
-            elif new_data is not None:
+                
+            else:
                 data_item.recall_data(new_data)
             if len(data_item.get_plot_data_item().xData) == 0:
+            # if len(data_item.get_time_data()) == 0:
                 break
             self.data_table.update(
                 {id_nr: data_item}
@@ -266,7 +286,7 @@ class TimePlotGui(QWidget):
             id_nr += 1
             
     def _init_settings(self, folder_filename):
-        """initializes plot settings
+        """initialize plot settings
         
         Settings are initialized by loading from file or from default values. 
         To initialize the plot settingsa PlotItemSettings object is created.
@@ -388,7 +408,8 @@ class TimePlotGui(QWidget):
         while data_length != len(self.settings['line_settings']):
             if data_length > len(self.settings['line_settings']):
                 self.settings['line_settings'][str(len(self.settings['line_settings']))] = \
-                            self.plot_item_settings.default_line_settings
+                            self.plot_item_settings.get_default_line_settings()
+                            # self.plot_item_settings.default_line_settings
             elif data_length < len(self.settings['line_settings']):
                 self.settings['line_settings'].popitem()
 

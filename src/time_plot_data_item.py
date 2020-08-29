@@ -79,6 +79,14 @@ class TimePlotDataItem(JSONFileHandler):
     def get_data(self):
         """returns the pg.PlotDataItem time and data arrays"""
         return self.pdi.getData()
+    
+    def get_time_data(self):
+        """returns the pg.PlotDataItem time value array"""
+        return self.get_data()[0]
+
+    def get_ydata(self):
+        """returns the pg.PlotDataItem data value array"""
+        return self.get_data()[1]
 
     def set_data(self, *args, **kwargs):
         """replaces data with provided data"""

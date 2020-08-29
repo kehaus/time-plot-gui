@@ -187,7 +187,7 @@ class PlotItemSettings(JSONFileHandler):
         
         """
         settings = PlotItemSettings.DEFAULT_SETTINGS.copy()
-        line_setting = PlotItemSettings.DEFAULT_LINE_SETTINGS
+        line_setting = self.get_default_line_settings()
         all_line_settings = {
             str(key): line_setting.copy() for key in range(n_lines)
         }
@@ -195,6 +195,17 @@ class PlotItemSettings(JSONFileHandler):
             line_settings = all_line_settings
         )
         return settings
+    
+    def get_default_line_settings(self):
+        """returns default line settings dictionary
+        
+        Return
+        ------
+        dct
+            default settings for line element in plot item
+            
+        """
+        return PlotItemSettings.DEFAULT_LINE_SETTINGS.copy()
 
     # ====
     # update, load, and save settings from/ to JSON file
