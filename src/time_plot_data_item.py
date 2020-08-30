@@ -156,28 +156,104 @@ class TimePlotDataItem(JSONFileHandler):
             self.set_data(t,y)
         return
 
-    def setAlpha(self, value):
-        self.pdi.setAlpha(value/255, False)
-
-    def setWidth(self, value):
-        self.pdi.update_width(value)
-
-    def open_color_dialog(self):
-        self.restorable_color = self.pdi.opts['pen'].color()
-        self.color_dialog = QColorDialog()
-        self.color_dialog.currentColorChanged.connect(self.set_color)
-        self.color_dialog.rejected.connect(self.cancel_color_dialog)
-        self.color_dialog.open()
-
-    def set_color(self):
-        self.pdi.update_color(self.color_dialog)
+    def set_alpha(self, value):
+        """set alpha value in PlotDatItem
         
-    def get_color(self):
-        return self.pdi.get_color()
+        Function rescales alpha value to range [0,1].
+        
+        Parameter
+        ---------
+        value : int
+            alpha value must be provided as int in range 0 to 255
+            
+        """
+        self.pdi.setAlpha(value/255., False)
 
-    def cancel_color_dialog(self):
-        self.pdi.update_color(self.restorable_color)
+    def set_width(self, width):
+        """set width value in PlotDataItem
+        
+        Parameter
+        ---------
+        width : int
+            
+        
+        """
+        self.pdi.opts['pen'].setWidth(width)
+        self.pdi.updateItems()
 
+    def get_color(self, rgb=True):
+        """returns color from plot data item object
+        
+        Function provides the color value as tuple of RGB values or as QColor
+        object depending on how the rgb-flag is set. This double functionality
+        is required to make the function interface seamlessly with the 
+        _open_color_dialog function in LineSettingsQWidgetAction
+        
+        Parameter
+        ---------
+        rgb : bool
+            flag indicates if color value is returned as RGB tuple (rgb=True)
+            or as QColor (rgb=False).
+            
+        """
+        if rgb:
+            return self.pdi.opts['pen'].color().getRgb()
+        else:
+            return self.pdi.opts['pen'].color()
+        
+    def set_color(self, color):
+        """set given color in plot data item object
+        
+        Function accepts QColor object or tuple of form (int, int, int, int).
+        
+        Parameter
+        ---------
+        color : QColor, tuple
+            represents color value passed to plot data item. Color needs to be 
+            provided as QColor or as tuple representing an RGB value (e.g. 
+            (int, int, int, int)).
+            
+        """
+        if type(color) is tuple:
+            qcolor = QColor()
+            qcolor.setRgb(*color)
+        elif type(color) is QColor:
+            qcolor = color
+        else:
+            raise TypeError(
+                'color type not valid: {} '.format(type(color))
+            )
+        self.pdi.opts['pen'].setColor(qcolor)
+        
+    def update_color_from_dialog(self, color_dialog):
+        """update color value of plot data item based on response from 
+        QColorDialog 
+        
+        This funciton is part of the machinery to select color from 
+        QColorDialog to update the plot data item color value. The variable 
+        type depends on which button is clicked in the color dialog box.
+        
+        Parameter
+        ---------
+        color_dialog : QColor, QColorDialog
+            variable contains color information from QColorDialog. 
+            
+        """
+        if type(color_dialog) is QColor:
+            self.set_color(color_dialog)
+        elif type(color_dialog) is QColorDialog:
+            self.set_color(color_dialog.currentColor())
+        else:
+            raise TypeError(
+                'color_dialog variable type not known: {} '.format(
+                    type(color_dialog)
+                )
+            )
+        self.pdi.updateItems()
+
+# ============================================================================
+# 
+# ============================================================================
 
 class PlotDataItemV2(pg.PlotDataItem):
     """Child class customizes pyqtgraph.PlotDataItem
@@ -187,7 +263,7 @@ class PlotDataItemV2(pg.PlotDataItem):
     pyqtgraph plot objects (e.g. ViewBox, PlotItem, PlotWidget)
 
     This class overwrites:
-        * _fourierTransform-function: fixes bug which caused indexing error
+        * getData() to introduce local fft mode
 
 
     """
@@ -289,8 +365,6 @@ class PlotDataItemV2(pg.PlotDataItem):
         if not hasattr(self, '_local_ft_xmin') or not hasattr(self, '_local_ft_xmax'):
             self.start_local_ft_mode()
         xmin, xmax = self._local_ft_xmin, self._local_ft_xmax
-        # print('************* xmin: ', xmin)
-        # print('************* xmin: ', xmax)
 
         # truncate x and y
         idx_lst = (xmin<x) & (x<xmax)
@@ -315,17 +389,17 @@ class PlotDataItemV2(pg.PlotDataItem):
     def stop_local_ft_mode(self):
         self.opts['fftLocal'] = False
 
-    def get_color(self):
-        return self.opts['pen'].color().getRgb()
+    # def get_color(self):
+    #     return self.opts['pen'].color().getRgb()
 
-    def update_width(self, value):
-        # /255
-        self.opts['pen'].setWidth(value)
-        self.updateItems()
+    # def update_width(self, value):
+    #     # /255
+    #     self.opts['pen'].setWidth(value)
+    #     self.updateItems()
 
-    def update_color(self, color_dialog):
-        if type(color_dialog) is QColor:
-            self.opts['pen'].setColor(color_dialog)
-        else:
-            self.opts['pen'].setColor(color_dialog.currentColor())
-        self.updateItems()
+    # def update_color(self, color_dialog):
+    #     if type(color_dialog) is QColor:
+    #         self.opts['pen'].setColor(color_dialog)
+    #     else:
+    #         self.opts['pen'].setColor(color_dialog.currentColor())
+    #     self.updateItems()

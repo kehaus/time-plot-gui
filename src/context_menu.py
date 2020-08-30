@@ -321,8 +321,7 @@ class TimePlotContextMenu():
         self.transform_menu.local_fourier = local_fourier
 
     def remove_options_from_default_contextmenu(self):
-        """
-        remove some default options from the contextmenu
+        """remove some default options from the contextmenu
         
         Since this context menu is build upon the pyqtgraph context menu, some 
         of the submenues are not relevant here. This function removes them.
@@ -349,19 +348,29 @@ class TimePlotContextMenu():
     #         )
     #         key += 1
 
-    def ammend_context_menu(self):
-        """ """
+    def update_line_settings_context_menu(self):
+        """updates all line setting values in context menu"""
         for line in self.line_settings_menu.lines:
             line.update_line_menu()
-            # line.set_alpha(
-            #     255*self.tpg.settings['line_settings'][str(line.id_nr)]['line_alpha']
-            # )
-            # line.set_width(
-            #     self.tpg.settings['line_settings'][str(line.id_nr)]['line_width']
-            # )
+
 
 class LineSettingsQWidgetAction(QtGui.QWidgetAction):
-    """ 
+    """Class customizes the QWidgetAction object for the line settings menu
+    
+    This class sets up a block in the line settings menu corresponding to one 
+    line object. It provides an interface between the clickable elements in
+    the submenu block and the TimePlotDataItem it is connected to set settings
+    like line width, line color, and alpha value.
+    
+    Parameter
+    ---------
+    line_settings_menu : QMenu
+        QMenu which this class will be ammended to
+    time_plot_gui : TimePlotGui object
+        Gui Widget that displayes the plot lines
+    id_nr : int
+        reference number to access TimePlotDataItem from data_table in the
+        TimePlotGui object
     
     
     Attribute
@@ -372,14 +381,14 @@ class LineSettingsQWidgetAction(QtGui.QWidgetAction):
     
     """
     
-    def __init__(self, parent, time_plot_gui, id_nr):
-        super(LineSettingsQWidgetAction, self).__init__(parent)
+    def __init__(self, line_settings_menu, time_plot_gui, id_nr):
+        super(LineSettingsQWidgetAction, self).__init__(line_settings_menu)
         
         self.id_nr = id_nr
         self.tpg = time_plot_gui
         self.data_item = self.tpg.data_table[id_nr]
         self.line_settings = self.tpg.settings['line_settings'][str(id_nr)]
-        self.line_settings_menu = parent
+        self.line_settings_menu = line_settings_menu
         self._compose_name()
         
         self.mainlabel = QLabel(self.name)
@@ -413,9 +422,9 @@ class LineSettingsQWidgetAction(QtGui.QWidgetAction):
         self.setDefaultWidget(self.width_widget)
 
         # connect signals & slots
-        self.spinbox.valueChanged.connect(self.data_item.setWidth)
-        self.alpha_slider.valueChanged.connect(self.data_item.setAlpha)
-        self.color_button.clicked.connect(self.data_item.open_color_dialog)
+        self.spinbox.valueChanged.connect(self.data_item.set_width)
+        self.alpha_slider.valueChanged.connect(self.data_item.set_alpha)
+        self.color_button.clicked.connect(self._open_color_dialog)
         
         
     def _compose_name(self):
@@ -437,15 +446,33 @@ class LineSettingsQWidgetAction(QtGui.QWidgetAction):
         return self.name
     
     def get_alpha(self):
+        """get alpha value from QSlider"""
         return self.alpha_slider.value()
     
     def set_alpha(self, alpha):
+        """sets alpha value in QSlider
+        
+        Parameter
+        ---------
+        alpha : int
+            alpha value needs to be provided as int in range 0 to 255
+            
+        """
         self.alpha_slider.setValue(alpha)
         
     def get_width(self):
+        """get width value from spinbox QObject"""
         return self.spinbox.value()
         
     def set_width(self, width):
+        """set width value in spinbox QObject
+        
+        Parameter
+        ---------
+        width : int
+            width can take int values between 0 and 15
+            
+        """
         self.spinbox.setValue(width)
         
     def get_line_settings(self):
@@ -490,8 +517,8 @@ class LineSettingsQWidgetAction(QtGui.QWidgetAction):
         Qbject in line settings submenu
         
         Note:
-            alpha value needs to be converted to value in [0,1] to be applied to 
-            Plot Item. Therefore the conversion factor of 1./255.
+            alpha value needs to be converted to value in [0,1] to be applied 
+            to Plot Item. Therefore the conversion factor of 1./255.
             
         """
         line_settings = self.get_line_settings()
@@ -499,4 +526,26 @@ class LineSettingsQWidgetAction(QtGui.QWidgetAction):
         self.line_settings.update(line_settings)
 
     
+    def _open_color_dialog(self):
+        """opens a QColorDialog window to select color for PlotDataItem
+        
+        This function generates and open QColorDialog. Button signals are 
+        connected to functions which directly change color value of 
+        PlotDataItem
+        
+        """
+        self.restorable_color = self.data_item.get_color(rgb=False)
+        self.color_dialog = QColorDialog()
+        self.color_dialog.currentColorChanged.connect(self._set_color_from_dialog)
+        self.color_dialog.rejected.connect(self._cancel_color_dialog)
+        self.color_dialog.open()
+
+    def _set_color_from_dialog(self):
+        """updates QColor in PlotDataITem. Part of QColorDialog mechanism """
+        self.data_item.update_color_from_dialog(self.color_dialog)
+
+    def _cancel_color_dialog(self):
+        """restores old QColor in PlotDataITem. Part of QColorDialog mechanism 
+        """
+        self.data_item.update_color_from_dialog(self.restorable_color)
 

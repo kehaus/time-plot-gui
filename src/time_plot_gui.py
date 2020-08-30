@@ -561,28 +561,32 @@ class TimePlotGui(QWidget):
         """updates PlotDataItem settings with values from settings dictionary
         """
         for line_nr, time_data_item in self.data_table.items():
-            data_item = time_data_item.get_plot_data_item()
+            pdi = time_data_item.get_plot_data_item()
             line_setting = self.settings['line_settings'][str(line_nr)]
 
-            data_item.setAlpha(
+            pdi.setAlpha(
                 alpha = line_setting['line_alpha'],
                 auto = False
             )
-            data_item.setPen(
+            pdi.setPen(
                 pg.mkPen(
                     width = line_setting['line_width'],
                     color = line_setting['line_color']
                 )
             )
-            data_item.setFftMode(self.settings['frequency_state'])
+            pdi.setFftMode(self.settings['frequency_state'])
 
     def update_plot_labels(self):
+        """updates plot labels and title corresponding to currently set fft 
+        mode.
+        """
         if self.frequency_state:
             self.set_frequency_labels()
         else:
             self.set_time_labels()
 
     def change_label_state(self):
+        """changes fft label and updates plot labels accordingly"""
         self.frequency_state = self.graphItem.ctrl.fftCheck.isChecked()
         self.update_plot_labels()
 
@@ -741,14 +745,14 @@ class TimePlotGui(QWidget):
         )
         self.resize_line_settings()
 
-        self.context_menu.ammend_context_menu()
+        self.context_menu.update_line_settings_context_menu()
         self.set_custom_settings()        
 
     def clear_line_settings(self):
         """restores default line settings"""
         self.plot_item_settings.clear_all_line_settings()
         self.update_line_settings()
-        self.context_menu.ammend_context_menu()
+        self.context_menu.update_line_settings_context_menu()
 
 
     # def add_line_settings_menu(self):
@@ -830,7 +834,7 @@ class TimePlotGui(QWidget):
                 self.resize_line_settings()
                 self.context_menu._add_line_settings_menu(self.data_table)
                 self.set_custom_settings()
-                # self.ammend_context_menu()
+                # self.update_line_settings_context_menu()
 
     def set_local_ft_mode(self, local_ft_mode):
         """starts or stops the local FT mode depending on local fourier checkbox
