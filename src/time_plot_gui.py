@@ -352,7 +352,7 @@ class TimePlotGui(QWidget):
             raise TimePlotGuiException(err_msg)
 
     def _create_data_item(self, id_nr):
-        """returns a data item
+        """initializes and returns a TimePlotDataItem object
         
         Parameter
         ---------
@@ -754,59 +754,6 @@ class TimePlotGui(QWidget):
         self.update_line_settings()
         self.context_menu.update_line_settings_context_menu()
 
-
-    # def add_line_settings_menu(self):
-    #     # ===============================
-    #     # remove existing items from the menu
-    #     # ===============================
-    #     self.line_settings_menu.clear()
-    #     # ===============================
-    #     # Submenu Formation: line_settings
-    #     # ===============================
-    #     for key in self.data_table:
-    #         # ===============================
-    #         # width and alpha
-    #         # ===============================
-    #         mainlabel = QLabel('Line '+str(key))
-    #         mainlabel.setAlignment(QtCore.Qt.AlignCenter)
-    #         widthintermediate = QtGui.QWidgetAction(self.line_settings_menu)
-    #         width_widget = QtGui.QWidget()
-    #         widthlabel = QLabel("Line Width:")
-    #         spinbox = QSpinBox()
-    #         spinbox.setValue(self.settings['line_settings'][str(key)]['line_width'])
-    #         spinbox.setRange(1, 15)
-    #         spinbox.setSingleStep(1)
-
-    #         alphalabel = QLabel("Alpha")
-    #         alphaSlider = QtGui.QSlider(self.line_settings_menu)
-    #         alphaSlider.setOrientation(QtCore.Qt.Horizontal)
-    #         alphaSlider.setMaximum(255)
-    #         alphaSlider.setValue(self.settings['line_settings'][str(key)]['line_alpha']*255)
-
-    #         width_layout = QGridLayout()
-    #         width_layout.addWidget(mainlabel, 0, 0, 1, 2)
-    #         width_layout.addWidget(alphalabel, 1, 0, 1, 1)
-    #         width_layout.addWidget(alphaSlider, 1, 1, 1, 1)
-    #         width_layout.addWidget(widthlabel, 2, 0, 1, 1)
-    #         width_layout.addWidget(spinbox, 2, 1, 1, 1)
-    #         width_widget.setLayout(width_layout)
-
-    #         spinbox.valueChanged.connect(self.data_table[key].setWidth)
-    #         alphaSlider.valueChanged.connect(self.data_table[key].setAlpha)
-    #         widthintermediate.setDefaultWidget(width_widget)
-    #         self.line_settings_menu.addAction(widthintermediate)
-    #         self.line_settings_menu.widthintermediate = widthintermediate
-    #         # ===============================
-    #         # color
-    #         # ===============================
-    #         change_line_color = QtGui.QWidgetAction(self.line_settings_menu)
-    #         color_button = QPushButton("Change line color")
-    #         color_button.clicked.connect(self.data_table[key].open_color_dialog)
-    #         change_line_color.setDefaultWidget(color_button)
-    #         self.line_settings_menu.addAction(change_line_color)
-    #         self.line_settings_menu.change_line_color = change_line_color
-
-
     def open_finder(self):
         self.started = False
         data_fname, file_info = QFileDialog.getOpenFileName(
@@ -844,22 +791,22 @@ class TimePlotGui(QWidget):
             if not self.graphItem.ctrl.fftCheck.isChecked():
                 for dataitem in self.data_table.values():
                     dataitem.start_local_ft_mode()
-                    # print('%%%%%% started local fourier mode')
             else:
                 self.transform_menu.local_fourier.defaultWidget().layout().itemAt(1).widget().setChecked(False)
                 self.local_ft_error()
         else:
             for dataitem in self.data_table.values():
                 dataitem.stop_local_ft_mode()
-                # print('%%%%%% stopped local fourier mode')
         return
 
     def clear_all_plot_data_items(self):
+        """remove all PlotDataItems from PLotItem"""
         data_items = self.graphItem.listDataItems()
         for data_item in data_items:
             self.graphItem.removeItem(data_item)
 
     def save_data_settings(self):
+        """save plot settings"""
         self.plot_item_settings.save_settings(
             auto_clear_data = self.context_menu.data_options.automatic_clear_checkbox.isChecked()
         )

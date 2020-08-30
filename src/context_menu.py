@@ -9,15 +9,44 @@ from PyQt5.QtGui import QIcon, QFont, QCursor, QRegion, QPolygon, QWindow, QColo
 from PyQt5 import QtCore, Qt, QtGui
 
 class TimePlotContextMenu():
-    """
-    TimePlotContextMenu class customizes the pyqtgraph context menu
+    """TimePlotContextMenu class customizes the pyqtgraph context menu
     
-    TimePlotContextMenu adds functionality to load and save plot settings and 
-    data; to customize the line plot settings; and to perform a local FFT
+    TimePlotContextMenu adds functionality to the pyqtgraph.ContextMenu to load 
+    and save plot settings and data; to customize the line plot settings; and 
+    to perform a local FFT. In that is this class built on top of the 
+    pyqtgraph.ContextMenu and replaces or ammmends the QMenus present inthere.
+    
+    
+    Parameter
+    ---------
+    menu : QMenu
+        Context Menu of the pyqtgraph.PlotItem object. This object acts as the 
+        template on which this class applies the customization
+    viewbox_menu : QMenu
+        Context Menu subsection of the pyqtgraph.viewbox object. This object 
+        acts as the template on which this class applies the customization
+    time_plot_gui : TimePlotGui
+        Gui QWidget which contains the PlotItem
+    
+        
+    Attribute
+    ---------
+    line_settings_menu : QMenu
+        contains interface to customize plot line layout like line width, 
+        line color, and alpha value for every plot line individually
+    visualization_settings : QMenu
+        contains actions to load, save, clear, and restore plot settings.
+    data_options : QMenu
+        contains actions to to clear present data; set the clear-on-startup 
+        option; and enable data autosave option
+    change_label_menu : QMenu
+        contains functions to change title, and axes labels. Furthermore it 
+        allows to change time scale from relative time values to absolute timve 
+        values
     
     """
-    def __init__(self, menu, viewbox_menu, tpg):
-        self.tpg = tpg
+    def __init__(self, menu, viewbox_menu, time_plot_gui):
+        self.tpg = time_plot_gui
         self.menu = menu
         self.viewbox_menu = viewbox_menu
         self.viewbox_menu.leftMenu.actions()[0].setText('Click and Drag')
@@ -90,53 +119,7 @@ class TimePlotContextMenu():
         # ===============================
         # Submenu Formation: line_settings
         # ===============================
-        for key in self.tpg.data_table:
-            # # ===============================
-            # # width and alpha
-            # # ===============================
-            # mainlabel = QLabel('Line '+str(key))
-            # mainlabel.setAlignment(QtCore.Qt.AlignCenter)
-            # widthintermediate = QtGui.QWidgetAction(self.line_settings_menu)
-            # width_widget = QtGui.QWidget()
-            # widthlabel = QLabel("Line Width:")
-            # spinbox = QSpinBox()
-            # spinbox.setValue(self.tpg.settings['line_settings'][str(key)]['line_width'])
-            # spinbox.setRange(1, 15)
-            # spinbox.setSingleStep(1)
-
-            # alphalabel = QLabel("Alpha")
-            # alphaSlider = QtGui.QSlider(self.line_settings_menu)
-            # alphaSlider.setOrientation(QtCore.Qt.Horizontal)
-            # alphaSlider.setMaximum(255)
-            # alphaSlider.setValue(self.tpg.settings['line_settings'][str(key)]['line_alpha']*255)
-
-            # color_button2 = QPushButton("Change line color2")
-            # color_button2.clicked.connect(self.tpg.data_table[key].open_color_dialog)
-
-            # width_layout = QGridLayout()
-            # width_layout.addWidget(mainlabel, 0, 0, 1, 2)
-            # width_layout.addWidget(alphalabel, 1, 0, 1, 1)
-            # width_layout.addWidget(alphaSlider, 1, 1, 1, 1)
-            # width_layout.addWidget(widthlabel, 2, 0, 1, 1)
-            # width_layout.addWidget(spinbox, 2, 1, 1, 1)
-            # width_layout.addWidget(color_button2, 3, 0, 1, 2)
-            # width_widget.setLayout(width_layout)
-
-            # spinbox.valueChanged.connect(self.tpg.data_table[key].setWidth)
-            # alphaSlider.valueChanged.connect(self.tpg.data_table[key].setAlpha)
-            # widthintermediate.setDefaultWidget(width_widget)
-            # self.line_settings_menu.addAction(widthintermediate)
-            # self.line_settings_menu.widthintermediate = widthintermediate
-            # # ===============================
-            # # color
-            # # ===============================
-            # # change_line_color = QtGui.QWidgetAction(self.line_settings_menu)
-            # # color_button = QPushButton("Change line color")
-            # # color_button.clicked.connect(self.tpg.data_table[key].open_color_dialog)
-            # # change_line_color.setDefaultWidget(color_button)
-            # # self.line_settings_menu.addAction(change_line_color)
-            # # self.line_settings_menu.change_line_color = change_line_color
-            
+        for key in self.tpg.data_table:            
 
             # create QWidgetAction
             line_action = LineSettingsQWidgetAction(
@@ -241,7 +224,7 @@ class TimePlotContextMenu():
     def _add_change_label_menu(self):
         """add change label submenu to Plot Option menu
         
-        Chane label menu contians functions to change title, and axes labels. 
+        Change label menu contains functions to change title, and axes labels. 
         Furthermore it allows to change time scale from relative time values to
         absolute timve values
         
@@ -334,19 +317,6 @@ class TimePlotContextMenu():
             menu_name = action.iconText() 
             if menu_name in remove_menu_lst:
                 self.tpg.graphItem.ctrlMenu.removeAction(action)
-        
-
-    # def ammend_context_menu_(self):
-    #     line_controls = self.line_settings_menu.actions()[0::2]
-    #     key = 0
-    #     for line in line_controls:
-    #         line.defaultWidget().layout().itemAt(2).widget().setValue(
-    #             255*self.tpg.settings['line_settings'][str(key)]['line_alpha']
-    #         )
-    #         line.defaultWidget().layout().itemAt(4).widget().setValue(
-    #             self.tpg.settings['line_settings'][str(key)]['line_width']
-    #         )
-    #         key += 1
 
     def update_line_settings_context_menu(self):
         """updates all line setting values in context menu"""
