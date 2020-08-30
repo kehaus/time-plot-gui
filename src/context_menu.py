@@ -82,6 +82,7 @@ class TimePlotContextMenu():
         consists of QWidgets to change line color, alpha value, and width.
         
         """
+        self.line_settings_menu.lines = []
         # ===============================
         # remove existing items from the menu
         # ===============================
@@ -90,47 +91,70 @@ class TimePlotContextMenu():
         # Submenu Formation: line_settings
         # ===============================
         for key in self.tpg.data_table:
-            # ===============================
-            # width and alpha
-            # ===============================
-            mainlabel = QLabel('Line '+str(key))
-            mainlabel.setAlignment(QtCore.Qt.AlignCenter)
-            widthintermediate = QtGui.QWidgetAction(self.line_settings_menu)
-            width_widget = QtGui.QWidget()
-            widthlabel = QLabel("Line Width:")
-            spinbox = QSpinBox()
-            spinbox.setValue(self.tpg.settings['line_settings'][str(key)]['line_width'])
-            spinbox.setRange(1, 15)
-            spinbox.setSingleStep(1)
+            # # ===============================
+            # # width and alpha
+            # # ===============================
+            # mainlabel = QLabel('Line '+str(key))
+            # mainlabel.setAlignment(QtCore.Qt.AlignCenter)
+            # widthintermediate = QtGui.QWidgetAction(self.line_settings_menu)
+            # width_widget = QtGui.QWidget()
+            # widthlabel = QLabel("Line Width:")
+            # spinbox = QSpinBox()
+            # spinbox.setValue(self.tpg.settings['line_settings'][str(key)]['line_width'])
+            # spinbox.setRange(1, 15)
+            # spinbox.setSingleStep(1)
 
-            alphalabel = QLabel("Alpha")
-            alphaSlider = QtGui.QSlider(self.line_settings_menu)
-            alphaSlider.setOrientation(QtCore.Qt.Horizontal)
-            alphaSlider.setMaximum(255)
-            alphaSlider.setValue(self.tpg.settings['line_settings'][str(key)]['line_alpha']*255)
+            # alphalabel = QLabel("Alpha")
+            # alphaSlider = QtGui.QSlider(self.line_settings_menu)
+            # alphaSlider.setOrientation(QtCore.Qt.Horizontal)
+            # alphaSlider.setMaximum(255)
+            # alphaSlider.setValue(self.tpg.settings['line_settings'][str(key)]['line_alpha']*255)
 
-            width_layout = QGridLayout()
-            width_layout.addWidget(mainlabel, 0, 0, 1, 2)
-            width_layout.addWidget(alphalabel, 1, 0, 1, 1)
-            width_layout.addWidget(alphaSlider, 1, 1, 1, 1)
-            width_layout.addWidget(widthlabel, 2, 0, 1, 1)
-            width_layout.addWidget(spinbox, 2, 1, 1, 1)
-            width_widget.setLayout(width_layout)
+            # color_button2 = QPushButton("Change line color2")
+            # color_button2.clicked.connect(self.tpg.data_table[key].open_color_dialog)
 
-            spinbox.valueChanged.connect(self.tpg.data_table[key].setWidth)
-            alphaSlider.valueChanged.connect(self.tpg.data_table[key].setAlpha)
-            widthintermediate.setDefaultWidget(width_widget)
-            self.line_settings_menu.addAction(widthintermediate)
-            self.line_settings_menu.widthintermediate = widthintermediate
-            # ===============================
-            # color
-            # ===============================
-            change_line_color = QtGui.QWidgetAction(self.line_settings_menu)
-            color_button = QPushButton("Change line color")
-            color_button.clicked.connect(self.tpg.data_table[key].open_color_dialog)
-            change_line_color.setDefaultWidget(color_button)
-            self.line_settings_menu.addAction(change_line_color)
-            self.line_settings_menu.change_line_color = change_line_color
+            # width_layout = QGridLayout()
+            # width_layout.addWidget(mainlabel, 0, 0, 1, 2)
+            # width_layout.addWidget(alphalabel, 1, 0, 1, 1)
+            # width_layout.addWidget(alphaSlider, 1, 1, 1, 1)
+            # width_layout.addWidget(widthlabel, 2, 0, 1, 1)
+            # width_layout.addWidget(spinbox, 2, 1, 1, 1)
+            # width_layout.addWidget(color_button2, 3, 0, 1, 2)
+            # width_widget.setLayout(width_layout)
+
+            # spinbox.valueChanged.connect(self.tpg.data_table[key].setWidth)
+            # alphaSlider.valueChanged.connect(self.tpg.data_table[key].setAlpha)
+            # widthintermediate.setDefaultWidget(width_widget)
+            # self.line_settings_menu.addAction(widthintermediate)
+            # self.line_settings_menu.widthintermediate = widthintermediate
+            # # ===============================
+            # # color
+            # # ===============================
+            # # change_line_color = QtGui.QWidgetAction(self.line_settings_menu)
+            # # color_button = QPushButton("Change line color")
+            # # color_button.clicked.connect(self.tpg.data_table[key].open_color_dialog)
+            # # change_line_color.setDefaultWidget(color_button)
+            # # self.line_settings_menu.addAction(change_line_color)
+            # # self.line_settings_menu.change_line_color = change_line_color
+            
+
+            # create QWidgetAction
+            line_action = LineSettingsQWidgetAction(
+                self.line_settings_menu,
+                self.tpg,
+                key
+            )
+            # add QWidgetAction to line_settings_menu
+            self.line_settings_menu.addAction(line_action)
+            
+            # add QWidgetAction as attribute to line_settings_menu
+            setattr(
+                self.line_settings_menu, 
+                line_action.get_name().replace(' ','_'), 
+                line_action
+            )
+            self.line_settings_menu.lines.append(line_action)
+
 
     def _add_visualization_settings_menu(self):
         """add visualization submenu to Plot Options menu
@@ -313,14 +337,166 @@ class TimePlotContextMenu():
                 self.tpg.graphItem.ctrlMenu.removeAction(action)
         
 
+    # def ammend_context_menu_(self):
+    #     line_controls = self.line_settings_menu.actions()[0::2]
+    #     key = 0
+    #     for line in line_controls:
+    #         line.defaultWidget().layout().itemAt(2).widget().setValue(
+    #             255*self.tpg.settings['line_settings'][str(key)]['line_alpha']
+    #         )
+    #         line.defaultWidget().layout().itemAt(4).widget().setValue(
+    #             self.tpg.settings['line_settings'][str(key)]['line_width']
+    #         )
+    #         key += 1
+
     def ammend_context_menu(self):
-        line_controls = self.line_settings_menu.actions()[0::2]
-        key = 0
-        for line in line_controls:
-            line.defaultWidget().layout().itemAt(2).widget().setValue(
-                255*self.tpg.settings['line_settings'][str(key)]['line_alpha']
-            )
-            line.defaultWidget().layout().itemAt(4).widget().setValue(
-                self.tpg.settings['line_settings'][str(key)]['line_width']
-            )
-            key += 1
+        """ """
+        for line in self.line_settings_menu.lines:
+            line.update_line_menu()
+            # line.set_alpha(
+            #     255*self.tpg.settings['line_settings'][str(line.id_nr)]['line_alpha']
+            # )
+            # line.set_width(
+            #     self.tpg.settings['line_settings'][str(line.id_nr)]['line_width']
+            # )
+
+class LineSettingsQWidgetAction(QtGui.QWidgetAction):
+    """ 
+    
+    
+    Attribute
+    ---------
+    name : str
+        Object name. This name is also used as Qlabel in the line_settings_menu
+        
+    
+    """
+    
+    def __init__(self, parent, time_plot_gui, id_nr):
+        super(LineSettingsQWidgetAction, self).__init__(parent)
+        
+        self.id_nr = id_nr
+        self.tpg = time_plot_gui
+        self.data_item = self.tpg.data_table[id_nr]
+        self.line_settings = self.tpg.settings['line_settings'][str(id_nr)]
+        self.line_settings_menu = parent
+        self._compose_name()
+        
+        self.mainlabel = QLabel(self.name)
+        self.mainlabel.setAlignment(QtCore.Qt.AlignCenter)
+        # widthintermediate = QtGui.QWidgetAction(self.line_settings_menu)
+        self.width_widget = QtGui.QWidget()
+        self.widthlabel = QLabel("Line Width:")
+        
+        self.spinbox = QSpinBox()
+        self.spinbox.setValue(self.line_settings['line_width'])
+        self.spinbox.setRange(1, 15)
+        self.spinbox.setSingleStep(1)
+        
+        self.alpha_label = QLabel("Alpha")
+        self.alpha_slider = QtGui.QSlider(self.line_settings_menu)
+        self.alpha_slider.setOrientation(QtCore.Qt.Horizontal)
+        self.alpha_slider.setMaximum(255)
+        self.alpha_slider.setValue(self.line_settings['line_alpha']*255)
+
+        self.color_button = QPushButton("Change line color")
+
+        self.width_layout = QGridLayout()
+        self.width_layout.addWidget(self.mainlabel, 0, 0, 1, 2)
+        self.width_layout.addWidget(self.alpha_label, 1, 0, 1, 1)
+        self.width_layout.addWidget(self.alpha_slider, 1, 1, 1, 1)
+        self.width_layout.addWidget(self.widthlabel, 2, 0, 1, 1)
+        self.width_layout.addWidget(self.spinbox, 2, 1, 1, 1)
+        self.width_layout.addWidget(self.color_button, 3, 0, 1, 2)
+        self.width_widget.setLayout(self.width_layout)
+
+        self.setDefaultWidget(self.width_widget)
+
+        # connect signals & slots
+        self.spinbox.valueChanged.connect(self.data_item.setWidth)
+        self.alpha_slider.valueChanged.connect(self.data_item.setAlpha)
+        self.color_button.clicked.connect(self.data_item.open_color_dialog)
+        
+        
+    def _compose_name(self):
+        """create the name object attribute based in naming convetion defined
+        in here
+        
+        """
+        self.name = 'Line {}'.format(str(self.id_nr))
+        
+    def get_name(self):
+        """returns object name
+        
+        Return
+        ------
+        str
+            object name. This name is also used as Qlabel in line_settings_menu
+        
+        """
+        return self.name
+    
+    def get_alpha(self):
+        return self.alpha_slider.value()
+    
+    def set_alpha(self, alpha):
+        self.alpha_slider.setValue(alpha)
+        
+    def get_width(self):
+        return self.spinbox.value()
+        
+    def set_width(self, width):
+        self.spinbox.setValue(width)
+        
+    def get_line_settings(self):
+        """returns line settings
+        
+        Since current implementation does not store the color value in this 
+        object rather in the TimePlotDataItem object, the color value is 
+        retrieved by calling the corresponding TimePlotDataItem getter function
+        
+        Return
+        ------
+        dict
+            dictionary contains alpha, width and color value from line settings
+            object
+            
+        """
+        dct = {
+            'line_alpha':   self.get_alpha(),
+            'line_width':   self.get_width(),
+            'line_color':   self.data_item.get_color(),
+        }
+        return dct
+    
+    def update_line_menu(self):
+        """updates the values in line settings submenu with values from 
+        line_settings dictionary.
+        
+        Note:
+            alpha value needs to be converted to RGB value for display in 
+            QSlider therefore the factor of 255.
+            
+        """
+        self.set_alpha(
+            255*self.line_settings['line_alpha']
+        )
+        self.set_width(
+            self.line_settings['line_width']
+        )
+        
+    def update_line_settings(self):
+        """update the values in line settings dictionary with values from 
+        Qbject in line settings submenu
+        
+        Note:
+            alpha value needs to be converted to value in [0,1] to be applied to 
+            Plot Item. Therefore the conversion factor of 1./255.
+            
+        """
+        line_settings = self.get_line_settings()
+        line_settings['line_alpha'] *= 1./255
+        self.line_settings.update(line_settings)
+
+    
+

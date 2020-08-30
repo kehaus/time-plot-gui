@@ -444,7 +444,7 @@ class TimePlotGui(QWidget):
             self.resize_data_table()
         else:
             self.coerce_same_length(data_length = len(self.data_table))
-        self.set_line_settings()
+        self.update_line_settings()
 
     def resize_data_table(self):
         """resizes data table to make number of data object match with devices
@@ -509,7 +509,7 @@ class TimePlotGui(QWidget):
         )
 
         # line settings
-        self.set_line_settings()
+        self.update_line_settings()
 
         # autopan
         self.viewbox.setAutoPan(x = self.settings['autoPan'])
@@ -557,7 +557,7 @@ class TimePlotGui(QWidget):
         # labels
         self.update_plot_labels()
 
-    def set_line_settings(self):
+    def update_line_settings(self):
         """updates PlotDataItem settings with values from settings dictionary
         """
         for line_nr, time_data_item in self.data_table.items():
@@ -745,62 +745,62 @@ class TimePlotGui(QWidget):
         self.set_custom_settings()        
 
     def clear_line_settings(self):
-        # self.settings['line_settings'] = self.plot_item_settings.DEFAULT_SETTINGS['line_settings']
+        """restores default line settings"""
         self.plot_item_settings.clear_all_line_settings()
-        self.set_line_settings()
+        self.update_line_settings()
         self.context_menu.ammend_context_menu()
 
 
-    def add_line_settings_menu(self):
-        # ===============================
-        # remove existing items from the menu
-        # ===============================
-        self.line_settings_menu.clear()
-        # ===============================
-        # Submenu Formation: line_settings
-        # ===============================
-        for key in self.data_table:
-            # ===============================
-            # width and alpha
-            # ===============================
-            mainlabel = QLabel('Line '+str(key))
-            mainlabel.setAlignment(QtCore.Qt.AlignCenter)
-            widthintermediate = QtGui.QWidgetAction(self.line_settings_menu)
-            width_widget = QtGui.QWidget()
-            widthlabel = QLabel("Line Width:")
-            spinbox = QSpinBox()
-            spinbox.setValue(self.settings['line_settings'][str(key)]['line_width'])
-            spinbox.setRange(1, 15)
-            spinbox.setSingleStep(1)
+    # def add_line_settings_menu(self):
+    #     # ===============================
+    #     # remove existing items from the menu
+    #     # ===============================
+    #     self.line_settings_menu.clear()
+    #     # ===============================
+    #     # Submenu Formation: line_settings
+    #     # ===============================
+    #     for key in self.data_table:
+    #         # ===============================
+    #         # width and alpha
+    #         # ===============================
+    #         mainlabel = QLabel('Line '+str(key))
+    #         mainlabel.setAlignment(QtCore.Qt.AlignCenter)
+    #         widthintermediate = QtGui.QWidgetAction(self.line_settings_menu)
+    #         width_widget = QtGui.QWidget()
+    #         widthlabel = QLabel("Line Width:")
+    #         spinbox = QSpinBox()
+    #         spinbox.setValue(self.settings['line_settings'][str(key)]['line_width'])
+    #         spinbox.setRange(1, 15)
+    #         spinbox.setSingleStep(1)
 
-            alphalabel = QLabel("Alpha")
-            alphaSlider = QtGui.QSlider(self.line_settings_menu)
-            alphaSlider.setOrientation(QtCore.Qt.Horizontal)
-            alphaSlider.setMaximum(255)
-            alphaSlider.setValue(self.settings['line_settings'][str(key)]['line_alpha']*255)
+    #         alphalabel = QLabel("Alpha")
+    #         alphaSlider = QtGui.QSlider(self.line_settings_menu)
+    #         alphaSlider.setOrientation(QtCore.Qt.Horizontal)
+    #         alphaSlider.setMaximum(255)
+    #         alphaSlider.setValue(self.settings['line_settings'][str(key)]['line_alpha']*255)
 
-            width_layout = QGridLayout()
-            width_layout.addWidget(mainlabel, 0, 0, 1, 2)
-            width_layout.addWidget(alphalabel, 1, 0, 1, 1)
-            width_layout.addWidget(alphaSlider, 1, 1, 1, 1)
-            width_layout.addWidget(widthlabel, 2, 0, 1, 1)
-            width_layout.addWidget(spinbox, 2, 1, 1, 1)
-            width_widget.setLayout(width_layout)
+    #         width_layout = QGridLayout()
+    #         width_layout.addWidget(mainlabel, 0, 0, 1, 2)
+    #         width_layout.addWidget(alphalabel, 1, 0, 1, 1)
+    #         width_layout.addWidget(alphaSlider, 1, 1, 1, 1)
+    #         width_layout.addWidget(widthlabel, 2, 0, 1, 1)
+    #         width_layout.addWidget(spinbox, 2, 1, 1, 1)
+    #         width_widget.setLayout(width_layout)
 
-            spinbox.valueChanged.connect(self.data_table[key].setWidth)
-            alphaSlider.valueChanged.connect(self.data_table[key].setAlpha)
-            widthintermediate.setDefaultWidget(width_widget)
-            self.line_settings_menu.addAction(widthintermediate)
-            self.line_settings_menu.widthintermediate = widthintermediate
-            # ===============================
-            # color
-            # ===============================
-            change_line_color = QtGui.QWidgetAction(self.line_settings_menu)
-            color_button = QPushButton("Change line color")
-            color_button.clicked.connect(self.data_table[key].open_color_dialog)
-            change_line_color.setDefaultWidget(color_button)
-            self.line_settings_menu.addAction(change_line_color)
-            self.line_settings_menu.change_line_color = change_line_color
+    #         spinbox.valueChanged.connect(self.data_table[key].setWidth)
+    #         alphaSlider.valueChanged.connect(self.data_table[key].setAlpha)
+    #         widthintermediate.setDefaultWidget(width_widget)
+    #         self.line_settings_menu.addAction(widthintermediate)
+    #         self.line_settings_menu.widthintermediate = widthintermediate
+    #         # ===============================
+    #         # color
+    #         # ===============================
+    #         change_line_color = QtGui.QWidgetAction(self.line_settings_menu)
+    #         color_button = QPushButton("Change line color")
+    #         color_button.clicked.connect(self.data_table[key].open_color_dialog)
+    #         change_line_color.setDefaultWidget(color_button)
+    #         self.line_settings_menu.addAction(change_line_color)
+    #         self.line_settings_menu.change_line_color = change_line_color
 
 
     def open_finder(self):
@@ -860,17 +860,31 @@ class TimePlotGui(QWidget):
             auto_clear_data = self.context_menu.data_options.automatic_clear_checkbox.isChecked()
         )
 
+    # def save_line_settings_(self):
+    #     line_controls = self.context_menu.line_settings_menu.actions()[0::2]
+    #     number = 0
+    #     for line in line_controls:
+    #         self.settings['line_settings'][str(number)]['line_alpha'] = line.defaultWidget().layout().itemAt(2).widget().value()/255
+    #         self.settings['line_settings'][str(number)]['line_width'] = line.defaultWidget().layout().itemAt(4).widget().value()
+    #         number += 1
+    #     for key in range(len(self.data_table)):
+    #         self.settings['line_settings'][str(key)]['line_color'] = \
+    #             self.data_table[key].get_plot_data_item().get_color()
+    #     self.plot_item_settings.save_settings(line_settings = self.settings['line_settings'])
+
     def save_line_settings(self):
-        line_controls = self.context_menu.line_settings_menu.actions()[0::2]
-        number = 0
-        for line in line_controls:
-            self.settings['line_settings'][str(number)]['line_alpha'] = line.defaultWidget().layout().itemAt(2).widget().value()/255
-            self.settings['line_settings'][str(number)]['line_width'] = line.defaultWidget().layout().itemAt(4).widget().value()
-            number += 1
-        for key in range(len(self.data_table)):
-            self.settings['line_settings'][str(key)]['line_color'] = \
-                self.data_table[key].get_plot_data_item().get_color()
-        self.plot_item_settings.save_settings(line_settings = self.settings['line_settings'])
+        """ """
+        for line in self.context_menu.line_settings_menu.lines:
+            # dct = line.get_line_settings()
+            # dct['line_alpha'] *= 1./255
+            
+            # self.settings['line_settings'][str(line.id_nr)].update(
+            #     dct
+            # )
+            line.update_line_settings()
+        self.plot_item_settings.save_settings(
+            line_settings = self.settings['line_settings']
+        )
 
     def store_all_data(self):
         """store all data objects

@@ -36,6 +36,18 @@ class TimePlotDataItem(JSONFileHandler):
     storing data in json files.
 
 
+    Parameter
+    ---------
+    data_fn : str
+        filename of data file
+    id_nr : int 
+        data line identification number 
+    absolute_time : float
+        absolute time value to sync data line values to other data line objects
+    do_autosave : bool
+        flag to specify if data are autosaved or not
+    
+
     TO INCLUDE:
         * automatic saving mechanism
 
@@ -159,6 +171,9 @@ class TimePlotDataItem(JSONFileHandler):
 
     def set_color(self):
         self.pdi.update_color(self.color_dialog)
+        
+    def get_color(self):
+        return self.pdi.get_color()
 
     def cancel_color_dialog(self):
         self.pdi.update_color(self.restorable_color)
