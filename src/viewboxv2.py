@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Thur Aug 6 14:42:02 2020
 
-"""
 
 import os
 from os import path
@@ -12,12 +9,12 @@ import numpy as np
 import pyqtgraph as pg
 
 class ViewBoxV2(pg.ViewBox):
+    """Alternative version of viewbox that allows autopan to work as desired 
+    without directly changing the source code
     """
-    Alternative version of viewbox that allows autopan to work as desired without directly
-    changing the source code
-    """
-    def __init__(self, parent=None, border=None, lockAspect=False, enableMouse=True, invertY=False,
-                enableMenu=True, name=None, invertX=False):
+    def __init__(self, parent=None, border=None, lockAspect=False, 
+                 enableMouse=True, invertY=False, enableMenu=True, name=None, 
+                 invertX=False):
         super().__init__(parent=parent)
 
     def updateAutoRange(self):
@@ -54,8 +51,9 @@ class ViewBoxV2(pg.ViewBox):
                 if self.state['autoVisibleOnly'][ax]:
                     oRange = [None, None]
                     oRange[ax] = targetRect[1-ax]
-                    childRange = self.childrenBounds(frac=fractionVisible, orthoRange=oRange)
-
+                    childRange = self.childrenBounds(
+                        frac=fractionVisible, orthoRange=oRange
+                    )
                 else:
                     if childRange is None:
                         childRange = self.childrenBounds(frac=fractionVisible)
@@ -112,10 +110,3 @@ class ViewBoxV2(pg.ViewBox):
         finally:
             self._autoRangeNeedsUpdate = False
             self._updatingRange = False
-
-
-
-# class PlotItemV2(pg.plotItem):
-#     """
-#     Alternative version of plotItem class to initialize the alternative version of ViewBox class
-#     """
