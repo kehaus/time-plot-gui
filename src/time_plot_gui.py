@@ -210,8 +210,10 @@ class TimePlotGui(QWidget):
     def _init_plot(self, dev_lst):
         """Initializes plot item by customizing corresponding Widgets
         
-        This function initializes the plot item by customizing the pyqtgraph
-        objects like *PlotWidget*, *PlotItem*, and *ViewBox*.
+        This function initializes the main plot item by customizing the 
+        ``pyqtgraph`` objects like ``PlotWidget``, ``PlotItem``, and 
+        ``ViewBox``.
+        
         
         Parameter
         ---------
@@ -320,7 +322,7 @@ class TimePlotGui(QWidget):
         
         Function is used to allow TimePlotGui initialization with either one 
         devicewrapper object or a list of devicewrapper objects. Function 
-        returns a list of device wrappres
+        returns a list of device wrappers
         
         Parameters
         ----------
@@ -352,11 +354,11 @@ class TimePlotGui(QWidget):
             raise TimePlotGuiException(err_msg)
 
     def _create_data_item(self, id_nr):
-        """initializes and returns a TimePlotDataItem object
+        """initializes and returns a ``TimePlotDataItem`` object
         
         Parameter
         ---------
-        id_nr : 
+        id_nr : int
             reference number of data item.
             
         """
@@ -368,7 +370,7 @@ class TimePlotGui(QWidget):
         return data_item
 
     def _add_data_item(self, id_nr, data_item):
-        """add data_item to data_table and to plot item
+        """add data_item to ``data_table`` and to plot item
         
         Parameter
         ---------
@@ -712,8 +714,8 @@ class TimePlotGui(QWidget):
           # frequency
             'frequency_state':  self.graphItem.ctrl.fftCheck.isChecked(),
           # autosave
-            'do_autosave':      self.context_menu.data_options.autosave.defaultWidget().layout().itemAt(0).widget().isChecked(),
-            'autosave_nr':      self.context_menu.data_options.autosave.defaultWidget().layout().itemAt(1).widget().value(),
+            'do_autosave':      self.context_menu.data_options.autosave_checkbox.isChecked(),
+            'autosave_nr':      self.context_menu.data_options.autosave_nr.value(),
           # time stamp
 
           # labels

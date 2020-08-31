@@ -71,7 +71,8 @@ class PlotItemSettings(JSONFileHandler):
     mouseMode : int
         1 means rectangle zooming and 3 means pan zooming
     plotalpha : lst
-        first item is the alpha and the second is whether the value is autodetermined
+        first item is the alpha and the second is whether the value is 
+        autodetermined
     
     
     Example

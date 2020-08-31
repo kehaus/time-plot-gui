@@ -185,6 +185,8 @@ class TimePlotContextMenu():
         clear-on-startup option; and enable data autosave option
         
         """
+        
+        # Clear data
         clear_data = QtGui.QAction(
             "Clear Data", 
             self.data_options
@@ -193,6 +195,7 @@ class TimePlotContextMenu():
         self.data_options.addAction(clear_data)
         self.data_options.clear_data = clear_data
 
+        # Automatic clear data
         automatic_clear = QtGui.QWidgetAction(self.data_options)
         automatic_clear_checkbox = QtGui.QCheckBox("Clear Old Data on Start")
         automatic_clear.setDefaultWidget(automatic_clear_checkbox)
@@ -201,6 +204,7 @@ class TimePlotContextMenu():
         self.data_options.automatic_clear = automatic_clear
         self.data_options.automatic_clear_checkbox = automatic_clear_checkbox
 
+        # autosave
         autosave = QtGui.QWidgetAction(self.data_options)
         autosave_widget = QWidget()
         autosave_layout = QHBoxLayout()
@@ -212,14 +216,16 @@ class TimePlotContextMenu():
         autosave_nr.setButtonSymbols(QAbstractSpinBox().NoButtons)
         autosave_nr.setRange(10, 1000)
         autosave_nr.setValue(self.tpg.settings['autosave_nr'])
-        # autosave_nr.setSingleStep(10)
         autosave_nr.valueChanged.connect(self.tpg.set_all_autosave_nr)
         autosave_layout.addWidget(autosave_checkbox)
         autosave_layout.addWidget(autosave_nr)
         autosave_widget.setLayout(autosave_layout)
         autosave.setDefaultWidget(autosave_widget)
         self.data_options.addAction(autosave)
-        self.data_options.autosave = autosave        
+        # self.data_options.autosave = autosave
+        setattr(self.data_options, 'autosave', autosave)
+        setattr(self.data_options, 'autosave_checkbox', autosave_checkbox)
+        setattr(self.data_options, 'autosave_nr', autosave_nr)        
 
     def _add_change_label_menu(self):
         """add change label submenu to Plot Option menu
@@ -347,6 +353,18 @@ class LineSettingsQWidgetAction(QtGui.QWidgetAction):
     ---------
     name : str
         Object name. This name is also used as Qlabel in the line_settings_menu
+    id_nr : int
+        id number of the corresponding TimePlotDataItem object
+    tpg : TimePlotGui
+        Gui Widget that displayes the plot lines
+    data_item : TimePlotDataItem
+        represents the data line inside PlotItem object in the TimePlotGui
+    line_settings : dict
+        contains layout settings like line width, line color, and alpha value 
+        of the plot line object
+    line_settings_menu : QMenu
+        submenu from the context menu hosting where the this QWidgetAction is
+        connected to
         
     
     """
