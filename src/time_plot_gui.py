@@ -24,6 +24,7 @@ import ctypes as ct
 import numpy as np
 import time
 import datetime
+from functools import wraps
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QMutex, QWaitCondition, QSize, QPoint
 from unittest.mock import MagicMock
 
@@ -100,6 +101,57 @@ class TimePlotGui(QWidget):
     pause_signal = QtCore.pyqtSignal()
     restart_signal = QtCore.pyqtSignal()
 
+    # =======================================================================
+    # decorator
+    # =======================================================================
+
+    def disable_fft_and_log_mode(func):
+        """function wrapper to temporarily disable FFT and log mode.
+        
+        This function can be used to wrap function which require FFT and log 
+        mode to be temporarily disabled. Examples of this are 
+        ``save_all_data()`` and ``update_datapoint()``.
+        
+        
+        Return
+        ------
+        func
+            function wrapper which disables FFT and log mode while given 
+            function is executed. restores previous FFT and log mode again
+            before finish.
+        
+        """
+        @wraps(func)
+        def wrapper(tpg, *args, **kwargs):
+            # print("inhere")
+            # print('args: ', args)
+            # print('args: ', kwargs)
+            
+            # save current state
+            frequency_state = tpg.frequency_state
+            x_log_check = tpg.context_menu.x_log_check.isChecked()
+            y_log_check = tpg.context_menu.y_log_check.isChecked()
+
+            # disable FFT, x log, and y log state
+            tpg.graphItem.ctrl.fftCheck.setChecked(False)
+            tpg.context_menu.x_log_check.setChecked(False)
+            tpg.context_menu.y_log_check.setChecked(False)
+            
+            # execute function
+            rtrn = func(tpg, *args, **kwargs)
+            
+            # reinstate FFT, x log, and y log state
+            tpg.graphItem.ctrl.fftCheck.setChecked(frequency_state)
+            tpg.context_menu.x_log_check.setChecked(x_log_check)
+            tpg.context_menu.y_log_check.setChecked(y_log_check)
+            # print("still inhere")
+            return rtrn
+        return wrapper
+
+    # =======================================================================
+    # 
+    # =======================================================================
+
     def __init__(self, parent=None, window=None, devices=None, 
                  folder_filename = None, sampling_latency = .005):
         super(TimePlotGui, self).__init__(parent=parent)
@@ -125,7 +177,8 @@ class TimePlotGui(QWidget):
 
     def _init_ui(self, mainwindow, dev_lst):
         """
-        Creates the ui layout and initializes all the necessary QWidget components
+        Creates the ui layout and initializes all the necessary QWidget 
+        components
         
         Parameter
         ---------
@@ -235,7 +288,9 @@ class TimePlotGui(QWidget):
                 plotItem=self.graphItem
             )
         except:
-            print("ERROR with custom viewbox class. 'Except' case run instead.")
+            print(
+                "ERROR with custom viewbox class. 'Except' case run instead."
+            )
             self.graphWidget = pg.PlotWidget(
                 axisItems={'bottom': self.axis_item}
             )
@@ -244,7 +299,9 @@ class TimePlotGui(QWidget):
         # ===============================
         # Enable Automatic Axis Label Updates
         # ===============================
-        self.graphItem.ctrl.fftCheck.stateChanged.connect(self.change_label_state)
+        self.graphItem.ctrl.fftCheck.stateChanged.connect(
+            self.change_label_state
+        )
         # ===============================
         # initlialize data lines
         # ===============================
@@ -794,7 +851,7 @@ class TimePlotGui(QWidget):
                 for dataitem in self.data_table.values():
                     dataitem.start_local_ft_mode()
             else:
-                self.transform_menu.local_fourier.defaultWidget().layout().itemAt(1).widget().setChecked(False)
+                self.transform_menu.local_fourier.defaultWidget().layout().itemAt(1).widget().setChecked(False)  # !! kehaus:  i think this would cause an erros since transform_menu os not attribute of time_plot_gui
                 self.local_ft_error()
         else:
             for dataitem in self.data_table.values():
@@ -813,32 +870,15 @@ class TimePlotGui(QWidget):
             auto_clear_data = self.context_menu.data_options.automatic_clear_checkbox.isChecked()
         )
 
-    # def save_line_settings_(self):
-    #     line_controls = self.context_menu.line_settings_menu.actions()[0::2]
-    #     number = 0
-    #     for line in line_controls:
-    #         self.settings['line_settings'][str(number)]['line_alpha'] = line.defaultWidget().layout().itemAt(2).widget().value()/255
-    #         self.settings['line_settings'][str(number)]['line_width'] = line.defaultWidget().layout().itemAt(4).widget().value()
-    #         number += 1
-    #     for key in range(len(self.data_table)):
-    #         self.settings['line_settings'][str(key)]['line_color'] = \
-    #             self.data_table[key].get_plot_data_item().get_color()
-    #     self.plot_item_settings.save_settings(line_settings = self.settings['line_settings'])
-
     def save_line_settings(self):
         """ """
         for line in self.context_menu.line_settings_menu.lines:
-            # dct = line.get_line_settings()
-            # dct['line_alpha'] *= 1./255
-            
-            # self.settings['line_settings'][str(line.id_nr)].update(
-            #     dct
-            # )
             line.update_line_settings()
         self.plot_item_settings.save_settings(
             line_settings = self.settings['line_settings']
         )
 
+    @disable_fft_and_log_mode
     def store_all_data(self):
         """store all data objects
 
@@ -848,15 +888,15 @@ class TimePlotGui(QWidget):
 
         """
 
-        # save current state
-        frequency_state = self.frequency_state
-        x_log_check = self.context_menu.x_log_check.isChecked()
-        y_log_check = self.context_menu.y_log_check.isChecked()
+        # # save current state
+        # frequency_state = self.frequency_state
+        # x_log_check = self.context_menu.x_log_check.isChecked()
+        # y_log_check = self.context_menu.y_log_check.isChecked()
 
-        # disable FFT, x log, and y log mode
-        self.graphItem.ctrl.fftCheck.setChecked(False)
-        self.context_menu.x_log_check.setChecked(False)
-        self.context_menu.y_log_check.setChecked(False)
+        # # disable FFT, x log, and y log mode
+        # self.graphItem.ctrl.fftCheck.setChecked(False)
+        # self.context_menu.x_log_check.setChecked(False)
+        # self.context_menu.y_log_check.setChecked(False)
 
         # sava data
         if path.exists(self.data_fn):
@@ -864,10 +904,10 @@ class TimePlotGui(QWidget):
         for data_item in self.data_table.values():
             data_item.store_data()
 
-        # restore FFT,x log, and y log states
-        self.graphItem.ctrl.fftCheck.setChecked(frequency_state)
-        self.context_menu.x_log_check.setChecked(x_log_check)
-        self.context_menu.y_log_check.setChecked(y_log_check)
+        # # restore FFT,x log, and y log states
+        # self.graphItem.ctrl.fftCheck.setChecked(frequency_state)
+        # self.context_menu.x_log_check.setChecked(x_log_check)
+        # self.context_menu.y_log_check.setChecked(y_log_check)
 
     def change_time_markers(self, relative_time):
         self.axis_item.relative_time = relative_time
@@ -882,7 +922,7 @@ class TimePlotGui(QWidget):
 
 
     def clear_all_data(self):
-        """clears data in all data items bby calling the corresponding clear()
+        """clears data in all data items by calling the corresponding clear()
         function
 
         """
@@ -1029,26 +1069,27 @@ class TimePlotGui(QWidget):
         # time.sleep(2)
         self.stop_signal.emit()
 
+    @disable_fft_and_log_mode
     def update_datapoint(self, id_nr, val, time_val):
         """updates TimePlotDataItem object with corresponding id_nr"""
 
-        # save current state
-        frequency_state = self.frequency_state
-        x_log_check = self.context_menu.x_log_check.isChecked()
-        y_log_check = self.context_menu.y_log_check.isChecked()
+        # # save current state
+        # frequency_state = self.frequency_state
+        # x_log_check = self.context_menu.x_log_check.isChecked()
+        # y_log_check = self.context_menu.y_log_check.isChecked()
 
-        # disable FFT, x log, and y log state
-        self.graphItem.ctrl.fftCheck.setChecked(False)
-        self.context_menu.x_log_check.setChecked(False)
-        self.context_menu.y_log_check.setChecked(False)
+        # # disable FFT, x log, and y log state
+        # self.graphItem.ctrl.fftCheck.setChecked(False)
+        # self.context_menu.x_log_check.setChecked(False)
+        # self.context_menu.y_log_check.setChecked(False)
 
         # update value
         self.data_table[id_nr].append_value(val, time_val)
 
-        # reinstate FFT, x log, and y log state
-        self.graphItem.ctrl.fftCheck.setChecked(frequency_state)
-        self.context_menu.x_log_check.setChecked(x_log_check)
-        self.context_menu.y_log_check.setChecked(y_log_check)
+        # # reinstate FFT, x log, and y log state
+        # self.graphItem.ctrl.fftCheck.setChecked(frequency_state)
+        # self.context_menu.x_log_check.setChecked(x_log_check)
+        # self.context_menu.y_log_check.setChecked(y_log_check)
 
 
     @QtCore.pyqtSlot(int, float, float)
@@ -1061,6 +1102,35 @@ class TimePlotGui(QWidget):
         self.cond_table[id_nr].wakeAll()     # wake worker thread up
         return
 
+    
+    # def disable_fft_and_log_mode(func):
+    #     def wrapper(tpg, *args, **kwargs):
+    #         print("inhere")
+            
+    #         # save current state
+    #         frequency_state = tpg.frequency_state
+    #         x_log_check = tpg.context_menu.x_log_check.isChecked()
+    #         y_log_check = tpg.context_menu.y_log_check.isChecked()
+
+    #         # disable FFT, x log, and y log state
+    #         tpg.graphItem.ctrl.fftCheck.setChecked(False)
+    #         tpg.context_menu.x_log_check.setChecked(False)
+    #         tpg.context_menu.y_log_check.setChecked(False)
+                        
+    #         rtrn = getattr(tpg, func)(*args, **kwargs)
+            
+    #         # reinstate FFT, x log, and y log state
+    #         tpg.graphItem.ctrl.fftCheck.setChecked(frequency_state)
+    #         tpg.context_menu.x_log_check.setChecked(x_log_check)
+    #         tpg.context_menu.y_log_check.setChecked(y_log_check)
+    #         print("still inhere")
+    #         return rtrn
+    #     return wrapper
+
+
+    # ========================================================================
+    # closeEvent handling
+    # ========================================================================
     def closeEvent(self, event, auto_accept = False):
         """
         By default, this function generates a pop-up confirming you want to close the gui before running
@@ -1087,6 +1157,34 @@ class TimePlotGui(QWidget):
         self.store_all_data()
         self.stop_thread()
         event.accept()
+
+# # ========================================================================
+# # helper
+# # ========================================================================
+# def disable_fft_and_log_mode(func):
+#     @wraps(func)
+#     def wrapper(tpg, *args, **kwargs):
+#         print("inhere")
+            
+#         # save current state
+#         frequency_state = tpg.frequency_state
+#         x_log_check = tpg.context_menu.x_log_check.isChecked()
+#         y_log_check = tpg.context_menu.y_log_check.isChecked()
+        
+#         # disable FFT, x log, and y log state
+#         tpg.graphItem.ctrl.fftCheck.setChecked(False)
+#         tpg.context_menu.x_log_check.setChecked(False)
+#         tpg.context_menu.y_log_check.setChecked(False)
+                        
+#         rtrn = getattr(tpg, func)(*args, **kwargs)
+            
+#         # reinstate FFT, x log, and y log state
+#         tpg.graphItem.ctrl.fftCheck.setChecked(frequency_state)
+#         tpg.context_menu.x_log_check.setChecked(x_log_check)
+#         tpg.context_menu.y_log_check.setChecked(y_log_check)
+#         print("still inhere")
+#         return rtrn
+#     return wrapper
 
 
 # ===========================================================================
