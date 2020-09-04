@@ -1071,7 +1071,23 @@ class TimePlotGui(QWidget):
 
     @disable_fft_and_log_mode
     def update_datapoint(self, id_nr, val, time_val):
-        """updates TimePlotDataItem object with corresponding id_nr"""
+        """updates TimePlotDataItem object with corresponding id_nr
+        
+        To account for the fact that different lines are present, the 
+        ``id_nr`` variable selects the right ``TimePlotdataItem`` object from
+        the ``data_table`` and appends the values.
+        
+        Parameter
+        ---------
+        id_nr : int
+            identifier for ``TimePlotDataItem`` in ``data_table``
+        val : float
+            collected value from measurement instrument
+        time_val : float
+            corresponding time stamp
+        
+        
+        """
 
         # # save current state
         # frequency_state = self.frequency_state
@@ -1094,7 +1110,8 @@ class TimePlotGui(QWidget):
 
     @QtCore.pyqtSlot(int, float, float)
     def newReading(self, id_nr, val, time_val):
-        """ """
+        """updates plot by adding provided value to corresponding 
+        ``TimePlotDataItem`` object """
         pg.QtGui.QApplication.processEvents()
         self.update_datapoint(id_nr, val, time_val)
         time.sleep(self.sampling_latency)
@@ -1133,9 +1150,11 @@ class TimePlotGui(QWidget):
     # ========================================================================
     def closeEvent(self, event, auto_accept = False):
         """
-        By default, this function generates a pop-up confirming you want to close the gui before running
-        closing protocol. This pop-up can be overridden with the auto_accept argument which is espcially
-        useful in avoiding mulitple redundant popups in large gui with multiple TimePlotGui objects.
+        By default, this function generates a pop-up confirming you want to 
+        close the gui before running closing protocol. This pop-up can be 
+        overridden with the auto_accept argument which is espcially useful in 
+        avoiding mulitple redundant popups in large gui with multiple 
+        TimePlotGui objects.
         """
         if not auto_accept:
             reply = QMessageBox.question(self, 'Message',
@@ -1152,7 +1171,7 @@ class TimePlotGui(QWidget):
             return True
 
     def accept_close_event(self, event):
-        """This runs all of the standard protocol for closing the GUI properly"""
+        """runs standard protocol for closing the GUI properly"""
         self.save_current_settings()
         self.store_all_data()
         self.stop_thread()
