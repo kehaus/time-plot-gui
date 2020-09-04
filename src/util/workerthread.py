@@ -61,14 +61,16 @@ class WorkerThread(threading.Thread):
 
     SLEEP_TIME = 0.001
 
-    def __init__(self, q=None):
+    def __init__(self, q=None, sleep_time=None):
         super(WorkerThread, self).__init__()
         if q is None: 
             q=queue.Queue()
         self.q = q
         self._stop_thread = True
-        self.sleep_time = WorkerThread.SLEEP_TIME
-
+        if sleep_time is None:
+            self.sleep_time = WorkerThread.SLEEP_TIME
+        else:
+            self.sleep_time = sleep_time
 
     def run(self):
 
