@@ -56,7 +56,7 @@ class PlotItemSettings(JSONFileHandler):
         'auto_clear_data':      True,
         'zoom_lines':           [0, 1, -1, 1],
         'frequency_state':      False,
-        'labels':               {'title_text':          'Test',
+        'labels':               {'title_text':          'TimePlotGui',
                                 'title_font_size':      20,
                                 'title_font_color':     '#FFF',
                                 'x_axis_data_type':     "Time",
