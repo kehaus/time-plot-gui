@@ -24,6 +24,7 @@ import ctypes as ct
 import numpy as np
 import time
 import datetime
+from functools import wraps
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QMutex, QWaitCondition, QSize, QPoint
 from unittest.mock import MagicMock
 
@@ -42,11 +43,13 @@ try:
     from .time_plot_worker import TimePlotWorker
     from .plot_item_settings import PlotItemSettings, JSONFileHandler
 
+
     from .util.workerthread import WorkerThread,WorkerTaskBase
     from .util.devicewrapper import DeviceWrapper, DummyDevice
     from .viewboxv2 import ViewBoxV2
     from .time_plot_data_item import TimePlotDataItem
     from .time_axis_item import TimeAxisItem
+    from .context_menu import TimePlotContextMenu
 except:
     from time_plot_worker import TimePlotWorker
     from plot_item_settings import PlotItemSettings, JSONFileHandler
@@ -56,6 +59,7 @@ except:
     from viewboxv2 import ViewBoxV2
     from time_plot_data_item import TimePlotDataItem
     from time_axis_item import TimeAxisItem
+    from context_menu import TimePlotContextMenu
 
 
 # ============================================================================
@@ -70,22 +74,92 @@ class TimePlotGuiException(Exception):
 # ============================================================================
 
 class TimePlotGui(QWidget):
+    """ 
+    QWidget collects and displays data in line plot item in real time
+    
+    
+    Parameters
+    ----------
+    parent : QWidget
+        PyQt handle to introduce inheritance dependence
+    window : QWidget, QMainWindow
+        specifies QWidget in which TimePlotgui will be placed
+    devices : lst, DeviceWrapper object
+        DeviceWrapper objects handle hardware communication 
+    folder_filename : str
+        directory where  plot settings and plot data will be stored
+    sampling_latency : float
+        time delay between two sample acquistion
+    
+    
+    """
+    
+    DEFAULT_DATA_FILENAME = 'stored_data.json'
 
     start_signal = QtCore.pyqtSignal()
     stop_signal = QtCore.pyqtSignal()
     pause_signal = QtCore.pyqtSignal()
     restart_signal = QtCore.pyqtSignal()
-    DEFAULT_DATA_FILENAME = 'stored_data.json'
 
-    def __init__(self, parent=None, window=None, devicewrapper_lst=None, folder_filename = None, sampling_latency = .005):
-        """ """
+    # =======================================================================
+    # decorator
+    # =======================================================================
+
+    def disable_fft_and_log_mode(func):
+        """function wrapper to temporarily disable FFT and log mode.
+        
+        This function can be used to wrap function which require FFT and log 
+        mode to be temporarily disabled. Examples of this are 
+        ``save_all_data()`` and ``update_datapoint()``.
+        
+        
+        Return
+        ------
+        func
+            function wrapper which disables FFT and log mode while given 
+            function is executed. restores previous FFT and log mode again
+            before finish.
+        
+        """
+        @wraps(func)
+        def wrapper(tpg, *args, **kwargs):
+            # print("inhere")
+            # print('args: ', args)
+            # print('args: ', kwargs)
+            
+            # save current state
+            frequency_state = tpg.frequency_state
+            x_log_check = tpg.context_menu.x_log_check.isChecked()
+            y_log_check = tpg.context_menu.y_log_check.isChecked()
+
+            # disable FFT, x log, and y log state
+            tpg.graphItem.ctrl.fftCheck.setChecked(False)
+            tpg.context_menu.x_log_check.setChecked(False)
+            tpg.context_menu.y_log_check.setChecked(False)
+            
+            # execute function
+            rtrn = func(tpg, *args, **kwargs)
+            
+            # reinstate FFT, x log, and y log state
+            tpg.graphItem.ctrl.fftCheck.setChecked(frequency_state)
+            tpg.context_menu.x_log_check.setChecked(x_log_check)
+            tpg.context_menu.y_log_check.setChecked(y_log_check)
+            # print("still inhere")
+            return rtrn
+        return wrapper
+
+    # =======================================================================
+    # 
+    # =======================================================================
+
+    def __init__(self, parent=None, window=None, devices=None, 
+                 folder_filename = None, sampling_latency = .005):
         super(TimePlotGui, self).__init__(parent=parent)
-
         self._create_absolute_time_stamp()
-
-        if type(devicewrapper_lst) == DeviceWrapper:
-            devicewrapper_lst = [devicewrapper_lst]
-        self.devicewrapper = devicewrapper_lst
+        self.dev_lst = self._check_devices_type(devices)
+        self.dev_num = len(self.dev_lst)
+        self.sampling_latency = sampling_latency
+        
         # ===============================
         # Allow for coercion of data and settings to the same number of lines
         # ===============================
@@ -94,23 +168,26 @@ class TimePlotGui(QWidget):
         self.previous_x_max = None
         self.previous_y_max = None
         # ===============================
-        # Allow customization of delay between samples
+        # setup gui and worker thread
         # ===============================
-        self.sampling_latency = sampling_latency
-        # ===============================
-        # Get the settings object
-        # ===============================
-        self.plot_item_settings = PlotItemSettings(number_of_lines = len(devicewrapper_lst), folder_filename = folder_filename)
-        self.settings = self.plot_item_settings.settings
-        self.data_fn = os.path.join(self.plot_item_settings.folder_filename, self.DEFAULT_DATA_FILENAME)
-
-        self._init_ui(window, devicewrapper_lst)
-        self._init_multi_worker_thread(devicewrapper_lst)
+        self._init_settings(folder_filename)
+        self._init_ui(window, self.dev_lst)
+        self._init_multi_worker_thread(devices)
 
 
-    def _init_ui(self, mainwindow, devicewrapper_lst):
+    def _init_ui(self, mainwindow, dev_lst):
         """
-        Creates and Loads the widgets in the GUI
+        Creates the ui layout and initializes all the necessary QWidget 
+        components
+        
+        Parameter
+        ---------
+        mainwindow : QMainWindow, QWidget
+            QWidget which will be used as central_widget for TimePlotGui
+        dev_lst : lst
+            lst of DeviceWrapper object used to collect data
+            
+            
         """
         # =====================================================================
         # Creates and configures central widget for window
@@ -122,24 +199,34 @@ class TimePlotGui(QWidget):
         # =====================================================================
         self.graphics_layout = QGridLayout()
         # =====================================================================
-        # control buttons - Non-plot widgets (stop/start buttons and spacers) created
+        # control buttons - Non-plot widgets (stop/start buttons and spacers)
         # =====================================================================
         self.playBtn = QPushButton()
         self.playBtn.setFixedSize(QSize(30, 30))
-        self.playBtn.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed))
-        points = [QPoint(0, 0), QPoint(0, self.playBtn.height()), QPoint(self.playBtn.width(), self.playBtn.height()/2)]
+        self.playBtn.setSizePolicy(
+            QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        )
+        points = [
+            QPoint(0, 0), 
+            QPoint(0, self.playBtn.height()), 
+            QPoint(self.playBtn.width(), self.playBtn.height()/2)
+        ]
         self.playBtn.setMask(QRegion(QPolygon(points)))
         self.playBtn.setStyleSheet("background-color: rgb(120,120,120);")
 
-        self.squarestopBtn = QPushButton()
-        self.squarestopBtn.setFixedSize(QSize(110, 30))
-        self.squarestopBtn.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed))
-        points = [QPoint((self.squarestopBtn.width()+50)/2, 0), \
-                QPoint((self.squarestopBtn.width()+50)/2, self.squarestopBtn.height()), \
-                QPoint(self.squarestopBtn.width(), self.squarestopBtn.height()), \
-                QPoint(self.squarestopBtn.width(), 0)]
-        self.squarestopBtn.setMask(QRegion(QPolygon(points)))
-        self.squarestopBtn.setStyleSheet("background-color: rgb(120,120,120);")
+        self.stopBtn = QPushButton()
+        self.stopBtn.setFixedSize(QSize(110, 30))
+        self.stopBtn.setSizePolicy(
+            QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        )
+        points = [
+            QPoint((self.stopBtn.width()+50)/2, 0),
+            QPoint((self.stopBtn.width()+50)/2, self.stopBtn.height()),
+            QPoint(self.stopBtn.width(), self.stopBtn.height()),
+            QPoint(self.stopBtn.width(), 0)
+        ]
+        self.stopBtn.setMask(QRegion(QPolygon(points)))
+        self.stopBtn.setStyleSheet("background-color: rgb(120,120,120);")
 
         self.blankWidget = QWidget()
         self.blankWidget.setFixedSize(QSize(500, 30))
@@ -149,7 +236,7 @@ class TimePlotGui(QWidget):
         # =====================================================================
         # Initialize the plot
         # =====================================================================
-        self._init_plot(devicewrapper_lst)
+        self._init_plot(dev_lst)
         # =====================================================================
         # Add Widgets to layout, including the Plot itself. Note that the order
         # in which these are added matters because several widgets overlap.
@@ -157,90 +244,217 @@ class TimePlotGui(QWidget):
         self.graphics_layout.addWidget(self.blankWidget, 0, 2)
         self.graphics_layout.addWidget(self.blankWidget2, 0, 1)
         self.graphics_layout.addWidget(self.graphWidget, 0, 0, 5, 4)
-        self.graphics_layout.addWidget(self.squarestopBtn, 0, 0)
+        self.graphics_layout.addWidget(self.stopBtn, 0, 0)
         self.graphics_layout.addWidget(self.playBtn, 0, 0)
 
-        # self.pauseBtn = QPushButton()
-        # self.restartBtn = QPushButton()
-        # self.pauseBtn.setStyleSheet("background-color: rgb(120,120,120);")
-        # self.restartBtn.setStyleSheet("background-color: rgb(120,120,120);")
-        # self.graphics_layout.addWidget(self.pauseBtn, 0, 6, 1, 1)
-        # self.pauseBtn.clicked.connect(self.pause_thread)
-        # self.graphics_layout.addWidget(self.restartBtn, 1, 6, 1, 1)
-        # self.restartBtn.clicked.connect(self.restart_thread)
         # =====================================================================
         # control buttons - connections
         # =====================================================================
         self.playBtn.clicked.connect(self.save_line_settings)
         self.playBtn.clicked.connect(self.thread_status_changed)
         self.playBtn.clicked.connect(self.start_thread)
-        self.squarestopBtn.clicked.connect(self.pause_thread)
+        self.stopBtn.clicked.connect(self.pause_thread)
         # ============================================================
         # Assign layout widget to window
         # ============================================================
         self.central_wid.setLayout(self.graphics_layout)
 
 
-    def _init_plot(self, devicewrapper_lst):
-        """ """
-        # ===============================
-        # Initializes plot by generating the plotWidget, plotItem, and ViewBox objects that are callable
-        # ===============================
+    def _init_plot(self, dev_lst):
+        """Initializes plot item by customizing corresponding Widgets
+        
+        This function initializes the main plot item by customizing the 
+        ``pyqtgraph`` objects like ``PlotWidget``, ``PlotItem``, and 
+        ``ViewBox``.
+        
+        
+        Parameter
+        ---------
+        dev_lst : lst
+            lst of DeviceWrapper object used to collect data
+        
+        """
+
         try:
             self.viewbox = ViewBoxV2()
-        # self.viewbox = pg.ViewBox(parent = pg.graphicsItems.PlotItem)
             self.graphItem = pg.PlotItem(viewBox = self.viewbox)
-            self.axis_item = TimeAxisItem(orientation='bottom', t0 = self.t0, relative_time = self.settings['relative_timestamp'])
-            self.graphWidget = pg.PlotWidget(axisItems = \
-                {'bottom': self.axis_item}, plotItem = self.graphItem)
+            self.axis_item = TimeAxisItem(
+                orientation='bottom', 
+                t0 = self.t0, 
+                relative_time = self.settings['relative_timestamp']
+            )
+            self.graphWidget = pg.PlotWidget(
+                axisItems={'bottom': self.axis_item}, 
+                plotItem=self.graphItem
+            )
         except:
-            print("ERROR with custom viewbox class. 'Except' case run instead.")
-            self.graphWidget = pg.PlotWidget(axisItems = \
-                {'bottom': self.axis_item})
+            print(
+                "ERROR with custom viewbox class. 'Except' case run instead."
+            )
+            self.graphWidget = pg.PlotWidget(
+                axisItems={'bottom': self.axis_item}
+            )
             self.graphItem = self.graphWidget.getPlotItem()
             self.viewbox = self.graphItem.getViewBox()
         # ===============================
         # Enable Automatic Axis Label Updates
         # ===============================
-        self.graphItem.ctrl.fftCheck.stateChanged.connect(self.change_label_state)
+        self.graphItem.ctrl.fftCheck.stateChanged.connect(
+            self.change_label_state
+        )
         # ===============================
         # initlialize data lines
         # ===============================
-        self._init_data_items(devicewrapper_lst)
+        self._init_data_table(dev_lst)
         self._align_time_stamps()
         # ===============================
         # Customize the context menu
         # ===============================
-        self._modify_context_menu()
+        menu = self.graphItem.getMenu()
+        viewbox_menu = self.graphItem.getViewBox().getMenu(True)
+        self.context_menu = TimePlotContextMenu(menu, viewbox_menu, self)
+        # self._modify_context_menu()
         # ===============================
         # customize plot settings with stored values
         # ===============================
         self.set_custom_settings()
 
 
-    def _init_data_items(self, devicewrapper_lst, new_data = None):
-        """ """
+    def _init_data_table(self, dev_lst, new_data = None):
+        """initialize data table by populating it with data items
         
+        data items are initialized from scratch or loaded from file
+        
+        Parameter
+        ---------
+        dev_lst : lst
+            lst of DeviceWrapper object used to collect data
+        new_data :  **??**
+            **??**
+            
+        """
         self.data_table = {}
         
         id_nr = 0
         while True:
-            data_item = TimePlotDataItem(
-                data_fn = self.data_fn, 
-                id_nr=id_nr, 
-                absolute_time=self.t0
-            )
+            data_item = self._create_data_item(id_nr)
             if new_data is None:
                 data_item.recall_data(self.data_fn)
-            elif new_data is not None:
+            else:
                 data_item.recall_data(new_data)
-            if len(data_item.get_plot_data_item().xData) == 0:
+
+            if len(data_item.get_time_data()) == 0:
                 break
-            self.data_table.update(
-                {id_nr: data_item}
-            )
-            self.graphItem.addItem(data_item.get_plot_data_item())
+
+            self._add_data_item(id_nr, data_item)
             id_nr += 1
+            
+    def _init_settings(self, folder_filename):
+        """initialize plot settings
+        
+        Settings are initialized by loading from file or from default values. 
+        To initialize the plot settingsa PlotItemSettings object is created.
+        
+        Parameters
+        ----------
+        folder_filename : str
+            path to settings filename
+            
+        
+        """
+        self.plot_item_settings = PlotItemSettings(
+            number_of_lines=self.dev_num, 
+            folder_filename=folder_filename
+        )
+        self.settings = self.plot_item_settings.settings
+        self.data_fn = os.path.join(
+            self.plot_item_settings.folder_filename, 
+            self.DEFAULT_DATA_FILENAME
+        )
+        return
+        
+
+    def _check_devices_type(self, devices):
+        """checks devices and reformats if necessary
+        
+        Function is used to allow TimePlotGui initialization with either one 
+        devicewrapper object or a list of devicewrapper objects. Function 
+        returns a list of device wrappers
+        
+        Parameters
+        ----------
+        devices : DeviceWrapper object or list of DeviceWrapper objects
+            DeviceWrapper object handle hardware communication
+            
+        Returns
+        -------
+        lst
+            list of DeviceWrapper object
+        
+        Raises
+        ------
+        TimePlotGuiException
+            if devices contains variables which are not of type DeviceWrapper
+        
+        """
+        err_msg = """
+        Given devices are not of type DeviceWrapper. 
+        Make sure that elemnts in devices are DeviceWrapper and initialize 
+        TimePlotGui again.
+        """
+        
+        if type(devices) is DeviceWrapper:
+            return [devices]
+        if all([type(d) is DeviceWrapper for d in devices]):
+            return devices
+        else:
+            raise TimePlotGuiException(err_msg)
+
+    def _create_data_item(self, id_nr):
+        """initializes and returns a ``TimePlotDataItem`` object
+        
+        Parameter
+        ---------
+        id_nr : int
+            reference number of data item.
+            
+        """
+        data_item = TimePlotDataItem(
+            data_fn = self.data_fn, 
+            id_nr=id_nr, 
+            absolute_time=self.t0
+        )
+        return data_item
+
+    def _add_data_item(self, id_nr, data_item):
+        """add data_item to ``data_table`` and to plot item
+        
+        Parameter
+        ---------
+        id_nr : int
+            number is used as id reference in data_table
+        data_item : TimePlotDataItem object
+            represents one data line in the plot
+            
+        """
+        self.data_table.update(
+            {id_nr: data_item}
+        )
+        self.graphItem.addItem(data_item.get_plot_data_item())
+
+    def _remove_data_item(self, id_nr):
+        """add data_item to data_table and to plot item
+        
+        Parameter
+        ---------
+        id_nr : int
+            number is used as id reference in data_table
+            
+        """
+        self.graphItem.removeItem(
+            self.data_table[id_nr].get_plot_data_item()
+        )
+        self.data_table.pop(id_nr)
 
 
     def _create_absolute_time_stamp(self):
@@ -274,39 +488,66 @@ class TimePlotGui(QWidget):
     def thread_status_changed(self):
         self.started = not self.started
         self.resize_line_settings()
-        self.add_line_settings_menu()
+        self.context_menu._add_line_settings_menu()
 
     def resize_line_settings(self):
+        """resizes line settings to make number of data object present
+        
+        If thread is started the number of data objects corresponds to number 
+        of devices concted. If thread does not run, number of data objects
+        is given by length of data_table
+        
+        """
         if self.started:
-            self.coerce_same_length(data_length = len(self.devicewrapper))
+            self.coerce_same_length(data_length = len(self.dev_lst))
             self.resize_data_table()
         else:
             self.coerce_same_length(data_length = len(self.data_table))
-        self.set_line_settings()
+        self.update_line_settings()
 
     def resize_data_table(self):
-        while len(self.devicewrapper) != len(self.data_table):
-            if len(self.devicewrapper) > len(self.data_table):
-                id_nr = len(self.data_table)
-                data_item = TimePlotDataItem(data_fn = self.data_fn, id_nr=id_nr, absolute_time=self.t0)
-                self.data_table.update(
-                    {id_nr: data_item}
-                )
-                self.graphItem.addItem(data_item.get_plot_data_item())
-            elif len(self.devicewrapper) < len(self.data_table):
-                timeplotdataitem = self.data_table[max(self.data_table.keys())]
-                self.graphItem.removeItem(self.data_table[max(self.data_table.keys())].get_plot_data_item())
-                del timeplotdataitem
-                self.data_table.popitem()
-
+        """resizes data table to make number of data object match with devices
+        connected
+        
+        Function adds or removes data_items from data table as long as number 
+        of data items does not match to number of devices connceted to 
+        TimePlotGui
+        
+        """
+        len_data_table = len(self.data_table)
+        while self.dev_num != len_data_table:
+            if self.dev_num > len_data_table:
+                id_nr = len_data_table
+                data_item = self._create_data_item(id_nr)
+                self._add_data_item(id_nr, data_item)
+            else:
+                self._remove_data_item(id_nr)
+            len_data_table = len(self.data_table)
 
     def coerce_same_length(self, data_length):
-        while data_length != len(self.settings['line_settings']):
-            if data_length > len(self.settings['line_settings']):
-                self.settings['line_settings'][str(len(self.settings['line_settings']))] = \
-                            self.plot_item_settings.default_line_settings
-            elif data_length < len(self.settings['line_settings']):
-                self.settings['line_settings'].popitem()
+        """changes number of line settings until it matches data_length.
+        
+        This function is required to adjust number of line settings to actual 
+        data present. Here the data_length variable is supposed to provide the 
+        information on how many data items are present in TimePlotGui. This
+        can either be the number of devices connected for data acquisition or 
+        the number of data items in the data table.
+        
+        Parameter
+        ---------
+        data_length : int
+            lenght of data objects present in  TimePlotGui class. This can be 
+            either number of devices connected or number of data_items in 
+            data_table
+        
+        """
+        n_lines = self.plot_item_settings.get_nr_lines()
+        while data_length != n_lines:
+            if data_length > n_lines:
+                self.plot_item_settings.add_line()
+            else:
+                self.plot_item_settings.remove_line()
+            n_lines = self.plot_item_settings.get_nr_lines()
 
 
     def set_custom_settings(self):
@@ -327,7 +568,7 @@ class TimePlotGui(QWidget):
         )
 
         # line settings
-        self.set_line_settings()
+        self.update_line_settings()
 
         # autopan
         self.viewbox.setAutoPan(x = self.settings['autoPan'])
@@ -345,7 +586,7 @@ class TimePlotGui(QWidget):
         )
 
         # auto_clear
-        self.data_options.automatic_clear_checkbox.setChecked(
+        self.context_menu.data_options.automatic_clear_checkbox.setChecked(
             self.settings['auto_clear_data']
         )
 
@@ -375,32 +616,36 @@ class TimePlotGui(QWidget):
         # labels
         self.update_plot_labels()
 
-    def set_line_settings(self):
+    def update_line_settings(self):
         """updates PlotDataItem settings with values from settings dictionary
         """
         for line_nr, time_data_item in self.data_table.items():
-            data_item = time_data_item.get_plot_data_item()
+            pdi = time_data_item.get_plot_data_item()
             line_setting = self.settings['line_settings'][str(line_nr)]
 
-            data_item.setAlpha(
+            pdi.setAlpha(
                 alpha = line_setting['line_alpha'],
                 auto = False
             )
-            data_item.setPen(
+            pdi.setPen(
                 pg.mkPen(
                     width = line_setting['line_width'],
                     color = line_setting['line_color']
                 )
             )
-            data_item.setFftMode(self.settings['frequency_state'])
+            pdi.setFftMode(self.settings['frequency_state'])
 
     def update_plot_labels(self):
+        """updates plot labels and title corresponding to currently set fft 
+        mode.
+        """
         if self.frequency_state:
             self.set_frequency_labels()
         else:
             self.set_time_labels()
 
     def change_label_state(self):
+        """changes fft label and updates plot labels accordingly"""
         self.frequency_state = self.graphItem.ctrl.fftCheck.isChecked()
         self.update_plot_labels()
 
@@ -517,7 +762,7 @@ class TimePlotGui(QWidget):
             'xautorange':       viewboxstate['autoRange'][0],
             'yautorange':       viewboxstate['autoRange'][1],
           # auto clear
-            'auto_clear_data':  self.data_options.automatic_clear_checkbox.isChecked(),
+            'auto_clear_data':  self.context_menu.data_options.automatic_clear_checkbox.isChecked(),
           # zoom
             'x_zoom':           viewboxstate['mouseEnabled'][0],
             'y_zoom':           viewboxstate['mouseEnabled'][1],
@@ -526,15 +771,15 @@ class TimePlotGui(QWidget):
           # frequency
             'frequency_state':  self.graphItem.ctrl.fftCheck.isChecked(),
           # autosave
-            'do_autosave':      self.data_options.autosave.defaultWidget().layout().itemAt(0).widget().isChecked(),
-            'autosave_nr':      self.data_options.autosave.defaultWidget().layout().itemAt(1).widget().value(),
+            'do_autosave':      self.context_menu.data_options.autosave_checkbox.isChecked(),
+            'autosave_nr':      self.context_menu.data_options.autosave_nr.value(),
           # time stamp
 
           # labels
             'labels':           self.settings['labels'],
           # auto visible only
-            'autoVisibleOnly_x': self.autoVisibleOnly_x.isChecked(),
-            'autoVisibleOnly_y': self.autoVisibleOnly_y.isChecked(),
+            'autoVisibleOnly_x': self.context_menu.autoVisibleOnly_x.isChecked(),
+            'autoVisibleOnly_y': self.context_menu.autoVisibleOnly_y.isChecked(),
         # alpha
             'plotalpha':        self.graphItem.alphaState(),
 
@@ -542,255 +787,46 @@ class TimePlotGui(QWidget):
         self.plot_item_settings.save_settings(**settings)
 
     def restore_default_settings(self):
-        temp_line_settings = self.settings['line_settings']
-        # ===============================
-        # Delete stored file settings
-        # ===============================
+        """restores default plot settings and deletes the settings file
+        
+        This function deletes the settings file and restores the default plot 
+        settings from the DEFAULT_SETTINGS dictionary specified in the 
+        PlotItemSettings class. The line settings are not restored.
+        After restoring the default settings the context menu and the plot item
+        are updated 
+        
+        """        
         if path.exists(self.plot_item_settings.settings_filename):
             os.remove(self.plot_item_settings.settings_filename)
-        # ===============================
-        # Delete PlotItemSettings instance and create new one
-        # ===============================
-        del self.plot_item_settings
-        self.plot_item_settings = PlotItemSettings(number_of_lines = len(self.devicewrapper))
-        self.settings = self.plot_item_settings.DEFAULT_SETTINGS
-        self.settings['line_settings'] = temp_line_settings
+        
+        self.plot_item_settings.restore_default_settings(
+            keep_line_settings=True
+        )
         self.resize_line_settings()
-        # ===============================
-        # Implement the settings
-        # ===============================
-        self.ammend_context_menu()
-        self.set_custom_settings()
+
+        self.context_menu.update_line_settings_context_menu()
+        self.set_custom_settings()        
 
     def clear_line_settings(self):
-        self.settings['line_settings'] = self.plot_item_settings.DEFAULT_SETTINGS['line_settings']
-        self.set_line_settings()
-        self.ammend_context_menu()
-
-    def _modify_context_menu(self):
-        self.resize_line_settings()
-        # ===============================
-        # Get the context menu as a callable object
-        # ===============================
-        self.menu = self.graphItem.getMenu()
-        self.viewbox_menu = self.graphItem.getViewBox().getMenu(True)
-        self.viewbox_menu.leftMenu.actions()[0].setText('Click and Drag')
-        self.viewbox_menu.leftMenu.actions()[1].setText('Select Rectangle')
-        self.y_autopan_check = self.viewbox_menu.actions()[2].menu().actions()[0].defaultWidget().layout().itemAt(10).widget()
-        self.y_autopan_check.stateChanged.connect(self.y_autopan_warning)
-
-        self.autoVisibleOnly_x = self.viewbox_menu.actions()[1].menu().actions()[0].defaultWidget().layout().itemAt(9).widget()
-        self.autoVisibleOnly_y = self.viewbox_menu.actions()[2].menu().actions()[0].defaultWidget().layout().itemAt(9).widget()
-        self.autoVisibleOnly_x.setChecked(self.settings['autoVisibleOnly_x'])
-        self.autoVisibleOnly_y.setChecked(self.settings['autoVisibleOnly_y'])
-
-        # ===============================
-        # Create submenus (in order)
-        # ===============================
-        self.line_settings_menu = self.menu.addMenu("Line Settings")
-        self.visualization_settings = self.menu.addMenu("Visualization Settings")
-        self.data_options = self.menu.addMenu("Data Options")
-        self.change_labels_menu = self.menu.addMenu("Change Labels")
-        # ===============================
-        # Submenu Formation: line_settings
-        # ===============================
-        self.add_line_settings_menu()
-        # ===============================
-        # Submenu Formation: visualization_settings
-        # ===============================
-        restore_default = QtGui.QAction("Restore Default Plot Settings", self.visualization_settings)
-        restore_default.triggered.connect(self.restore_default_settings)
-        self.visualization_settings.addAction(restore_default)
-        self.visualization_settings.restore_default = restore_default
-
-        restore_saved = QtGui.QAction("Restore Saved Plot Settings", self.visualization_settings)
-        restore_saved.triggered.connect(self.set_custom_settings)
-        self.visualization_settings.addAction(restore_saved)
-        self.visualization_settings.restore_saved = restore_saved
-
-        save_settings = QtGui.QAction("Save Current Plot Settings", self.visualization_settings)
-        save_settings.triggered.connect(self.save_current_settings)
-        self.visualization_settings.addAction(save_settings)
-        self.visualization_settings.save_settings = save_settings
-
-        clear_line_settings = QtGui.QAction("Clear Line Settings", self.visualization_settings)
-        clear_line_settings.triggered.connect(self.clear_line_settings)
-        self.visualization_settings.addAction(clear_line_settings)
-        self.visualization_settings.clear_line_settings = clear_line_settings
-        # ===============================
-        # Submenu Formation: Data Options
-        # ===============================
-        clear_data = QtGui.QAction("Clear Data", self.data_options)
-        clear_data.triggered.connect(self.clear_all_data)
-        self.data_options.addAction(clear_data)
-        self.data_options.clear_data = clear_data
-
-        automatic_clear = QtGui.QWidgetAction(self.data_options)
-        automatic_clear_checkbox = QtGui.QCheckBox("Clear Old Data on Start", self)
-        automatic_clear.setDefaultWidget(automatic_clear_checkbox)
-        automatic_clear_checkbox.stateChanged.connect(self.save_data_settings)
-        self.data_options.addAction(automatic_clear)
-        self.data_options.automatic_clear = automatic_clear
-        self.data_options.automatic_clear_checkbox = automatic_clear_checkbox
-
-        autosave = QtGui.QWidgetAction(self.data_options)
-        autosave_widget = QWidget()
-        autosave_layout = QHBoxLayout()
-        autosave_layout.setContentsMargins(0,0,0,0)
-        autosave_checkbox = QtGui.QCheckBox("Automatically Save Data", self)
-        autosave_checkbox.stateChanged.connect(self.set_all_autosave)
-        autosave_checkbox.setChecked(self.settings['do_autosave'])
-        autosave_nr = QSpinBox()
-        autosave_nr.setButtonSymbols(QAbstractSpinBox().NoButtons)
-        autosave_nr.setRange(10, 1000)
-        autosave_nr.setValue(self.settings['autosave_nr'])
-        # autosave_nr.setSingleStep(10)
-        autosave_nr.valueChanged.connect(self.set_all_autosave_nr)
-        autosave_layout.addWidget(autosave_checkbox)
-        autosave_layout.addWidget(autosave_nr)
-        autosave_widget.setLayout(autosave_layout)
-        autosave.setDefaultWidget(autosave_widget)
-        self.data_options.addAction(autosave)
-        self.data_options.autosave = autosave
-
-        # ===============================
-        # Submenu Formation: Change Labels
-        # ===============================
-        change_title = QtGui.QAction("Change Plot Title", self.change_labels_menu)
-        change_title.triggered.connect(self.change_title)
-        self.change_labels_menu.addAction(change_title)
-        self.change_labels_menu.change_title = change_title
-
-        change_x_axis_label = QtGui.QAction("Change X Axis Label", self.change_labels_menu)
-        change_x_axis_label.triggered.connect(self.change_x_axis_label)
-        self.change_labels_menu.addAction(change_x_axis_label)
-        self.change_labels_menu.change_x_axis_label = change_x_axis_label
-
-        change_y_axis_label = QtGui.QAction("Change Y Axis Label", self.change_labels_menu)
-        change_y_axis_label.triggered.connect(self.change_y_axis_label)
-        self.change_labels_menu.addAction(change_y_axis_label)
-        self.change_labels_menu.change_y_axis_label = change_y_axis_label
-
-        relative_time = QtGui.QWidgetAction(self.change_labels_menu)
-        relative_time_checkbox = QtGui.QCheckBox("Relative Time Markers", self)
-        relative_time.setDefaultWidget(relative_time_checkbox)
-        relative_time_checkbox.setChecked(self.settings['relative_timestamp'])
-        relative_time_checkbox.stateChanged.connect(self.change_time_markers)
-        self.change_labels_menu.addAction(relative_time)
-        self.change_labels_menu.relative_time = relative_time
-        self.change_labels_menu.relative_time_checkbox = relative_time_checkbox
-        # ===============================
-        # Function Formation: Load Past Data
-        # ===============================
-        open_data = QtGui.QAction("Load Stored Data")
-        open_data.triggered.connect(self.open_finder)
-        self.menu.addAction(open_data)
-        self.menu.open_data = open_data
-        # ===============================
-        # Submenu revision: local fourier transform
-        # ===============================
-        self.transform_menu = self.menu.actions()[0].menu()
-        self.transform_menu.actions()[0].defaultWidget().layout().setContentsMargins(10,10,10,0)
-
-        self.x_log_check = self.transform_menu.actions()[0].defaultWidget().layout().itemAt(1).widget()
-        self.y_log_check = self.transform_menu.actions()[0].defaultWidget().layout().itemAt(2).widget()
-
-        local_fourier = QtGui.QWidgetAction(self.transform_menu)
-        local_fourier_widget = QWidget()
-        lf_label = QLabel("Local Fourier Mode")
-        local_fourier_checkbox = QtGui.QCheckBox(self)
-        local_fourier_checkbox.stateChanged.connect(self.set_local_ft_mode)
-        lf_layout = QHBoxLayout()
-        lf_layout.setContentsMargins(10,0,0,0)
-        lf_layout.addWidget(lf_label)
-        lf_layout.addWidget(local_fourier_checkbox)
-        local_fourier_widget.setLayout(lf_layout)
-        local_fourier.setDefaultWidget(local_fourier_widget)
-        self.transform_menu.addAction(local_fourier)
-        self.transform_menu.local_fourier = local_fourier
-
-        # ===============================
-        # Remove unnecesary default context menu operations
-        # ===============================
-        actions = self.graphItem.ctrlMenu.actions()
-        #1,2,3,5
-        for index in range(len(actions)):
-            self.graphItem.ctrlMenu.removeAction(actions[index])
-        for index in [0, 4, 6, 7, 8, 9, 10]:
-            self.graphItem.ctrlMenu.addAction(actions[index])
-
-    def ammend_context_menu(self):
-        line_controls = self.line_settings_menu.actions()[0::2]
-        key = 0
-        for line in line_controls:
-            line.defaultWidget().layout().itemAt(2).widget().setValue(255*self.settings['line_settings'][str(key)]['line_alpha'])
-            line.defaultWidget().layout().itemAt(4).widget().setValue(self.settings['line_settings'][str(key)]['line_width'])
-            key += 1
-
-    def add_line_settings_menu(self):
-        # ===============================
-        # remove existing items from the menu
-        # ===============================
-        self.line_settings_menu.clear()
-        # ===============================
-        # Submenu Formation: line_settings
-        # ===============================
-        for key in self.data_table:
-            # ===============================
-            # width and alpha
-            # ===============================
-            mainlabel = QLabel('Line '+str(key))
-            mainlabel.setAlignment(QtCore.Qt.AlignCenter)
-            widthintermediate = QtGui.QWidgetAction(self.line_settings_menu)
-            width_widget = QtGui.QWidget()
-            widthlabel = QLabel("Line Width:")
-            spinbox = QSpinBox()
-            spinbox.setValue(self.settings['line_settings'][str(key)]['line_width'])
-            spinbox.setRange(1, 15)
-            spinbox.setSingleStep(1)
-
-            alphalabel = QLabel("Alpha")
-            alphaSlider = QtGui.QSlider(self.line_settings_menu)
-            alphaSlider.setOrientation(QtCore.Qt.Horizontal)
-            alphaSlider.setMaximum(255)
-            alphaSlider.setValue(self.settings['line_settings'][str(key)]['line_alpha']*255)
-
-            width_layout = QGridLayout()
-            width_layout.addWidget(mainlabel, 0, 0, 1, 2)
-            width_layout.addWidget(alphalabel, 1, 0, 1, 1)
-            width_layout.addWidget(alphaSlider, 1, 1, 1, 1)
-            width_layout.addWidget(widthlabel, 2, 0, 1, 1)
-            width_layout.addWidget(spinbox, 2, 1, 1, 1)
-            width_widget.setLayout(width_layout)
-
-            spinbox.valueChanged.connect(self.data_table[key].setWidth)
-            alphaSlider.valueChanged.connect(self.data_table[key].setAlpha)
-            widthintermediate.setDefaultWidget(width_widget)
-            self.line_settings_menu.addAction(widthintermediate)
-            self.line_settings_menu.widthintermediate = widthintermediate
-            # ===============================
-            # color
-            # ===============================
-            change_line_color = QtGui.QWidgetAction(self.line_settings_menu)
-            color_button = QPushButton("Change line color")
-            color_button.clicked.connect(self.data_table[key].open_color_dialog)
-            change_line_color.setDefaultWidget(color_button)
-            self.line_settings_menu.addAction(change_line_color)
-            self.line_settings_menu.change_line_color = change_line_color
-
+        """restores default line settings"""
+        self.plot_item_settings.clear_all_line_settings()
+        self.update_line_settings()
+        self.context_menu.update_line_settings_context_menu()
 
     def open_finder(self):
         self.started = False
         data_fname, file_info = QFileDialog.getOpenFileName(
             self,
             'Select data file',
-            '~/',"JSON files (*.json)"
+            '~/',
+            "JSON files (*.json)"
         )
         if data_fname != '':
             settings_fname, file_info = QFileDialog.getOpenFileName(
                 self,
                 'Select settings file',
-                '~/',"JSON files (*.json)"
+                '~/',
+                "JSON files (*.json)"
             )
             if settings_fname !='':
                 del self.plot_item_settings
@@ -800,11 +836,11 @@ class TimePlotGui(QWidget):
                 self.settings = self.plot_item_settings.settings
             if data_fname is not None:
                 self.clear_all_plot_data_items()
-                self._init_data_items(self.devicewrapper, new_data = data_fname)
+                self._init_data_table(self.dev_lst, new_data = data_fname)
                 self.resize_line_settings()
-                self.add_line_settings_menu()
+                self.context_menu._add_line_settings_menu(self.data_table)
                 self.set_custom_settings()
-                # self.ammend_context_menu()
+                # self.update_line_settings_context_menu()
 
     def set_local_ft_mode(self, local_ft_mode):
         """starts or stops the local FT mode depending on local fourier checkbox
@@ -814,38 +850,35 @@ class TimePlotGui(QWidget):
             if not self.graphItem.ctrl.fftCheck.isChecked():
                 for dataitem in self.data_table.values():
                     dataitem.start_local_ft_mode()
-                    # print('%%%%%% started local fourier mode')
             else:
-                self.transform_menu.local_fourier.defaultWidget().layout().itemAt(1).widget().setChecked(False)
+                self.transform_menu.local_fourier.defaultWidget().layout().itemAt(1).widget().setChecked(False)  # !! kehaus:  i think this would cause an erros since transform_menu os not attribute of time_plot_gui
                 self.local_ft_error()
         else:
             for dataitem in self.data_table.values():
                 dataitem.stop_local_ft_mode()
-                # print('%%%%%% stopped local fourier mode')
         return
 
     def clear_all_plot_data_items(self):
+        """remove all PlotDataItems from PLotItem"""
         data_items = self.graphItem.listDataItems()
         for data_item in data_items:
             self.graphItem.removeItem(data_item)
 
     def save_data_settings(self):
+        """save plot settings"""
         self.plot_item_settings.save_settings(
-            auto_clear_data = self.data_options.automatic_clear_checkbox.isChecked()
+            auto_clear_data = self.context_menu.data_options.automatic_clear_checkbox.isChecked()
         )
 
     def save_line_settings(self):
-        line_controls = self.line_settings_menu.actions()[0::2]
-        number = 0
-        for line in line_controls:
-            self.settings['line_settings'][str(number)]['line_alpha'] = line.defaultWidget().layout().itemAt(2).widget().value()/255
-            self.settings['line_settings'][str(number)]['line_width'] = line.defaultWidget().layout().itemAt(4).widget().value()
-            number += 1
-        for key in range(len(self.data_table)):
-            self.settings['line_settings'][str(key)]['line_color'] = \
-                self.data_table[key].get_plot_data_item().get_color()
-        self.plot_item_settings.save_settings(line_settings = self.settings['line_settings'])
+        """ """
+        for line in self.context_menu.line_settings_menu.lines:
+            line.update_line_settings()
+        self.plot_item_settings.save_settings(
+            line_settings = self.settings['line_settings']
+        )
 
+    @disable_fft_and_log_mode
     def store_all_data(self):
         """store all data objects
 
@@ -855,15 +888,15 @@ class TimePlotGui(QWidget):
 
         """
 
-        # save current state
-        frequency_state = self.frequency_state
-        x_log_check = self.x_log_check.isChecked()
-        y_log_check = self.y_log_check.isChecked()
+        # # save current state
+        # frequency_state = self.frequency_state
+        # x_log_check = self.context_menu.x_log_check.isChecked()
+        # y_log_check = self.context_menu.y_log_check.isChecked()
 
-        # disable FFT, x log, and y log mode
-        self.graphItem.ctrl.fftCheck.setChecked(False)
-        self.x_log_check.setChecked(False)
-        self.y_log_check.setChecked(False)
+        # # disable FFT, x log, and y log mode
+        # self.graphItem.ctrl.fftCheck.setChecked(False)
+        # self.context_menu.x_log_check.setChecked(False)
+        # self.context_menu.y_log_check.setChecked(False)
 
         # sava data
         if path.exists(self.data_fn):
@@ -871,10 +904,10 @@ class TimePlotGui(QWidget):
         for data_item in self.data_table.values():
             data_item.store_data()
 
-        # restore FFT,x log, and y log states
-        self.graphItem.ctrl.fftCheck.setChecked(frequency_state)
-        self.x_log_check.setChecked(x_log_check)
-        self.y_log_check.setChecked(y_log_check)
+        # # restore FFT,x log, and y log states
+        # self.graphItem.ctrl.fftCheck.setChecked(frequency_state)
+        # self.context_menu.x_log_check.setChecked(x_log_check)
+        # self.context_menu.y_log_check.setChecked(y_log_check)
 
     def change_time_markers(self, relative_time):
         self.axis_item.relative_time = relative_time
@@ -889,7 +922,7 @@ class TimePlotGui(QWidget):
 
 
     def clear_all_data(self):
-        """clears data in all data items bby calling the corresponding clear()
+        """clears data in all data items by calling the corresponding clear()
         function
 
         """
@@ -936,20 +969,20 @@ class TimePlotGui(QWidget):
         self.central_wid.setPalette(p)
 
 
-    def _init_multi_worker_thread(self, devicewrapper_lst):
-        """initializes a worker thread for every devicewrapper"""
+    def _init_multi_worker_thread(self, devices):
+        """initializes a worker thread for every devicewrapper in devices"""
 
         # set up QWaitCondition
         self.mutex_table = {
-            idx: QMutex() for idx in range(len(devicewrapper_lst))
+            idx: QMutex() for idx in range(len(devices))
         }
         self.cond_table = {
-            idx: QWaitCondition() for idx in range(len(devicewrapper_lst))
+            idx: QWaitCondition() for idx in range(len(devices))
         }
 
         # set up the measurement engine
         self.worker_table = {}
-        for idx, devicewrapper in enumerate(devicewrapper_lst):
+        for idx, devicewrapper in enumerate(devices):
             worker = TimePlotWorker(
                 devicewrapper,
                 self.mutex_table[idx],
@@ -1013,7 +1046,7 @@ class TimePlotGui(QWidget):
         if self.start_button_counter == 0:
             self.start_button_counter += 1
             is_checked = False
-            if self.data_options.automatic_clear_checkbox.isChecked():
+            if self.context_menu.data_options.automatic_clear_checkbox.isChecked():
                 if self.graphItem.ctrl.fftCheck.isChecked():
                     is_checked = True
                 self.graphItem.ctrl.fftCheck.setChecked(False)
@@ -1036,31 +1069,49 @@ class TimePlotGui(QWidget):
         # time.sleep(2)
         self.stop_signal.emit()
 
+    @disable_fft_and_log_mode
     def update_datapoint(self, id_nr, val, time_val):
-        """updates TimePlotDataItem object with corresponding id_nr"""
+        """updates TimePlotDataItem object with corresponding id_nr
+        
+        To account for the fact that different lines are present, the 
+        ``id_nr`` variable selects the right ``TimePlotdataItem`` object from
+        the ``data_table`` and appends the values.
+        
+        Parameter
+        ---------
+        id_nr : int
+            identifier for ``TimePlotDataItem`` in ``data_table``
+        val : float
+            collected value from measurement instrument
+        time_val : float
+            corresponding time stamp
+        
+        
+        """
 
-        # save current state
-        frequency_state = self.frequency_state
-        x_log_check = self.x_log_check.isChecked()
-        y_log_check = self.y_log_check.isChecked()
+        # # save current state
+        # frequency_state = self.frequency_state
+        # x_log_check = self.context_menu.x_log_check.isChecked()
+        # y_log_check = self.context_menu.y_log_check.isChecked()
 
-        # disable FFT, x log, and y log state
-        self.graphItem.ctrl.fftCheck.setChecked(False)
-        self.x_log_check.setChecked(False)
-        self.y_log_check.setChecked(False)
+        # # disable FFT, x log, and y log state
+        # self.graphItem.ctrl.fftCheck.setChecked(False)
+        # self.context_menu.x_log_check.setChecked(False)
+        # self.context_menu.y_log_check.setChecked(False)
 
         # update value
         self.data_table[id_nr].append_value(val, time_val)
 
-        # reinstate FFT, x log, and y log state
-        self.graphItem.ctrl.fftCheck.setChecked(frequency_state)
-        self.x_log_check.setChecked(x_log_check)
-        self.y_log_check.setChecked(y_log_check)
+        # # reinstate FFT, x log, and y log state
+        # self.graphItem.ctrl.fftCheck.setChecked(frequency_state)
+        # self.context_menu.x_log_check.setChecked(x_log_check)
+        # self.context_menu.y_log_check.setChecked(y_log_check)
 
 
     @QtCore.pyqtSlot(int, float, float)
     def newReading(self, id_nr, val, time_val):
-        """ """
+        """updates plot by adding provided value to corresponding 
+        ``TimePlotDataItem`` object """
         pg.QtGui.QApplication.processEvents()
         self.update_datapoint(id_nr, val, time_val)
         time.sleep(self.sampling_latency)
@@ -1068,11 +1119,42 @@ class TimePlotGui(QWidget):
         self.cond_table[id_nr].wakeAll()     # wake worker thread up
         return
 
+    
+    # def disable_fft_and_log_mode(func):
+    #     def wrapper(tpg, *args, **kwargs):
+    #         print("inhere")
+            
+    #         # save current state
+    #         frequency_state = tpg.frequency_state
+    #         x_log_check = tpg.context_menu.x_log_check.isChecked()
+    #         y_log_check = tpg.context_menu.y_log_check.isChecked()
+
+    #         # disable FFT, x log, and y log state
+    #         tpg.graphItem.ctrl.fftCheck.setChecked(False)
+    #         tpg.context_menu.x_log_check.setChecked(False)
+    #         tpg.context_menu.y_log_check.setChecked(False)
+                        
+    #         rtrn = getattr(tpg, func)(*args, **kwargs)
+            
+    #         # reinstate FFT, x log, and y log state
+    #         tpg.graphItem.ctrl.fftCheck.setChecked(frequency_state)
+    #         tpg.context_menu.x_log_check.setChecked(x_log_check)
+    #         tpg.context_menu.y_log_check.setChecked(y_log_check)
+    #         print("still inhere")
+    #         return rtrn
+    #     return wrapper
+
+
+    # ========================================================================
+    # closeEvent handling
+    # ========================================================================
     def closeEvent(self, event, auto_accept = False):
         """
-        By default, this function generates a pop-up confirming you want to close the gui before running
-        closing protocol. This pop-up can be overridden with the auto_accept argument which is espcially
-        useful in avoiding mulitple redundant popups in large gui with multiple TimePlotGui objects.
+        By default, this function generates a pop-up confirming you want to 
+        close the gui before running closing protocol. This pop-up can be 
+        overridden with the auto_accept argument which is espcially useful in 
+        avoiding mulitple redundant popups in large gui with multiple 
+        TimePlotGui objects.
         """
         if not auto_accept:
             reply = QMessageBox.question(self, 'Message',
@@ -1089,11 +1171,39 @@ class TimePlotGui(QWidget):
             return True
 
     def accept_close_event(self, event):
-        """This runs all of the standard protocol for closing the GUI properly"""
+        """runs standard protocol for closing the GUI properly"""
         self.save_current_settings()
         self.store_all_data()
         self.stop_thread()
         event.accept()
+
+# # ========================================================================
+# # helper
+# # ========================================================================
+# def disable_fft_and_log_mode(func):
+#     @wraps(func)
+#     def wrapper(tpg, *args, **kwargs):
+#         print("inhere")
+            
+#         # save current state
+#         frequency_state = tpg.frequency_state
+#         x_log_check = tpg.context_menu.x_log_check.isChecked()
+#         y_log_check = tpg.context_menu.y_log_check.isChecked()
+        
+#         # disable FFT, x log, and y log state
+#         tpg.graphItem.ctrl.fftCheck.setChecked(False)
+#         tpg.context_menu.x_log_check.setChecked(False)
+#         tpg.context_menu.y_log_check.setChecked(False)
+                        
+#         rtrn = getattr(tpg, func)(*args, **kwargs)
+            
+#         # reinstate FFT, x log, and y log state
+#         tpg.graphItem.ctrl.fftCheck.setChecked(frequency_state)
+#         tpg.context_menu.x_log_check.setChecked(x_log_check)
+#         tpg.context_menu.y_log_check.setChecked(y_log_check)
+#         print("still inhere")
+#         return rtrn
+#     return wrapper
 
 
 # ===========================================================================
@@ -1104,18 +1214,18 @@ class TimePlotMainWindow(QMainWindow):
     # xpos on screen, ypos on screen, width, height
     DEFAULT_GEOMETRY = [400, 400, 1000, 500]
 
-    def __init__(self, devicewrapper_lst=None):
+    def __init__(self, devices=None):
         super(TimePlotMainWindow, self).__init__()
-        self._init_ui(devicewrapper_lst=devicewrapper_lst)
+        self._init_ui(devices=devices)
 
-    def _init_ui(self, window_geometry=None, devicewrapper_lst=None):
+    def _init_ui(self, window_geometry=None, devices=None):
         self.setGeometry()
         self.setWindowTitle('time-plot')
         self.setStyleSheet("background-color: black;")
         self.time_plot_ui = TimePlotGui(
             parent=None,
             window=self,
-            devicewrapper_lst=devicewrapper_lst,
+            devices=devices,
             folder_filename = None
         )
         self.test_widget = QWidget()
