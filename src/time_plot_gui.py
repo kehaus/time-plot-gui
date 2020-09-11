@@ -329,8 +329,8 @@ class TimePlotGui(QWidget):
         ---------
         dev_lst : lst
             lst of DeviceWrapper object used to collect data
-        new_data :  **??**
-            **??**
+        new_data :  str
+            data filename if new data is loaded. Used inside Open finder
             
         """
         self.data_table = {}
