@@ -133,34 +133,46 @@ class WorkerTaskBase(object):
         self.callback = self._check_callback(callback)
 
     def _check_func(self, func):
+        
+        err_msg = 'func needs to be callable object: {}'.format(func)
+        
         if callable(func) != True:
-            raise WorkerTaskException('func needs to be callable object: {}'.format(func))
+            raise WorkerTaskException(err_msg)
         return func
     
     def _check_callback(self, callback):
+        
+        err_msg = 'callback needs to be callable object: {}'.format(callback)
+        
         if callback is None:
             return callback
         if callable(callback) != True:
-            raise WorkerTaskException('callback needs to be callable object: {}'.format(callback))
+            raise WorkerTaskException(err_msg)
         return callback
     
 
     def _check_args(self, args):
         """verify if args is list-like by checking if it is iterable"""
+        
+        err_msg = 'args is not a list-like object: {}'.format(args)
+        
         if args == None:
             args = []
         try:
             for i in args:
                 pass
         except TypeError:
-            raise WorkerTaskException('args is not a list-like object: {}'.format(args))
+            raise WorkerTaskException(err_msg)
         return args
 
     def _check_kwargs(self, kwargs):
+        
+        err_msg = 'kwargs needs to be of type dict: {}'.format(kwargs)
+        
         if kwargs == None:
             kwargs = {}
         if type(kwargs) != dict:
-            raise WorkerTaskException('kwargs needs to be of type dict: {}'.format(kwargs))
+            raise WorkerTaskException(err_msg)
         return kwargs
 
 

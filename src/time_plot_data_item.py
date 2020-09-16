@@ -142,6 +142,11 @@ class TimePlotDataItem(JSONFileHandler):
     def recall_data(self, fn):
         """checks for data in data file and updates pq.PlotDataItem object if
         present
+        
+        Parameter
+        ---------
+        fn : str
+            data filename from which data are imported.
         """
         if path.exists(fn):
             all_data_dct = self.load(fn)
