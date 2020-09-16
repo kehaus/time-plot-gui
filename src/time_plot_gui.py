@@ -172,12 +172,11 @@ class TimePlotGui(QWidget):
         # ===============================
         self._init_settings(folder_filename)
         self._init_ui(window, self.dev_lst)
-        self._init_multi_worker_thread(devices)
+        self._init_multi_worker_thread(self.dev_lst)
 
 
     def _init_ui(self, mainwindow, dev_lst):
-        """
-        Creates the ui layout and initializes all the necessary QWidget 
+        """ Creates the ui layout and initializes all the necessary QWidget 
         components
         
         Parameter
@@ -353,7 +352,7 @@ class TimePlotGui(QWidget):
         """initialize plot settings
         
         Settings are initialized by loading from file or from default values. 
-        To initialize the plot settingsa PlotItemSettings object is created.
+        To initialize the plot settings a PlotItemSettings object is created.
         
         Parameters
         ----------
@@ -1113,8 +1112,14 @@ class TimePlotGui(QWidget):
         """updates plot by adding provided value to corresponding 
         ``TimePlotDataItem`` object """
         pg.QtGui.QApplication.processEvents()
+        t0 = time.time()
         self.update_datapoint(id_nr, val, time_val)
-        time.sleep(self.sampling_latency)
+        dt = self.sampling_latency - (time.time()-t0)
+        if dt > 0:
+            time.sleep(dt)
+        else:
+            time.sleep(0.001)
+#        time.sleep(self.sampling_latency)
         # necessary to avoid worker to freeze
         self.cond_table[id_nr].wakeAll()     # wake worker thread up
         return
@@ -1214,11 +1219,11 @@ class TimePlotMainWindow(QMainWindow):
     # xpos on screen, ypos on screen, width, height
     DEFAULT_GEOMETRY = [400, 400, 1000, 500]
 
-    def __init__(self, devices=None):
+    def __init__(self, devices=None, **kwargs):
         super(TimePlotMainWindow, self).__init__()
-        self._init_ui(devices=devices)
+        self._init_ui(devices=devices, **kwargs)
 
-    def _init_ui(self, window_geometry=None, devices=None):
+    def _init_ui(self, window_geometry=None, devices=None, **kwargs):
         self.setGeometry()
         self.setWindowTitle('time-plot')
         self.setStyleSheet("background-color: black;")
@@ -1226,7 +1231,8 @@ class TimePlotMainWindow(QMainWindow):
             parent=None,
             window=self,
             devices=devices,
-            folder_filename = None
+            folder_filename = None,
+            **kwargs
         )
         self.test_widget = QWidget()
         self.layout = QGridLayout()
