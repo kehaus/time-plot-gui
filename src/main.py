@@ -12,11 +12,11 @@ from PyQt5.QtWidgets import QApplication
 
 
 try:
-    from .time_plot_gui import TimePlotMainWindow
+    from .time_plot_main_window import TimePlotMainWindow
     from .util.devicewrapper import DeviceWrapper
     from .util.dummydevice import DummyDevice
 except:
-    from time_plot_gui import TimePlotMainWindow
+    from time_plot_main_window import TimePlotMainWindow
     from util.devicewrapper import DeviceWrapper
     from util.dummydevice import DummyDevice
 

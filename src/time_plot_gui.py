@@ -1214,40 +1214,40 @@ class TimePlotGui(QWidget):
 # ===========================================================================
 # MainWindow
 # ===========================================================================
-class TimePlotMainWindow(QMainWindow):
-    """ """
-    # xpos on screen, ypos on screen, width, height
-    DEFAULT_GEOMETRY = [400, 400, 1000, 500]
+# class TimePlotMainWindow(QMainWindow):
+#     """ """
+#     # xpos on screen, ypos on screen, width, height
+#     DEFAULT_GEOMETRY = [400, 400, 1000, 500]
 
-    def __init__(self, devices=None, **kwargs):
-        super(TimePlotMainWindow, self).__init__()
-        self._init_ui(devices=devices, **kwargs)
+#     def __init__(self, devices=None, **kwargs):
+#         super(TimePlotMainWindow, self).__init__()
+#         self._init_ui(devices=devices, **kwargs)
 
-    def _init_ui(self, window_geometry=None, devices=None, **kwargs):
-        self.setGeometry()
-        self.setWindowTitle('time-plot')
-        self.setStyleSheet("background-color: black;")
-        self.time_plot_ui = TimePlotGui(
-            parent=None,
-            window=self,
-            devices=devices,
-            folder_filename = None,
-            **kwargs
-        )
-        self.test_widget = QWidget()
-        self.layout = QGridLayout()
-        self.setCentralWidget(self.test_widget)
-        self.layout.addWidget(self.time_plot_ui.central_wid, 0, 0, 1, 1)
-        self.test_widget.setLayout(self.layout)
+#     def _init_ui(self, window_geometry=None, devices=None, **kwargs):
+#         self.setGeometry()
+#         self.setWindowTitle('time-plot')
+#         self.setStyleSheet("background-color: black;")
+#         self.time_plot_ui = TimePlotGui(
+#             parent=None,
+#             window=self,
+#             devices=devices,
+#             folder_filename = None,
+#             **kwargs
+#         )
+#         self.test_widget = QWidget()
+#         self.layout = QGridLayout()
+#         self.setCentralWidget(self.test_widget)
+#         self.layout.addWidget(self.time_plot_ui.central_wid, 0, 0, 1, 1)
+#         self.test_widget.setLayout(self.layout)
 
-    def setGeometry(self, *args, **kwargs):
-        """ """
-        if len(args) == 0 and len(kwargs) == 0:
-            args = TimePlotMainWindow.DEFAULT_GEOMETRY
-        super(TimePlotMainWindow, self).setGeometry(*args, **kwargs)
+#     def setGeometry(self, *args, **kwargs):
+#         """ """
+#         if len(args) == 0 and len(kwargs) == 0:
+#             args = TimePlotMainWindow.DEFAULT_GEOMETRY
+#         super(TimePlotMainWindow, self).setGeometry(*args, **kwargs)
 
-    def closeEvent(self, event):
-        """ """
-        print('event')
-        self.time_plot_ui.closeEvent(event)
-#        event.accept
+#     def closeEvent(self, event):
+#         """ """
+#         print('event')
+#         self.time_plot_ui.closeEvent(event)
+# #        event.accept
