@@ -20,7 +20,7 @@ else:
     if module_path not in sys.path:
         sys.path.append(module_path)
     from src import TimePlotMainWindow, DeviceWrapper, DummyDevice
-
+    from src.plot_item_settings import PlotItemSettings, JSONFileHandler
 
 
 # ===========================================================================
@@ -52,7 +52,7 @@ if app is None:
     app = QApplication(sys.argv)
 else:
     print('QApplication instance already exists {}'.format(str(app)))
-window = TimePlotMainWindow(devices=[dw1, dw2])
+window = TimePlotMainWindow(devices=[dw1, dw2], sampling_latency=0.5)
 try:
     window.show()
     app.exec_()
@@ -63,4 +63,15 @@ except:
 # ===========================================================================
 # investigate data
 # ===========================================================================
+
+
+
+json_handler = JSONFileHandler()
+data_dct = json_handler.load(window.time_plot_ui.data_fn)
+
+
+d0_2 = data_dct['data_0']
+d1_2 = data_dct['data_1']
+
+
 
