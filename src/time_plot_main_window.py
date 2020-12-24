@@ -38,11 +38,7 @@ class TimePlotMainWindow(QMainWindow):
             folder_filename = None,
             **kwargs
         )
-        self.test_widget = QWidget()
-        self.layout = QGridLayout()
-        self.setCentralWidget(self.test_widget)
-        self.layout.addWidget(self.time_plot_ui.central_wid, 0, 0, 1, 1)
-        self.test_widget.setLayout(self.layout)
+        self.setCentralWidget(self.time_plot_ui.central_wid)
 
     def setGeometry(self, *args, **kwargs):
         """ """
