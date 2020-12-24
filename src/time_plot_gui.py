@@ -47,7 +47,7 @@ try:
     from .util.workerthread import WorkerThread,WorkerTaskBase
     from .util.devicewrapper import DeviceWrapper, DummyDevice
     from .viewboxv2 import ViewBoxV2
-    from .time_plot_data_item import TimePlotDataItem
+    from .time_plot_data_item import TimePlotDataItem, TimePlotDataTable
     from .time_axis_item import TimeAxisItem
     from .context_menu import TimePlotContextMenu
 except:
@@ -57,7 +57,7 @@ except:
     from util.workerthread import WorkerThread,WorkerTaskBase
     from util.devicewrapper import DeviceWrapper, DummyDevice
     from viewboxv2 import ViewBoxV2
-    from time_plot_data_item import TimePlotDataItem
+    from time_plot_data_item import TimePlotDataItem, TimePlotDataTable
     from time_axis_item import TimeAxisItem
     from context_menu import TimePlotContextMenu
 
@@ -331,7 +331,7 @@ class TimePlotGui(QWidget):
             data filename if new data is loaded. Used inside Open finder
             
         """
-        self.data_table = {}
+        self.data_table = TimePlotDataTable()
         
         id_nr = 0
         while True:
@@ -450,7 +450,7 @@ class TimePlotGui(QWidget):
             
         """
         self.graphItem.removeItem(
-            self.data_table[id_nr].get_plot_data_item()
+            self.data_table.get_plot_data_item(id_nr)
         )
         self.data_table.pop(id_nr)
 
@@ -1086,7 +1086,7 @@ class TimePlotGui(QWidget):
         
         
         """
-        self.data_table[id_nr].append_value(val, time_val)
+        self.data_table.append_value(id_nr, val, time_val)
 
 
     @QtCore.pyqtSlot(int, float, float)

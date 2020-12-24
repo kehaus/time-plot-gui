@@ -24,6 +24,50 @@ except:
     from plot_item_settings import PlotItemSettings, JSONFileHandler
 
 
+class TimePlotDataTable():
+    """
+    
+    Use meta classes for this...?
+    
+    TODO:
+        * change the data_table initialization statement
+        * implement response to len (maybe change len(..) to get length)
+        * implement append_value (and change in time_plot_gui)
+        * implement get_plot_data_item (and change in time_plot_gui)
+        
+    
+    """
+    
+    
+    def __init__(self, *args, **kwargs):
+        self.dct = dict(*args, **kwargs)
+        
+    def __len__(self):
+        return len(self.dct)
+        
+    def update(self, *args, **kwargs):
+        self.dct.update(*args, **kwargs)
+        
+    def get(self, id_nr):
+        return self.dct[id_nr]
+        
+    def keys(self, *args, **kwargs):
+        return self.dct.keys(*args, **kwargs)
+        
+    def values(self, *args, **kwargs):
+        return self.dct.values(*args, **kwargs)
+    
+    def items(self, *args, **kwargs):
+        return self.dct.items(*args, **kwargs)
+    
+    def pop(self, id_nr):
+        return self.dct.pop(id_nr)
+    
+    def get_plot_data_item(self, id_nr):
+        return self.dct[id_nr].get_plot_data_item()
+    
+    def append_value(self, id_nr, val, time_val):
+        self.dct[id_nr].append_value(val, time_val)
 
 class TimePlotDataItem(JSONFileHandler):
     """wraps the pq.PlotDataItem class to extend functionality

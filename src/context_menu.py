@@ -119,7 +119,7 @@ class TimePlotContextMenu():
         # ===============================
         # Submenu Formation: line_settings
         # ===============================
-        for key in self.tpg.data_table:            
+        for key in self.tpg.data_table.keys():            
 
             # create QWidgetAction
             line_action = LineSettingsQWidgetAction(
@@ -374,7 +374,7 @@ class LineSettingsQWidgetAction(QtGui.QWidgetAction):
         
         self.id_nr = id_nr
         self.tpg = time_plot_gui
-        self.data_item = self.tpg.data_table[id_nr]
+        self.data_item = self.tpg.data_table.get(id_nr)
         self.line_settings = self.tpg.settings['line_settings'][str(id_nr)]
         self.line_settings_menu = line_settings_menu
         self._compose_name()
