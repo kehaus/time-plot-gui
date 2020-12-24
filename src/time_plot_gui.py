@@ -123,9 +123,6 @@ class TimePlotGui(QWidget):
         """
         @wraps(func)
         def wrapper(tpg, *args, **kwargs):
-            # print("inhere")
-            # print('args: ', args)
-            # print('args: ', kwargs)
             
             # save current state
             frequency_state = tpg.frequency_state
@@ -144,7 +141,7 @@ class TimePlotGui(QWidget):
             tpg.graphItem.ctrl.fftCheck.setChecked(frequency_state)
             tpg.context_menu.x_log_check.setChecked(x_log_check)
             tpg.context_menu.y_log_check.setChecked(y_log_check)
-            # print("still inhere")
+            
             return rtrn
         return wrapper
 
@@ -230,8 +227,6 @@ class TimePlotGui(QWidget):
         self.blankWidget = QWidget()
         self.blankWidget.setFixedSize(QSize(500, 30))
 
-        # self.blankWidget2 = QWidget()
-        # self.blankWidget2.setFixedSize(QSize(30, 30))
         # =====================================================================
         # Initialize the plot
         # =====================================================================
@@ -241,7 +236,6 @@ class TimePlotGui(QWidget):
         # in which these are added matters because several widgets overlap.
         # =====================================================================
         self.graphics_layout.addWidget(self.blankWidget, 0, 2, 1, 6)
-        # self.graphics_layout.addWidget(self.blankWidget2, 0, 3, 1, 1)
         self.graphics_layout.addWidget(self.graphWidget, 0, 0, 8, 8)
         self.graphics_layout.addWidget(self.stopBtn, 0, 0, 1, 1)
         self.graphics_layout.addWidget(self.playBtn, 0, 0, 1, 1)
@@ -286,15 +280,20 @@ class TimePlotGui(QWidget):
                 axisItems={'bottom': self.axis_item}, 
                 plotItem=self.graphItem
             )
-        except:
-            print(
-                "ERROR with custom viewbox class. 'Except' case run instead."
-            )
-            self.graphWidget = pg.PlotWidget(
-                axisItems={'bottom': self.axis_item}
-            )
-            self.graphItem = self.graphWidget.getPlotItem()
-            self.viewbox = self.graphItem.getViewBox()
+        except Exception as e:
+            msg = 'error occured during pyqtgraph initialization'
+            print('')
+            print(e)
+            print('')
+            raise (TimePlotGuiException(msg))
+            # print(
+            #     "ERROR with custom viewbox class. 'Except' case run instead."
+            # )
+            # self.graphWidget = pg.PlotWidget(
+            #     axisItems={'bottom': self.axis_item}
+            # )
+            # self.graphItem = self.graphWidget.getPlotItem()
+            # self.viewbox = self.graphItem.getViewBox()
         # ===============================
         # Enable Automatic Axis Label Updates
         # ===============================
@@ -1087,24 +1086,7 @@ class TimePlotGui(QWidget):
         
         
         """
-
-        # # save current state
-        # frequency_state = self.frequency_state
-        # x_log_check = self.context_menu.x_log_check.isChecked()
-        # y_log_check = self.context_menu.y_log_check.isChecked()
-
-        # # disable FFT, x log, and y log state
-        # self.graphItem.ctrl.fftCheck.setChecked(False)
-        # self.context_menu.x_log_check.setChecked(False)
-        # self.context_menu.y_log_check.setChecked(False)
-
-        # update value
         self.data_table[id_nr].append_value(val, time_val)
-
-        # # reinstate FFT, x log, and y log state
-        # self.graphItem.ctrl.fftCheck.setChecked(frequency_state)
-        # self.context_menu.x_log_check.setChecked(x_log_check)
-        # self.context_menu.y_log_check.setChecked(y_log_check)
 
 
     @QtCore.pyqtSlot(int, float, float)
