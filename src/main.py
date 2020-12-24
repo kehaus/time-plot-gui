@@ -53,6 +53,8 @@ else:
 window = TimePlotMainWindow(devices=[dw1, dw2])
 try:
     window.show()
-    app.exec_()
+    # app.exec()
 except:
     window.closeEvent()
+
+
