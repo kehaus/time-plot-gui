@@ -230,8 +230,8 @@ class TimePlotGui(QWidget):
         self.blankWidget = QWidget()
         self.blankWidget.setFixedSize(QSize(500, 30))
 
-        self.blankWidget2 = QWidget()
-        self.blankWidget2.setFixedSize(QSize(30, 30))
+        # self.blankWidget2 = QWidget()
+        # self.blankWidget2.setFixedSize(QSize(30, 30))
         # =====================================================================
         # Initialize the plot
         # =====================================================================
@@ -240,11 +240,11 @@ class TimePlotGui(QWidget):
         # Add Widgets to layout, including the Plot itself. Note that the order
         # in which these are added matters because several widgets overlap.
         # =====================================================================
-        self.graphics_layout.addWidget(self.blankWidget, 0, 2)
-        self.graphics_layout.addWidget(self.blankWidget2, 0, 1)
-        self.graphics_layout.addWidget(self.graphWidget, 0, 0, 5, 4)
-        self.graphics_layout.addWidget(self.stopBtn, 0, 0)
-        self.graphics_layout.addWidget(self.playBtn, 0, 0)
+        self.graphics_layout.addWidget(self.blankWidget, 0, 2, 1, 6)
+        # self.graphics_layout.addWidget(self.blankWidget2, 0, 3, 1, 1)
+        self.graphics_layout.addWidget(self.graphWidget, 0, 0, 8, 8)
+        self.graphics_layout.addWidget(self.stopBtn, 0, 0, 1, 1)
+        self.graphics_layout.addWidget(self.playBtn, 0, 0, 1, 1)
 
         # =====================================================================
         # control buttons - connections
