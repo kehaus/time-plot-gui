@@ -31,7 +31,7 @@ dd1 = DummyDevice(
 dw1 = DeviceWrapper(dd1)
 
 dd2 = DummyDevice(
-    frequency=0.6
+    frequency=0.6, xmin=0, xmax=3
 )
 dw2 = DeviceWrapper(dd2)
 
