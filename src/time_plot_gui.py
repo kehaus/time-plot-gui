@@ -876,7 +876,7 @@ class TimePlotGui(QWidget):
             line_settings = self.settings['line_settings']
         )
 
-    @disable_fft_and_log_mode
+    # @disable_fft_and_log_mode
     def store_all_data(self):
         """store all data objects
 
@@ -1067,7 +1067,7 @@ class TimePlotGui(QWidget):
         # time.sleep(2)
         self.stop_signal.emit()
 
-    @disable_fft_and_log_mode
+    # @disable_fft_and_log_mode
     def update_datapoint(self, id_nr, val, time_val):
         """updates TimePlotDataItem object with corresponding id_nr
         
