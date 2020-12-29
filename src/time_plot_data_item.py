@@ -69,6 +69,10 @@ class TimePlotDataTable():
     def append_value(self, id_nr, val, time_val):
         self.dct[id_nr].append_value(val, time_val)
 
+# ===========================================================================
+# 
+# ===========================================================================
+
 class TimePlotDataItem(JSONFileHandler):
     """wraps the pq.PlotDataItem class to extend functionality
 
