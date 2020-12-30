@@ -9,6 +9,7 @@ __version__ = "1.0.0"
 
 
 
+import os
 from os import path
 import time
 
@@ -45,6 +46,10 @@ class TimePlotDataTable():
     def __len__(self):
         return len(self.dct)
         
+    # ======================================
+    # dict properties
+    # ======================================
+    
     def update(self, *args, **kwargs):
         self.dct.update(*args, **kwargs)
         
@@ -63,11 +68,29 @@ class TimePlotDataTable():
     def pop(self, id_nr):
         return self.dct.pop(id_nr)
     
+    # ======================================
+    # data table options
+    # ======================================
+    
     def get_plot_data_item(self, id_nr):
         return self.dct[id_nr].get_plot_data_item()
     
     def append_value(self, id_nr, val, time_val):
         self.dct[id_nr].append_value(val, time_val)
+        
+    def store_all_data(self, data_fn):
+        if path.exists(data_fn):
+            os.remove(data_fn)
+        for data_item in self.dct.values():
+            data_item.store_data()
+            
+    def clear_all_data(self, absolute_time):
+        
+        for data_item in self.dct.values():
+            data_item.clear_data()
+            data_item.reset_absolute_time(absolute_time=absolute_time)
+
+
 
 # ===========================================================================
 # 
@@ -128,8 +151,7 @@ class TimePlotDataItem(JSONFileHandler):
         return TimePlotDataItem.DATA_NAME.format(self.id_nr)
 
     def _init_data_objects(self, absolute_time):
-        # self._t = []
-        # self._y = []
+        self.reset_recent_data()
         
         if absolute_time == None:
             self.absolute_time = time.time()
@@ -139,6 +161,10 @@ class TimePlotDataItem(JSONFileHandler):
     def reset_absolute_time(self, absolute_time):
         self.absolute_time = absolute_time
 
+    def reset_recent_data(self):
+        self.t_recent = []
+        self.y_recent = []
+        
     def get_plot_data_item(self):
         """returns the pg.PlotDataItem"""
         return self.pdi
@@ -146,19 +172,17 @@ class TimePlotDataItem(JSONFileHandler):
     def append_value(self, val, time_val):
         """adds value to pg.PlotDataItem data array"""
         
-        # t, y = self.get_data()
-        # t = np.append(t, time_val - self.absolute_time)
-        # y = np.append(y, val)
-        # self.set_data(t,y)
-        
-        # self._t.append(time_val - self.absolute_time)
-        # self._y.append(val)
-        # self.set_plot_data(self._t, self._y)
-        
         t,y = self.get_data()
         t = np.append(t, time_val - self.absolute_time)
         y = np.append(y, val)
         self.set_data(t,y)
+        
+        
+        # self.t_recent.append(t[-1])
+        # self.y_recent.append(y[-1])
+        # if len(self.t_recent) >= self.autosave_nr:
+        #     self.store_recent_data()
+        #     self.reset_recent_data()
         
         if self.do_autosave:
             if len(t)%self.autosave_nr == 0:
@@ -166,23 +190,11 @@ class TimePlotDataItem(JSONFileHandler):
 
     def get_plot_data(self):
         """returns the pg.PlotDataItem time and data arrays"""
-        # t,y = self.pdi.getData()
-        # t = t.tolist(); y = y.tolist()
-        # return t,y
         return self.pdi.getData()
         
     def set_plot_data(self, *args, **kwargs):
         """replaces data in pg.PlotDataItem with provided data array"""
         self.pdi.setData(*args, **kwargs)
-        
-    # def get_data_(self):
-    #     """returns the pg.PlotDataItem time and data arrays
-        
-    #     **obsolete**
-        
-    #     """
-    #     # return self.pdi.getData()
-    #     return self._t, self._y
     
     def get_data(self):
         """returns the pg.PlotDataItem time and data arrays"""
@@ -199,14 +211,9 @@ class TimePlotDataItem(JSONFileHandler):
     def set_data(self, t ,y):
         """replaces data with provided data
         
-        This function replaces the data lists present in this class and the 
-        data in pq.PlotDataItem. This is because this function is used to 
-        initialize the data structure at the beginning.
+        This function calls setData of the py.PlotDataItem object.
         
         """
-        # self._t = t
-        # self._y = y        
-        # self.set_plot_data(t, y)
         self.pdi.setData(t, y)
 
     def clear_data(self):
@@ -226,10 +233,7 @@ class TimePlotDataItem(JSONFileHandler):
             fn = self.fn
         # extract data from PlotDataItem object
         t, y = self.get_data()
-        # t = t.tolist(); y = y.tolist()
         data_dct = {
-            # 't': self._t,
-            # 'y': self._y,
             't': t.tolist(),
             'y': y.tolist(),
             'absolute_time': self.absolute_time

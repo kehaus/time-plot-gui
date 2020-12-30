@@ -876,36 +876,10 @@ class TimePlotGui(QWidget):
             line_settings = self.settings['line_settings']
         )
 
-    # @disable_fft_and_log_mode
     def store_all_data(self):
-        """store all data objects
+        """store all data objects"""
+        self.data_table.store_all_data(self.data_fn)
 
-        Function stores data of every data_item by calling its store_data().
-        To avoid problems when importing data the next time this function
-        temporarily disables FFT, x log, and y log mode.
-
-        """
-
-        # # save current state
-        # frequency_state = self.frequency_state
-        # x_log_check = self.context_menu.x_log_check.isChecked()
-        # y_log_check = self.context_menu.y_log_check.isChecked()
-
-        # # disable FFT, x log, and y log mode
-        # self.graphItem.ctrl.fftCheck.setChecked(False)
-        # self.context_menu.x_log_check.setChecked(False)
-        # self.context_menu.y_log_check.setChecked(False)
-
-        # sava data
-        if path.exists(self.data_fn):
-            os.remove(self.data_fn)
-        for data_item in self.data_table.values():
-            data_item.store_data()
-
-        # # restore FFT,x log, and y log states
-        # self.graphItem.ctrl.fftCheck.setChecked(frequency_state)
-        # self.context_menu.x_log_check.setChecked(x_log_check)
-        # self.context_menu.y_log_check.setChecked(y_log_check)
 
     def change_time_markers(self, relative_time):
         self.axis_item.relative_time = relative_time
@@ -920,14 +894,11 @@ class TimePlotGui(QWidget):
 
 
     def clear_all_data(self):
-        """clears data in all data items by calling the corresponding clear()
-        function
+        """resets the time stamp and clears data in all data items
 
         """
-        self.reset_absolute_time_stamp()
-        for data_item in self.data_table.values():
-            data_item.clear_data()
-            data_item.reset_absolute_time(absolute_time=self.t0)
+        self.reset_absolute_time_stamp()            
+        self.data_table.clear_all_data(self.t0)
 
     def change_title(self):
         title, acccepted = QInputDialog.getText(
@@ -1105,31 +1076,6 @@ class TimePlotGui(QWidget):
         # necessary to avoid worker to freeze
         self.cond_table[id_nr].wakeAll()     # wake worker thread up
         return
-
-    
-    # def disable_fft_and_log_mode(func):
-    #     def wrapper(tpg, *args, **kwargs):
-    #         print("inhere")
-            
-    #         # save current state
-    #         frequency_state = tpg.frequency_state
-    #         x_log_check = tpg.context_menu.x_log_check.isChecked()
-    #         y_log_check = tpg.context_menu.y_log_check.isChecked()
-
-    #         # disable FFT, x log, and y log state
-    #         tpg.graphItem.ctrl.fftCheck.setChecked(False)
-    #         tpg.context_menu.x_log_check.setChecked(False)
-    #         tpg.context_menu.y_log_check.setChecked(False)
-                        
-    #         rtrn = getattr(tpg, func)(*args, **kwargs)
-            
-    #         # reinstate FFT, x log, and y log state
-    #         tpg.graphItem.ctrl.fftCheck.setChecked(frequency_state)
-    #         tpg.context_menu.x_log_check.setChecked(x_log_check)
-    #         tpg.context_menu.y_log_check.setChecked(y_log_check)
-    #         print("still inhere")
-    #         return rtrn
-    #     return wrapper
 
 
     # ========================================================================
